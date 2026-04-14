@@ -1,0 +1,32 @@
+{
+  "claude-code": {
+    "agents": {
+      "source": "agents/",
+      "target": "~/.claude/agents/",
+      "include": ["*.md"],
+      "exclude": ["README.md"],
+      "transform": false
+    },
+    "skills": {
+      "source": "skills/",
+      "target": "~/.claude/skills/",
+      "include": ["**/*"],
+      "transform": false
+    }
+  },
+  "cursor": {
+    "agents": {
+      "source": "agents/",
+      "target": "~/.cursor/agents/",
+      "include": ["*.md"],
+      "exclude": ["README.md"],
+      "transform": true
+    },
+    "skills": {
+      "source": "skills/",
+      "target": "~/.cursor/skills/",
+      "include": ["**/*"],
+      "transform": true
+    }
+  }
+}

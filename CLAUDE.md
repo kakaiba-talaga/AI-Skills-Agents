@@ -1,0 +1,37 @@
+# AI-Skills-Agents
+
+A collection of reusable AI agents and multi-file skills for Claude Code and Cursor, with automated deployment and Cursor portability transforms.
+
+## Documentation Sync
+
+Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
+
+> **Mirror:** This section is duplicated in `.cursor/rules/documentation-sync.mdc`. Changes here must be applied there too, and vice versa.
+
+### Map
+
+| Documentation | Code / Config |
+| :--- | :--- |
+| `CLAUDE.md` (Documentation Sync) | `.cursor/rules/documentation-sync.mdc` (mirror) |
+| `README.md` | Repo structure, `tooling/deploy-manifest.json` |
+| `docs/ASSESSMENT.md` | All agents, skills, and tooling |
+| `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
+| `agents/README.md` | `agents/*.md` (13 agent definitions) |
+| `skills/clickup/README.md` | `skills/clickup/SKILL.md` |
+| `skills/code-review/README.md` | `skills/code-review/SKILL.md` |
+| `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |
+| `skills/deploy/README.md` | `skills/deploy/SKILL.md`, `skills/deploy/SKILL.cursor.md`, `skills/deploy/*.md` |
+| `skills/deslop/README.md` | `skills/deslop/SKILL.md` |
+| `skills/doc-sync/README.md` | `skills/doc-sync/SKILL.md` |
+| `skills/linter/README.md` | `skills/linter/SKILL.md` |
+| `skills/ops/README.md` | `skills/ops/SKILL.md`, `skills/ops/SKILL.cursor.md`, `skills/ops/*.md` |
+| `skills/ralph-loop/README.md` | `skills/ralph-loop/SKILL.md`, `skills/ralph-loop/*.md` |
+| `skills/ralph-loop/templates/README.md` | `skills/ralph-loop/templates/*.yaml` |
+
+### Rules
+
+- Make targeted edits — preserve tone, structure, and detail level.
+- Check diagrams against prose when either changes.
+- Update multiple docs consistently when they reference the same concept (e.g., pipeline order appears in `agents/README.md` and individual agent files).
+- Defer doc updates during debugging, experimental, or exploratory changes.
+- Defer doc updates while the Ralph Wiggum Loop skill is active.

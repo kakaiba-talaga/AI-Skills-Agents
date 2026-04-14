@@ -1,0 +1,80 @@
+template_id: refactor
+version: 1
+name: "Safe Refactor Loop"
+description: "Iteratively refactor code while ensuring tests pass before and after each change. Tracks files migrated and regressions introduced."
+
+parameters:
+  - name: test_command
+    type: string
+    required: true
+    description: "Command to run the test suite (e.g., 'pytest', 'npm test')"
+  - name: target_path
+    type: path
+    required: false
+    default: "."
+    description: "Directory or file to refactor"
+  - name: scope
+    type: string
+    required: false
+    default: ""
+    description: "Description of refactor scope (e.g., 'rename all camelCase to snake_case in utils/')"
+
+acceptance_criteria:
+  mode: all_pass
+  overall_threshold: 100
+  categories:
+    - name: tests_passing
+      threshold: 100
+      metric_path: "pass_rate"
+      weight: 0.6
+    - name: files_migrated
+      threshold: 100
+      metric_path: "migration_percent"
+      weight: 0.4
+
+hooks:
+  frame:
+    pre: null
+    post: null
+  plan:
+    pre: null
+    post: null
+  execute:
+    pre: "{{test_command}} --tb=short 2>&1 | tail -5"
+    post: null
+  verify:
+    pre: null
+    command: "{{test_command}}"
+    metric_extraction:
+      format: regex
+      pattern: "(?P<passed>\\d+) passed.*(?P<failed>\\d+) failed|(?P<all_passed>\\d+) passed"
+    for_each: null
+    post: null
+  reflect:
+    pre: null
+    post: null
+
+auto_pause:
+  plateau_iterations: 3
+  plateau_threshold: 1.0
+  diminishing_returns:
+    enabled: false
+    window: 3
+    min_delta: 1.0
+  max_iterations: 15
+  regression_halt: true
+  regression_threshold: 0.0
+
+auto_advance:
+  frame_plan_combine: true
+  skip_frame_on_resume: true
+  conditions:
+    - when: "resume and next_step names specific files"
+      advance_to: Execute
+
+headless:
+  auto_decide: true
+  max_iterations_per_run: 3
+  exit_on_target: true
+  exit_on_plateau: true
+  report_format: markdown

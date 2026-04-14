@@ -1,0 +1,80 @@
+template_id: test-coverage
+version: 1
+name: "Test Coverage Improvement"
+description: "Iteratively increase test coverage toward a target percentage. Adds tests for uncovered code paths, functions, and branches."
+
+parameters:
+  - name: test_command
+    type: string
+    required: true
+    description: "Command to run tests with coverage (e.g., 'pytest --cov=src --cov-report=json')"
+  - name: coverage_report
+    type: path
+    required: false
+    default: "coverage.json"
+    description: "Path to the coverage report output file"
+  - name: target_coverage
+    type: number
+    required: false
+    default: 80
+    description: "Target coverage percentage"
+
+acceptance_criteria:
+  mode: overall
+  overall_threshold: 80
+  categories:
+    - name: line_coverage
+      threshold: 80
+      metric_path: "totals.percent_covered"
+      weight: 0.7
+    - name: branch_coverage
+      threshold: 70
+      metric_path: "totals.percent_covered_branches"
+      weight: 0.3
+
+hooks:
+  frame:
+    pre: null
+    post: null
+  plan:
+    pre: "{{test_command}} 2>&1 | tail -20"
+    post: null
+  execute:
+    pre: null
+    post: null
+  verify:
+    pre: null
+    command: "{{test_command}}"
+    metric_extraction:
+      format: json
+      paths:
+        line_coverage: ".totals.percent_covered"
+        branch_coverage: ".totals.percent_covered_branches"
+    for_each: null
+    post: null
+  reflect:
+    pre: null
+    post: null
+
+auto_pause:
+  plateau_iterations: 3
+  plateau_threshold: 1.0
+  diminishing_returns:
+    enabled: true
+    window: 3
+    min_delta: 0.5
+  max_iterations: 20
+  regression_halt: true
+  regression_threshold: 2.0
+
+auto_advance:
+  frame_plan_combine: true
+  skip_frame_on_resume: false
+  conditions: []
+
+headless:
+  auto_decide: true
+  max_iterations_per_run: 5
+  exit_on_target: true
+  exit_on_plateau: true
+  report_format: markdown

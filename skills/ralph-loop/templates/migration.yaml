@@ -1,0 +1,79 @@
+template_id: migration
+version: 1
+name: "Code Migration Loop"
+description: "Iteratively migrate code from one pattern/framework/version to another. Tracks which files have been migrated and verifies compatibility."
+
+parameters:
+  - name: test_command
+    type: string
+    required: true
+    description: "Command to verify migration hasn't broken anything"
+  - name: source_pattern
+    type: string
+    required: true
+    description: "Grep pattern to find unmigrated code (e.g., 'from old_module import')"
+  - name: target_dir
+    type: path
+    required: false
+    default: "."
+    description: "Directory to scan for migration candidates"
+
+acceptance_criteria:
+  mode: all_pass
+  overall_threshold: 100
+  categories:
+    - name: files_migrated
+      threshold: 100
+      metric_path: "migration_percent"
+      weight: 0.5
+    - name: tests_passing
+      threshold: 100
+      metric_path: "pass_rate"
+      weight: 0.5
+
+hooks:
+  frame:
+    pre: "grep -rl '{{source_pattern}}' {{target_dir}} --include='*.py' | wc -l"
+    post: null
+  plan:
+    pre: null
+    post: null
+  execute:
+    pre: null
+    post: null
+  verify:
+    pre: null
+    command: "{{test_command}}"
+    metric_extraction:
+      format: regex
+      pattern: "(?P<passed>\\d+) passed"
+    for_each: null
+    post: "grep -rl '{{source_pattern}}' {{target_dir}} --include='*.py' | wc -l"
+  reflect:
+    pre: null
+    post: null
+
+auto_pause:
+  plateau_iterations: 2
+  plateau_threshold: 1.0
+  diminishing_returns:
+    enabled: false
+    window: 3
+    min_delta: 1.0
+  max_iterations: 30
+  regression_halt: true
+  regression_threshold: 0.0
+
+auto_advance:
+  frame_plan_combine: true
+  skip_frame_on_resume: true
+  conditions:
+    - when: "resume and remaining files are known"
+      advance_to: Execute
+
+headless:
+  auto_decide: true
+  max_iterations_per_run: 5
+  exit_on_target: true
+  exit_on_plateau: true
+  report_format: markdown

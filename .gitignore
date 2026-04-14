@@ -1,0 +1,13 @@
+**/.*/
+**/.*
+**/config
+**/docs/plan
+/rules
+
+# Exceptions
+!.gitignore
+!.markdownlint.json
+!.cursor/
+.cursor/*
+!.cursor/rules
+!.cursor/rules/**

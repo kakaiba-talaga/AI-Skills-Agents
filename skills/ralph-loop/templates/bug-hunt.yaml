@@ -1,0 +1,79 @@
+template_id: bug-hunt
+version: 1
+name: "Bug Hunt Loop"
+description: "Systematically reproduce, diagnose, fix, and verify bugs. Each iteration targets one bug or a cluster of related bugs."
+
+parameters:
+  - name: test_command
+    type: string
+    required: false
+    default: ""
+    description: "Command to run regression tests after each fix"
+  - name: repro_command
+    type: string
+    required: false
+    default: ""
+    description: "Command to reproduce the bug (empty = manual reproduction)"
+  - name: bug_list
+    type: string
+    required: false
+    default: ""
+    description: "Comma-separated list of bug IDs or descriptions to track"
+
+acceptance_criteria:
+  mode: overall
+  overall_threshold: 100
+  categories:
+    - name: bugs_fixed
+      threshold: 100
+      metric_path: "fixed_percent"
+      weight: 0.7
+    - name: tests_passing
+      threshold: 100
+      metric_path: "pass_rate"
+      weight: 0.3
+
+hooks:
+  frame:
+    pre: null
+    post: null
+  plan:
+    pre: null
+    post: null
+  execute:
+    pre: null
+    post: null
+  verify:
+    pre: null
+    command: "{{test_command}}"
+    metric_extraction:
+      format: regex
+      pattern: "(?P<passed>\\d+) passed"
+    for_each: null
+    post: null
+  reflect:
+    pre: null
+    post: null
+
+auto_pause:
+  plateau_iterations: 2
+  plateau_threshold: 0.0
+  diminishing_returns:
+    enabled: false
+    window: 3
+    min_delta: 1.0
+  max_iterations: 10
+  regression_halt: true
+  regression_threshold: 0.0
+
+auto_advance:
+  frame_plan_combine: false
+  skip_frame_on_resume: false
+  conditions: []
+
+headless:
+  auto_decide: false
+  max_iterations_per_run: 3
+  exit_on_target: true
+  exit_on_plateau: false
+  report_format: markdown

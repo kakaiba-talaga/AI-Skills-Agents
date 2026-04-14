@@ -1,0 +1,82 @@
+template_id: accuracy-improvement
+version: 1
+name: "Metric Accuracy Improvement"
+description: "Iteratively improve measurable accuracy metrics toward per-category thresholds. Suitable for ML model tuning, detection pipelines, classification accuracy, etc."
+
+parameters:
+  - name: verify_command
+    type: string
+    required: true
+    description: "Command that produces structured metric output (must output JSON with metric keys)"
+  - name: input_dir
+    type: path
+    required: false
+    default: "."
+    description: "Directory containing input files to validate against"
+  - name: input_glob
+    type: string
+    required: false
+    default: "*.pdf"
+    description: "Glob pattern for input files within input_dir"
+
+acceptance_criteria:
+  mode: per_category
+  overall_threshold: 90
+  categories: []
+  # Categories are set per-task via --param, e.g.:
+  #   --param categories="walls:96,doors:90,windows:90"
+  # The loop parses this into the categories array at init.
+
+hooks:
+  frame:
+    pre: null
+    post: null
+  plan:
+    pre: null
+    post: null
+  execute:
+    pre: null
+    post: null
+  verify:
+    pre: null
+    command: "{{verify_command}}"
+    metric_extraction:
+      format: json
+      paths: {}
+      # Paths are auto-discovered from the verify command's JSON output.
+      # Override per-task if the output structure is non-standard.
+    for_each:
+      source: "ls {{input_dir}}/{{input_glob}} 2>/dev/null"
+      parallel: true
+      max_concurrency: 4
+      per_item_command: "{{verify_command}} --file {{item}}"
+      aggregation: average
+    post: null
+  reflect:
+    pre: null
+    post: null
+
+auto_pause:
+  plateau_iterations: 3
+  plateau_threshold: 0.5
+  diminishing_returns:
+    enabled: true
+    window: 3
+    min_delta: 1.0
+  max_iterations: 20
+  regression_halt: true
+  regression_threshold: 5.0
+
+auto_advance:
+  frame_plan_combine: true
+  skip_frame_on_resume: false
+  conditions:
+    - when: "resume and next_step is actionable"
+      advance_to: Execute
+
+headless:
+  auto_decide: true
+  max_iterations_per_run: 5
+  exit_on_target: true
+  exit_on_plateau: true
+  report_format: json
