@@ -111,7 +111,7 @@ Determine the starting point from the parsed arguments:
 
 | Input | Action |
 | :--- | :--- |
-| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch **planner** via `Agent(agent="planner")`. If ambiguous, dispatch **interviewer** first via `Agent(agent="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
+| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
 | `resume` | Read the state file from `.ops-state/`. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). For full recovery procedure, see Interruption Handling → Session Recovery. |
 | `status` | Read the state file, display the dashboard (see Status Dashboard), stop. |
@@ -180,8 +180,8 @@ If **any** of these signals are present, skip Phase 1a. If **none** are present,
 | Tier | Criteria | Action | Cost |
 | :--- | :--- | :--- | :--- |
 | **Tier 1 — Skip** | 1-2 tasks, no architectural decisions, mechanical/trivial changes | Proceed directly to Phase 1.5. | None |
-| **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates and gap analysis, OR medium signals present | Dispatch **project-scoper** via `Agent(agent="project-scoper")` to produce a scoping document (gap analysis, effort estimates, risk flags, edge cases). The scoper's output enriches the plan — it does not replace it. Proceed to Phase 1.5 after scoping. | 1 opus agent |
-| **Tier 3 — Scope + Critique** | >5 tasks, OR any high-weight signal (architectural decisions, security/risk), OR multiple medium signals | Dispatch **project-scoper** first, then dispatch **critic** via `Agent(agent="critic")` to review the combined plan + scoping document. Handle the critic's verdict as described below. | 2 opus agents |
+| **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates and gap analysis, OR medium signals present | Dispatch a **project-scoper** agent to produce a scoping document (gap analysis, effort estimates, risk flags, edge cases). The scoper's output enriches the plan — it does not replace it. Proceed to Phase 1.5 after scoping. | 1 opus agent |
+| **Tier 3 — Scope + Critique** | >5 tasks, OR any high-weight signal (architectural decisions, security/risk), OR multiple medium signals | Dispatch a **project-scoper** agent first, then dispatch a **critic** agent to review the combined plan + scoping document. Handle the critic's verdict as described below. | 2 opus agents |
 
 **Critic verdict handling (Tier 3):**
 
@@ -189,7 +189,7 @@ If **any** of these signals are present, skip Phase 1a. If **none** are present,
 | :--- | :--- |
 | **ACCEPT** | Proceed to Phase 1.5. |
 | **ACCEPT WITH RESERVATIONS** | Display the reservations. In all modes (interactive, autonomous, supervised), **stop and present the reservations to the user**. The user decides: proceed as-is, address the reservations first, or send it back for revision. This is a decision point — autonomous mode stops here per the Autonomy Modes rules. |
-| **REVISE** | Route the critic's findings back to the **planner** via `Agent(agent="planner")`. The planner updates the existing plan document. Re-run Phase 1a. Maximum 2 revision loops — if the planner produces a substantively similar plan after 2 revisions, escalate to the user: "The planner produced a similar plan after 2 revisions. The critic's findings may require rethinking the approach, not just revising the plan." |
+| **REVISE** | Route the critic's findings back to a **planner** agent. The planner updates the existing plan document. Re-run Phase 1a. Maximum 2 revision loops — if the planner produces a substantively similar plan after 2 revisions, escalate to the user: "The planner produced a similar plan after 2 revisions. The critic's findings may require rethinking the approach, not just revising the plan." |
 | **REJECT** | Escalate to the user with the critic's full findings. Do not proceed to Phase 2. |
 
 **Step 3 — Display the tier decision.** Always show the tier decision to the user, regardless of autonomy mode:
@@ -326,7 +326,7 @@ Before displaying the task board, confirm the state file exists and is valid:
 
 If a task doesn't clearly match, ask yourself: "Is this writing docs, running tests, reviewing code, or implementing code?" and assign accordingly. Only default to `executor` for tasks that are genuinely about writing or modifying source code. **Never assign documentation, scoping, or review tasks to the executor** — these have dedicated agents.
 
-**When genuinely in doubt** — if a task is ambiguous enough that you cannot confidently determine the right agent type — dispatch the **interviewer** via `Agent(agent="interviewer")` to clarify with the user before assigning. The interviewer's job is to resolve ambiguity. Do not guess and assign to the wrong agent; a quick clarification is cheaper than re-doing the work.
+**When genuinely in doubt** — if a task is ambiguous enough that you cannot confidently determine the right agent type — dispatch an **interviewer** agent to clarify with the user before assigning. The interviewer's job is to resolve ambiguity. Do not guess and assign to the wrong agent; a quick clarification is cheaper than re-doing the work.
 
 Each agent must stay in its lane:
 
@@ -377,7 +377,7 @@ If `--dry-run` is set, display the task board and stop. Do not dispatch.
 
 ### Phase 2.5 — Preflight Validation
 
-After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent via `Agent(agent="verifier")` with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
+After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/preflight-validation.md` for the complete preflight validation procedure, check categories, and agent brief template. If the file is missing, proceed without preflight checks.
 
@@ -402,7 +402,21 @@ A task is ready when:
 **Step 3 — Dispatch agents.** For each task (or parallel batch):
 
 1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk.
-2. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file as the agent name: `Agent(agent="<agent_type>", prompt=<brief>)`. This loads the custom agent definition from `~/.claude/agents/<agent_type>.md`, which provides the agent's model, tool restrictions, and specialized behavior. Use the brief format below.
+2. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file. Follow the dispatch procedure below.
+
+**Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
+
+The Agent tool's `subagent_type` parameter only accepts built-in types (`debugger-build`, `git-master`). It does **not** load custom agent definitions from `~/.claude/agents/`. You must read the agent file and include its instructions in the prompt. The task's `agent_type` field in the state file determines which agent definition to load.
+
+For each dispatch:
+
+   a. **Read** `~/.claude/agents/<agent_type>.md` where `<agent_type>` is the task's `agent_type` value from the state file. Extract the `model` from YAML frontmatter and the full instruction body (everything after the closing `---`).
+   b. **`description`**: Set to `"<agent_type>(<task subject>)"` — e.g., `"executor(Implement auth middleware)"`. This is the label shown in the UI. Always include the agent type name so the user can identify which agent is working on which task.
+   c. **`model`**: Set from the agent's frontmatter `model` field (e.g., `"sonnet"`, `"opus"`).
+   d. **`subagent_type`**: Set **only** when `agent_type` is `debugger-build` or `git-master` (these are the only custom agents that match a built-in type). For all other agents (executor, verifier, planner, critic, etc.), **omit** this parameter.
+   e. **`prompt`**: Concatenate the agent definition body + `\n\n---\n\n` + the task brief (see Agent Briefing Format). The agent has no conversation history — the prompt must be fully self-contained.
+
+Use the brief format below.
 3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
 
 **Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (REMINDER: Do not skip timing. Every result must record an end time before any other processing.)
@@ -411,7 +425,7 @@ A task is ready when:
 | :--- | :--- |
 | **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
 | **Failed — 1st attempt** | Re-dispatch with the error appended to the brief. Narrow the scope or add constraints based on what went wrong. |
-| **Failed — 2nd attempt** | Dispatch the **debugger** via `Agent(agent="debugger")` (or `Agent(agent="debugger-build")` if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
+| **Failed — 2nd attempt** | Dispatch a **debugger** agent (or **debugger-build** if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
 | **Failed — 3rd attempt** | Escalate model (e.g., sonnet → opus) and re-dispatch with full error history. Skip if already on opus. See Model Escalation in Adaptability. |
 | **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
 | **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task describing the issue. Pause dependent chain. Flag to user. |
@@ -435,7 +449,7 @@ When every task is `completed`:
 
 1. **Confirm all agents have finished** — read the state file and verify no tasks are `"in_progress"`. If any agent is still running, wait for it to return before proceeding. Never report completion while agents are still active.
 2. **Verify deliverables exist on disk** — check that every deliverable task produced a real file. Read (or at minimum glob for) each expected artifact. If a deliverable file is missing or empty, the workflow is **not complete** — dispatch the appropriate agent to create it before proceeding. Never report completion based on chat output alone; the user should not have to ask "where is the document?"
-3. **Run a final verification pass** — if the work involved code changes, dispatch a verifier agent via `Agent(agent="verifier")` to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
+3. **Run a final verification pass** — if the work involved code changes, dispatch a **verifier** agent to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
 4. **Compute timing summary** — (REMINDER: This is mandatory. Do not skip the timing report.) Read all task entries from the state file. Calculate:
    - **Total wall time** — from the first task's `started_at` to the last task's `completed_at`.
    - **Total estimated time** — sum of all `estimated_minutes`.
@@ -622,7 +636,7 @@ When `--worktree` is set (or when parallel agents are likely to touch overlappin
 - Any parallel work where file independence is uncertain
 - High-risk changes where you want easy rollback per agent
 
-**Merge strategy:** After all worktree agents complete, their branches must be merged. Dispatch the **git-master** via `Agent(agent="git-master")` to merge branches sequentially, resolving conflicts if any. If conflicts exist, flag to the user before force-merging.
+**Merge strategy:** After all worktree agents complete, their branches must be merged. Dispatch a **git-master** agent to merge branches sequentially, resolving conflicts if any. If conflicts exist, flag to the user before force-merging.
 
 **When NOT to use worktrees:**
 
@@ -739,7 +753,7 @@ When an agent discovers the plan is wrong or incomplete, the team-manager decide
 | :--- | :--- |
 | **Missing task** — agent finds work the plan didn't account for | Create the task, wire dependencies, slot it into the board. Log it as an adaptation. In interactive mode, mention it at the next checkpoint. |
 | **Wrong sequencing** — a task's dependency was incorrect | Update the dependency graph. Re-order the dispatch queue. Log the change. |
-| **Task too large** — agent reports the task needs splitting | Pause the task. Dispatch the **planner** via `Agent(agent="planner")` to break it into subtasks. Replace the original task with the subtasks. Resume. |
+| **Task too large** — agent reports the task needs splitting | Pause the task. Dispatch a **planner** agent to break it into subtasks. Replace the original task with the subtasks. Resume. |
 | **Scope change** — agent reports the approach needs rethinking | In autonomous mode: if the change is small (affects < 3 tasks), adapt in-place. If large (affects a whole stage), pause and escalate to the user. In interactive mode: always present at the next checkpoint. |
 
 **Guardrail:** The team-manager may add tasks or re-sequence, but must not silently remove tasks or reduce scope. Scope reduction always requires user approval.
