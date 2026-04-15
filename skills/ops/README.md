@@ -321,16 +321,16 @@ You can interact with the team manager at any point between agent dispatches:
 
 | Command | What happens |
 | :--- | :--- |
-| "stop" / "cancel" | Stops dispatching, lets active agents finish, preserves task list for later resume |
+| "stop" / "cancel" | Stops dispatching, lets active agents finish, preserves state file for later resume |
 | "skip [stage/task]" | Deletes the tasks, updates dependencies, resumes |
 | "do #N next" | Promotes task priority, dispatches immediately if unblocked |
 | "add [task]" | Creates a new task, wires dependencies, slots into the dispatch loop |
 | "drop #N" | Removes task, clears downstream blockers |
 | "reprioritize" | Pauses, shows board, waits for instructions |
 | "pause" | Stops dispatching but keeps all task state |
-| "resume" | Recovers from task list, verifies in-progress tasks, continues |
+| "resume" | Recovers from state file, verifies in-progress tasks, continues |
 
-**Conversation recovery:** Three things survive session loss: the **task list** (built-in persistence), the **plan document** on disk (`docs/plan/`), and the **handoff files** on disk (`docs/plan/.handoffs/<run_id>/`). Together they provide complete state recovery. `/ops resume` reads all three to rebuild the dispatch state — no reliance on conversation history.
+**Conversation recovery:** Three things survive session loss: the **state file** (`.ops-state/<run-id>-board.json`), the **plan document** on disk (`docs/plan/`), and the **handoff files** on disk (`docs/plan/.handoffs/<run_id>/`). Together they provide complete state recovery. `/ops resume` reads all three to rebuild the dispatch state — no reliance on conversation history.
 
 ## Failure Handling
 

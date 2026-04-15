@@ -129,7 +129,7 @@ Model escalation overhead: ~$1.80 (2 tasks escalated sonnet→opus)
 
 Task-level costs only account for dispatched agents. They exclude the team-manager itself, which also burns tokens on the orchestrating model (typically opus):
 
-- Task board creation (Phase 2) — TaskCreate/TaskUpdate calls, dashboard render
+- Task board creation (Phase 2) — state file writes, dashboard render
 - Dispatch turns (Phase 3) — writing each agent brief, processing each result, writing handoffs, marking state transitions
 - Stage transition checkpoints (interactive mode)
 - Completion pipeline (Phase 4) — timing, cost, summary, file list, cleanup turns

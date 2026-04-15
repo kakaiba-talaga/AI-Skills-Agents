@@ -59,7 +59,7 @@ These Claude Code features have no direct counterpart in Cursor. The mechanical 
 
 | Feature | Impact | Severity | Mitigation |
 |---------|--------|----------|------------|
-| `TaskCreate`/`TaskUpdate`/`TaskList` | No shared task board for multi-agent coordination. | **Mitigated** | Ops uses a JSON state file (`.ops-state/<run-id>-board.json`) as the real task board with `TodoWrite` as the display layer. Full metadata, dependencies, and timing preserved. |
+| `TaskCreate`/`TaskUpdate`/`TaskList` | No shared task board for multi-agent coordination. | **Mitigated** | Both Claude Code and Cursor versions of ops now use a JSON state file (`.ops-state/<run-id>-board.json`) as the task board. Cursor adds `TodoWrite` as a display layer on top. Full metadata, dependencies, and timing preserved. |
 | `Agent` tool with custom `model`/`tools` | Cannot spawn agents with a specific model or restrict their tool access. | **Mitigated** | Ops and deploy use `Task(subagent_type=...)` for dispatch. Deploy script injects `## Tool Constraints` markdown into agent bodies for tool-restricted agents. Model selection is not possible — documented as accepted limitation. |
 | `Skill` tool | Cannot programmatically invoke another skill from within a skill. | **Mitigated** | Read-and-dispatch pattern: read the target skill's `SKILL.md` from `~/.cursor/skills/<name>/SKILL.md`, then follow inline or pass to `Task(subagent_type="generalPurpose")`. |
 | `EnterWorktree`/`ExitWorktree` | No git worktree isolation for parallel agents. | **Mitigated** | `Task(subagent_type="best-of-n-runner")` provides isolated worktrees per agent. |
@@ -68,7 +68,7 @@ These Claude Code features have no direct counterpart in Cursor. The mechanical 
 
 ### Summary by component
 
-- **ops**: Functional with Cursor-native `SKILL.cursor.md`. Uses state file + TodoWrite for task board, `Task` tool for agent dispatch, read-and-dispatch for skill invocation. Limitations: no model escalation, no tool enforcement.
+- **ops**: Functional with Cursor-native `SKILL.cursor.md`. Both versions use `.ops-state/<run-id>-board.json` state file for the task board; Cursor adds TodoWrite as display layer. `SKILL.cursor.md` still needed for `Task` tool dispatch, read-and-dispatch skill invocation, and TodoWrite integration. Limitations: no model escalation, no tool enforcement.
 - **deploy**: Functional with Cursor-native `SKILL.cursor.md`. Uses `Task(subagent_type="ssh-executor")` for dispatch. All deployment patterns, rollback, and reporting work. Limitation: no model or tool enforcement on dispatched ssh-executor.
 - **All agents**: Functional. Tool-restricted agents receive injected `## Tool Constraints` markdown section (advisory). No model enforcement.
 - **All other skills**: Fully functional after mechanical transform. No missing features.

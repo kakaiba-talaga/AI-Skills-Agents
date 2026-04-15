@@ -23,7 +23,7 @@ For each `in_progress` task, run these checks in order. Collect all results befo
 If the task's acceptance criteria mention specific files to create or modify:
 
 1. Check whether those files exist.
-2. Compare their modification timestamps against the run start time (stored in the run state file).
+2. Compare their modification timestamps against the run start time (stored in the state file).
 3. A file that exists and was modified after the run started is positive evidence the agent wrote it.
 
 ### Check B — Git Diff
@@ -95,13 +95,13 @@ This prevents the agent from duplicating work or overwriting good output with a 
 
 This dedup step slots in between the existing steps in `interruption-recovery.md`:
 
-1. Recover task list (existing — load run state, identify `in_progress` tasks)
+1. Read the state file (existing — load run state, identify `in_progress` tasks)
 2. **For each `in_progress` task: run dedup verification** (NEW — this file)
-3. **Mark verified-complete tasks as `completed`** (NEW — update state file, write any missing handoffs)
+3. **Mark verified-complete tasks as `completed`** (NEW — update the state file, write any missing handoffs)
 4. Re-dispatch remaining `in_progress` tasks, with context briefs where applicable (existing dispatch loop, now context-aware)
 5. Continue dispatch loop for any remaining `pending` tasks (existing)
 
-Step 3 must write the updated task status back to the run state file before Step 4 begins, so the dispatch loop sees accurate status and does not re-dispatch already-completed tasks.
+Step 3 must write the updated task status to the state file before Step 4 begins, so the dispatch loop sees accurate status and does not re-dispatch already-completed tasks.
 
 ---
 

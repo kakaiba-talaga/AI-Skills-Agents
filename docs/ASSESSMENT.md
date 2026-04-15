@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-04-14 (updated)
-**Previous assessment:** 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-04-14 (state unification)
+**Previous assessment:** 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents and skills in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -41,7 +41,7 @@
 | Deslop | `skills/deslop/` | 2 | ~670 | AI slop cleanup (dead code, redundant comments, over-abstraction) |
 | Doc Sync | `skills/doc-sync/` | 2 | ~276 | Documentation audit and sync against codebase |
 | Linter | `skills/linter/` | 2 | ~453 | Source file linting with auto-fix and incremental cache |
-| Ops | `skills/ops/` | 20 | ~778 (Claude), ~907 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
+| Ops | `skills/ops/` | 20 | ~872 (Claude), ~922 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
 | Deploy | `skills/deploy/` | 9 | ~403 (Claude), ~400 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Ralph Loop | `skills/ralph-loop/` | 17 (incl. 5 YAML templates) | ~320 | Iterative execute-verify-reflect loop with state persistence |
 
@@ -77,6 +77,19 @@
 
 ---
 
+## Changes Since Last Assessment (2026-04-14 — state unification)
+
+### Unified ops state management
+
+| Change | Detail |
+|--------|--------|
+| **State file for both platforms** | `SKILL.md` (Claude Code) now uses `.ops-state/<run-id>-board.json` state file, matching the approach already in `SKILL.cursor.md`. Replaces all `TaskCreate`/`TaskList`/`TaskUpdate` references. |
+| **Helper files updated** | `resume-dedup.md`, `interruption-recovery.md`, `cost-tracking.md`, `handoffs.md` — all references to `TaskCreate`/`TaskList`/`TaskUpdate` replaced with state file operations. Consistent across both platforms. |
+| **Portability guide updated** | Feature gap table and ops summary updated to reflect unified state management. |
+| **SKILL.md line count** | ~778 → ~872 lines (added State Management section, updated phases). |
+
+---
+
 ## Changes Since Last Assessment (2026-04-14 updated)
 
 ### Cursor portability gap closure
@@ -85,7 +98,7 @@
 |--------|--------|
 | **`SKILL.cursor.md` convention** | Deploy scripts (`deploy.ps1`, `deploy.sh`) now detect `SKILL.cursor.md` companion files and use them as the Cursor deployment source, skipping mechanical transforms. |
 | **Agent tool-restriction hardening** | Deploy scripts inject `## Tool Constraints` markdown into Cursor-deployed agents whose Claude Code frontmatter restricted tools. Affected: critic, ssh-executor, interviewer, verifier. |
-| **Ops Cursor-native version** | `skills/ops/SKILL.cursor.md` (~907 lines) — uses JSON state file (`.ops-state/`) + TodoWrite for task board, `Task` tool for dispatch, read-and-dispatch for skill invocation. |
+| **Ops Cursor-native version** | `skills/ops/SKILL.cursor.md` (~922 lines) — uses JSON state file (`.ops-state/`) + TodoWrite for task board, `Task` tool for dispatch, read-and-dispatch for skill invocation. |
 | **Deploy Cursor-native version** | `skills/deploy/SKILL.cursor.md` (~400 lines) — uses `Task(subagent_type="ssh-executor")` for dispatch. All deployment patterns preserved. |
 | **Portability guide expanded** | Added Cursor-Native Adaptations section documenting `SKILL.cursor.md` convention, agent hardening, and read-and-dispatch pattern. Updated feature gap table with mitigations. |
 
@@ -166,11 +179,11 @@ No active issues.
 
 These are not defects — they are patterns worth monitoring.
 
-- **Large skill files:** `skills/ops/SKILL.md` (~778 lines) is the largest single file. Context pressure may occur when ops loads multiple companion files simultaneously. The `docs/plan/ops-skill-optimization-plan.md` already addresses this.
+- **Large skill files:** `skills/ops/SKILL.md` (~872 lines) is the largest single file. Context pressure may occur when ops loads multiple companion files simultaneously. The `docs/plan/ops-skill-optimization-plan.md` already addresses this.
 - **No version identifiers** in any agent or skill file. If these files are shared across machines or updated frequently, a version field in frontmatter would aid change tracking.
 - **Planning docs gitignored:** `docs/plan/` is in `.gitignore`, meaning planning context is local-only and won't survive a machine change or clone.
 - **Cursor transform is text-based:** Tool name replacements (`Bash`→`Shell`, `Edit`→`StrReplace`, `Agent`→`Task`) use word-boundary matching, which may produce false positives in prose that coincidentally matches tool names. No issues observed in current files.
-- **ops and deploy have Cursor-native versions:** Both skills now have `SKILL.cursor.md` files that use Cursor primitives (`Task` tool, TodoWrite, state files). Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
+- **ops and deploy have Cursor-native versions:** Both skills have `SKILL.cursor.md` files. State management (`.ops-state/` JSON files) is now unified across both versions; the Cursor-native file is still needed for `Task` tool dispatch, TodoWrite display layer, read-and-dispatch skill invocation, and Cursor-specific limitations. Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
 
 ---
 
@@ -220,4 +233,4 @@ Skills invoked within pipeline stages:
 
 ---
 
-*Assessment updated 2026-04-14. Files assessed: 13 agents, 9 skills (58 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 3 tooling, 10 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore. Active issues: 0. Carried from previous: 3.*
+*Assessment updated 2026-04-14 (state unification). Files assessed: 13 agents, 9 skills (58 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 3 tooling, 10 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore. Active issues: 0. Carried from previous: 3.*
