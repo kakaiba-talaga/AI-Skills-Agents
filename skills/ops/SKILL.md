@@ -41,6 +41,68 @@ Think of yourself as the person in front of a task board, moving tickets and bri
 
 ---
 
+## State Management
+
+The ops skill persists all task data in a JSON state file on disk. This is the source of truth for dependencies, timing, estimates, agent assignments, and adaptation notes.
+
+**CRITICAL — The state file on disk is MANDATORY.** Without the state file, `resume`, `status`, timing reports, and cost tracking all break. Every Phase 2 run MUST create the `.ops-state/` directory and write the JSON state file to disk before proceeding. If you skip the state file, the run is broken.
+
+### State File
+
+The state file is stored at `.ops-state/<run-id>-board.json`.
+
+**Directory conventions:**
+- `.ops-state/` holds one board file per run (supports concurrent/sequential runs without collision)
+- `.ops-state/` should be in `.gitignore` (ephemeral runtime state, not project content)
+- Cleaned up on successful completion (same lifecycle as ralph-loop's `.ralph-state/`)
+
+**State file structure:**
+
+```json
+{
+  "run_id": "auth-middleware-2026-04-14",
+  "state_dir": ".ops-state/",
+  "plan_file": "docs/plan/auth-middleware-plan.md",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subject": "Implement auth middleware",
+      "description": "Full task details with acceptance criteria...",
+      "status": "pending",
+      "agent_type": "executor",
+      "stage": "implement",
+      "priority": 1,
+      "estimated_minutes": 15,
+      "estimate_source": "ops",
+      "blocked_by": ["task-0"],
+      "started_at": null,
+      "completed_at": null,
+      "duration_seconds": null,
+      "model_used": null,
+      "attempts": 0,
+      "adaptation": null,
+      "handoff_file": null,
+      "_internal": false
+    }
+  ]
+}
+```
+
+### State Operations
+
+All task board operations use the state file as the primary store. **Every mutation must write the state file to disk** — do not rely on in-memory state alone.
+
+| Operation | State file action |
+| :--- | :--- |
+| **Create task** | Append to `tasks` array, write file to disk |
+| **Update status** | Update task's `status`, `started_at`, etc., write file to disk |
+| **Scan for ready** | Read file from disk, filter tasks where `status=="pending"` and all `blocked_by` entries are `"completed"` |
+| **Complete task** | Update `status`, `completed_at`, `duration_seconds`, write file to disk |
+| **Resume** | Read file from disk — full state recovered |
+| **Report** | Read file from disk, compute timing/estimates/variance |
+
+---
+
 ## Workflow
 
 ### Phase 1 — Intake
@@ -49,10 +111,10 @@ Determine the starting point from the parsed arguments:
 
 | Input | Action |
 | :--- | :--- |
-| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch **planner**. If ambiguous, dispatch **interviewer** first, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
+| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch **planner** via `Agent(agent="planner")`. If ambiguous, dispatch **interviewer** first via `Agent(agent="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
-| `resume` | Call TaskList. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). For full recovery procedure, see Interruption Handling → Session Recovery. |
-| `status` | Call TaskList, display the dashboard (see Status Dashboard), stop. |
+| `resume` | Read the state file from `.ops-state/`. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). For full recovery procedure, see Interruption Handling → Session Recovery. |
+| `status` | Read the state file, display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
 
@@ -75,7 +137,7 @@ In **autonomous mode**, dispatch the interviewer when the spec scores as vague/a
 2. **Trivial tasks** (1-2 simple tasks): plan persistence is optional. The plan lives in conversation context only.
 3. **Explicit `plan` command**: always persist to disk, regardless of task count. This lets the user force a plan document even for small tasks.
 4. **Filename**: generate from the work description — lowercase, hyphen-separated, with a `-plan.md` suffix (e.g., "Implement caching layer" → `docs/plan/caching-layer-plan.md`). If a plan doc already exists for this initiative, **update it** rather than creating a new file.
-5. **On `resume`**: read the plan doc from disk to reconstruct the work scope. The plan doc + task list + handoff files (see Handoff Documents) provide complete state recovery across session boundaries.
+5. **On `resume`**: read the plan doc path from the state file's `plan_file` field to reconstruct the work scope. The plan doc + state file + handoff files (see Handoff Documents) provide complete state recovery across session boundaries.
 
 The plan document is **not** a deliverable task — it is infrastructure created by the team manager during Phase 1. It is written before the task board is created and serves as input for Phase 2 task board creation.
 
@@ -118,8 +180,8 @@ If **any** of these signals are present, skip Phase 1a. If **none** are present,
 | Tier | Criteria | Action | Cost |
 | :--- | :--- | :--- | :--- |
 | **Tier 1 — Skip** | 1-2 tasks, no architectural decisions, mechanical/trivial changes | Proceed directly to Phase 1.5. | None |
-| **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates and gap analysis, OR medium signals present | Dispatch **project-scoper** to produce a scoping document (gap analysis, effort estimates, risk flags, edge cases). The scoper's output enriches the plan — it does not replace it. Proceed to Phase 1.5 after scoping. | 1 opus agent |
-| **Tier 3 — Scope + Critique** | >5 tasks, OR any high-weight signal (architectural decisions, security/risk), OR multiple medium signals | Dispatch **project-scoper** first, then dispatch **critic** to review the combined plan + scoping document. Handle the critic's verdict as described below. | 2 opus agents |
+| **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates and gap analysis, OR medium signals present | Dispatch **project-scoper** via `Agent(agent="project-scoper")` to produce a scoping document (gap analysis, effort estimates, risk flags, edge cases). The scoper's output enriches the plan — it does not replace it. Proceed to Phase 1.5 after scoping. | 1 opus agent |
+| **Tier 3 — Scope + Critique** | >5 tasks, OR any high-weight signal (architectural decisions, security/risk), OR multiple medium signals | Dispatch **project-scoper** first, then dispatch **critic** via `Agent(agent="critic")` to review the combined plan + scoping document. Handle the critic's verdict as described below. | 2 opus agents |
 
 **Critic verdict handling (Tier 3):**
 
@@ -127,7 +189,7 @@ If **any** of these signals are present, skip Phase 1a. If **none** are present,
 | :--- | :--- |
 | **ACCEPT** | Proceed to Phase 1.5. |
 | **ACCEPT WITH RESERVATIONS** | Display the reservations. In all modes (interactive, autonomous, supervised), **stop and present the reservations to the user**. The user decides: proceed as-is, address the reservations first, or send it back for revision. This is a decision point — autonomous mode stops here per the Autonomy Modes rules. |
-| **REVISE** | Route the critic's findings back to the **planner**. The planner updates the existing plan document. Re-run Phase 1a. Maximum 2 revision loops — if the planner produces a substantively similar plan after 2 revisions, escalate to the user: "The planner produced a similar plan after 2 revisions. The critic's findings may require rethinking the approach, not just revising the plan." |
+| **REVISE** | Route the critic's findings back to the **planner** via `Agent(agent="planner")`. The planner updates the existing plan document. Re-run Phase 1a. Maximum 2 revision loops — if the planner produces a substantively similar plan after 2 revisions, escalate to the user: "The planner produced a similar plan after 2 revisions. The critic's findings may require rethinking the approach, not just revising the plan." |
 | **REJECT** | Escalate to the user with the critic's full findings. Do not proceed to Phase 2. |
 
 **Step 3 — Display the tier decision.** Always show the tier decision to the user, regardless of autonomy mode:
@@ -150,7 +212,7 @@ In **supervised mode**, show the tier decision and wait for approval before each
 
 **What the project-scoper adds (Tier 2 and 3):**
 - **Gap analysis** — what the plan missed (edge cases, error handling, dependencies)
-- **Effort estimates** — hours per task, sourced from scoping analysis (these feed into `metadata.estimated_minutes` with `estimate_source: "scoping-doc"` in Phase 2)
+- **Effort estimates** — hours per task, sourced from scoping analysis (these feed into `estimated_minutes` with `estimate_source: "scoping-doc"` in Phase 2)
 - **Risk flags** — what could go wrong and how to mitigate
 - **Scope boundaries** — what's explicitly out of scope to prevent creep
 - **Scoping document** — persisted to `docs/plan/` alongside the plan document
@@ -193,23 +255,55 @@ When skipping, **always log it as an adaptation**: "Adapted: skipped branch crea
 
 ### Phase 2 — Task Board Creation
 
-Parse the plan into discrete, assignable tasks. Record the run identity in **every** task's metadata:
-- `metadata.run_id: "<plan-slug>-<ISO-date>"` — identifies which run this task belongs to. Used to locate the correct handoff subdirectory and to distinguish runs across sessions.
-- `metadata.plan_file: "docs/plan/<name>-plan.md"` — path to the plan document (if one was written in Phase 1). Stored on every task so any task can locate the plan doc on `resume`.
+Parse the plan into discrete, assignable tasks. Create the state file.
 
-1. Read the plan hierarchy (milestones > stages > tasks).
-2. For each actionable task, call **TaskCreate** with:
-   - **subject**: Imperative task title (e.g., "Implement authentication middleware")
-   - **description**: Full task details including acceptance criteria copied from the plan
-   - **metadata.agent_type**: Agent to assign (see Agent Assignment Rules)
-   - **metadata.stage**: Pipeline stage — `plan`, `implement`, `verify`, `review`, `document`
-   - **metadata.priority**: `1` (critical path) through `5` (nice-to-have)
-   - **metadata.estimated_minutes**: Estimated time to complete. Source this from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc exists, produce a rough estimate based on task complexity: trivial (1-5 min), scoped (5-15 min), complex (15-45 min). Record the source: `metadata.estimate_source: "scoping-doc" | "ops"`
-3. Set up dependencies via **TaskUpdate**:
-   - Implementation tasks **block** their corresponding verification tasks.
-   - Verification tasks **block** review tasks.
-   - Review tasks **block** documentation tasks.
-   - Honor any intra-stage dependencies from the plan.
+**1. Initialize the state file (MANDATORY — do not skip):**
+
+```
+Run ID: <plan-slug>-<ISO-date>
+State file: .ops-state/<run-id>-board.json
+Plan file: docs/plan/<name>-plan.md (if one was written in Phase 1)
+```
+
+Create the directory and file using these exact steps:
+
+1. Run `Bash(command="mkdir -p .ops-state")`.
+2. Use the Write tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.
+3. Verify the file exists by reading it back. If the read fails, the state file was not created — stop and fix before proceeding.
+
+**2. Parse and populate tasks:**
+
+Read the plan hierarchy (milestones > stages > tasks). For each actionable task, add an entry to the state file's `tasks` array with:
+
+- **id**: `"task-N"` (sequential, starting from 0)
+- **subject**: Imperative task title (e.g., "Implement authentication middleware")
+- **description**: Full task details including acceptance criteria copied from the plan
+- **status**: `"pending"`
+- **agent_type**: Agent to assign (see Agent Assignment Rules)
+- **stage**: Pipeline stage — `plan`, `implement`, `verify`, `review`, `document`
+- **priority**: `1` (critical path) through `5` (nice-to-have)
+- **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
+- **estimate_source**: `"scoping-doc"` or `"ops"`
+- **blocked_by**: Array of task IDs this task depends on
+
+**3. Wire dependencies:**
+
+- Implementation tasks **block** their corresponding verification tasks.
+- Verification tasks **block** review tasks.
+- Review tasks **block** documentation tasks.
+- Honor any intra-stage dependencies from the plan.
+
+**4. Write state file to disk:**
+
+Use the Write tool to overwrite `.ops-state/<run-id>-board.json` with the complete JSON (all tasks populated from steps 2-3).
+
+**5. Verify state file on disk (MANDATORY):**
+
+Before displaying the task board, confirm the state file exists and is valid:
+
+1. Read `.ops-state/<run-id>-board.json` — verify the file contains valid JSON with a non-empty `tasks` array.
+2. If the file is missing or empty, **stop and re-create it**. Do not proceed to dispatch without a valid state file on disk.
+3. Check whether `.ops-state/` is in `.gitignore`. If not, add it.
 
 **Agent Assignment Rules** — auto-detect from task content when `--agents` is not specified:
 
@@ -232,7 +326,7 @@ Parse the plan into discrete, assignable tasks. Record the run identity in **eve
 
 If a task doesn't clearly match, ask yourself: "Is this writing docs, running tests, reviewing code, or implementing code?" and assign accordingly. Only default to `executor` for tasks that are genuinely about writing or modifying source code. **Never assign documentation, scoping, or review tasks to the executor** — these have dedicated agents.
 
-**When genuinely in doubt** — if a task is ambiguous enough that you cannot confidently determine the right agent type — dispatch the **interviewer** to clarify with the user before assigning. The interviewer's job is to resolve ambiguity. Do not guess and assign to the wrong agent; a quick clarification is cheaper than re-doing the work.
+**When genuinely in doubt** — if a task is ambiguous enough that you cannot confidently determine the right agent type — dispatch the **interviewer** via `Agent(agent="interviewer")` to clarify with the user before assigning. The interviewer's job is to resolve ambiguity. Do not guess and assign to the wrong agent; a quick clarification is cheaper than re-doing the work.
 
 Each agent must stay in its lane:
 
@@ -277,13 +371,13 @@ Extract the first 3-5 meaningful words from the task description, drop articles 
 
 These deliverable tasks must be on the board **from the start**, blocked by the analysis/implementation tasks they depend on, and dispatched automatically when their blockers complete. The workflow is not complete until deliverable files exist on disk. Chat summaries are not deliverables.
 
-**Display the task board after creation.** After all TaskCreate and TaskUpdate (dependency wiring) calls are done, render a full Status Dashboard — the same table format used for `status` and completion displays. This shows the user the complete board at a glance (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section with estimates) before any dispatch begins. This applies to every run, not just `--dry-run`.
+**Display the task board after creation.** After the state file is written and verified, render a full Status Dashboard — the same table format used for `status` and completion displays. This shows the user the complete board at a glance (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section with estimates) before any dispatch begins. This applies to every run, not just `--dry-run`.
 
 If `--dry-run` is set, display the task board and stop. Do not dispatch.
 
 ### Phase 2.5 — Preflight Validation
 
-After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
+After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent via `Agent(agent="verifier")` with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/preflight-validation.md` for the complete preflight validation procedure, check categories, and agent brief template. If the file is missing, proceed without preflight checks.
 
@@ -291,10 +385,12 @@ After the task board is created and before the first dispatch, run a preflight c
 
 This is the core orchestration loop. Repeat until all tasks are completed or the user intervenes:
 
-**Step 1 — Scan for ready tasks.** Call TaskList. A task is ready when:
+**Step 1 — Scan for ready tasks.** Read the state file from `.ops-state/<run-id>-board.json`. If the state file does not exist, **stop** — the state file should have been created in Phase 2. Re-run Phase 2 step 1 to create it before continuing.
 
-- Status is `pending`
-- It has no unresolved `blockedBy` entries (all blockers are `completed`)
+A task is ready when:
+
+- `status` is `"pending"`
+- All entries in `blocked_by` refer to tasks whose `status` is `"completed"`
 
 **Step 2 — Batch parallel work.** Group ready tasks for concurrent dispatch:
 
@@ -305,18 +401,17 @@ This is the core orchestration loop. Repeat until all tasks are completed or the
 
 **Step 3 — Dispatch agents.** For each task (or parallel batch):
 
-1. Mark the task `in_progress` via TaskUpdate. Set `owner` to the agent type.
-2. **Record the start time** in task metadata: `metadata.started_at: "<ISO-8601>"`. (REMINDER: Do not skip timing. Every dispatch must record a start time.)
-3. Spawn the agent via the **Agent** tool using the brief format below.
-4. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
+1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk.
+2. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file as the agent name: `Agent(agent="<agent_type>", prompt=<brief>)`. This loads the custom agent definition from `~/.claude/agents/<agent_type>.md`, which provides the agent's model, tool restrictions, and specialized behavior. Use the brief format below.
+3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
 
-**Step 4 — Process results.** When an agent returns, **immediately record the end time** in task metadata: `metadata.completed_at: "<ISO-8601>"`. Calculate and store `metadata.duration_seconds`. (REMINDER: Do not skip timing. Every result must record an end time before any other processing.)
+**Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (REMINDER: Do not skip timing. Every result must record an end time before any other processing.)
 
 | Outcome | Action |
 | :--- | :--- |
-| **Passed** — acceptance criteria met | Mark task `completed`. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
+| **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
 | **Failed — 1st attempt** | Re-dispatch with the error appended to the brief. Narrow the scope or add constraints based on what went wrong. |
-| **Failed — 2nd attempt** | Dispatch the **debugger** (or **debugger-build** if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
+| **Failed — 2nd attempt** | Dispatch the **debugger** via `Agent(agent="debugger")` (or `Agent(agent="debugger-build")` if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
 | **Failed — 3rd attempt** | Escalate model (e.g., sonnet → opus) and re-dispatch with full error history. Skip if already on opus. See Model Escalation in Adaptability. |
 | **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
 | **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task describing the issue. Pause dependent chain. Flag to user. |
@@ -338,13 +433,13 @@ This is the core orchestration loop. Repeat until all tasks are completed or the
 
 When every task is `completed`:
 
-1. **Confirm all agents have finished** — call TaskList and verify no tasks are `in_progress`. If any agent is still running, wait for it to return before proceeding. Never report completion while agents are still active.
+1. **Confirm all agents have finished** — read the state file and verify no tasks are `"in_progress"`. If any agent is still running, wait for it to return before proceeding. Never report completion while agents are still active.
 2. **Verify deliverables exist on disk** — check that every deliverable task produced a real file. Read (or at minimum glob for) each expected artifact. If a deliverable file is missing or empty, the workflow is **not complete** — dispatch the appropriate agent to create it before proceeding. Never report completion based on chat output alone; the user should not have to ask "where is the document?"
-3. **Run a final verification pass** — if the work involved code changes, dispatch a verifier agent to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
-4. **Compute timing summary** — (REMINDER: This is mandatory. Do not skip the timing report.) Read `metadata.started_at`, `metadata.completed_at`, `metadata.duration_seconds`, and `metadata.estimated_minutes` from every task. Calculate:
+3. **Run a final verification pass** — if the work involved code changes, dispatch a verifier agent via `Agent(agent="verifier")` to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
+4. **Compute timing summary** — (REMINDER: This is mandatory. Do not skip the timing report.) Read all task entries from the state file. Calculate:
    - **Total wall time** — from the first task's `started_at` to the last task's `completed_at`.
-   - **Total estimated time** — sum of all `metadata.estimated_minutes`.
-   - **Per-stage totals** — estimated vs actual durations grouped by `metadata.stage`.
+   - **Total estimated time** — sum of all `estimated_minutes`.
+   - **Per-stage totals** — estimated vs actual durations grouped by `stage`.
    - **Per-task durations** — estimated vs actual for each task.
    - **Variance** — percentage over/under estimate per task and overall. Flag tasks that exceeded their estimate by more than 2x.
    - **Longest task** — flag the slowest task (useful for future optimization).
@@ -354,7 +449,7 @@ When every task is `completed`:
 
    > **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, and calibration procedure. If the file is missing, proceed without estimation feedback.
 
-5. **Compute cost estimate** — (REMINDER: This is mandatory. Do not skip the cost estimate. It must be computed before the summary and displayed as part of it.) Estimate token usage and cost for the run based on each task's `metadata.model_used`, `metadata.retry_count`, and agent type. This step runs immediately after timing and before the summary so cost information can be included in the completion output.
+5. **Compute cost estimate** — (REMINDER: This is mandatory. Do not skip the cost estimate. It must be computed before the summary and displayed as part of it.) Estimate token usage and cost for the run based on each task's `model_used`, `attempts`, and agent type. This step runs immediately after timing and before the summary so cost information can be included in the completion output.
 
    **Prefer per-task token estimation from observed tool-use patterns** (tool-call count, file sizes read, output length) when you have that signal — it is more accurate than applying flat baselines. Fall back to the agent-type baselines in `cost-tracking.md` (section 2) only when per-task estimation isn't feasible. Ranges (e.g., `~$1.50–3.00`) are acceptable and often more honest than point estimates.
 
@@ -363,7 +458,7 @@ When every task is `completed`:
 6. Display the final task board (with per-task durations).
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time, **and estimated cost** (from step 5).
 8. List all files changed across all agents.
-9. **Clean up temp files and handoffs** — run `rm _tmp_*` to remove any temporary files created during the run. This is the batch cleanup point for all `_tmp_` files left by agents and the team manager. Also **delete this run's handoff subdirectory** (`docs/plan/.handoffs/<run_id>/`) — the run completed successfully, so handoffs are no longer needed for resume. **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** other runs' handoff subdirectories — they may belong to active runs in other sessions.
+9. **Clean up temp files, handoffs, and state** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's state file (`.ops-state/<run-id>-board.json`). If `.ops-state/` is empty after deletion, remove the directory. **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** other runs' handoff subdirectories or state files.
 10. Suggest natural next steps (e.g., "Ready for commit" or "Run the full test suite").
 
 ---
@@ -430,8 +525,8 @@ When a task completes and feeds into a downstream task, write a **handoff docume
 
 - **Storage:** `docs/plan/.handoffs/<run_id>/` — each run gets its own subdirectory.
 - **Naming:** `handoff-<task_number>-<from_stage>-to-<to_stage>.md` (e.g., `handoff-003-implement-to-verify.md`).
-- **Run ID:** `<plan-slug>-<ISO-date>` stored in every task's `metadata.run_id`.
-- **Writing:** After marking a task completed, immediately write the handoff to disk. Store the path in `metadata.handoff_file`.
+- **Run ID:** `<plan-slug>-<ISO-date>` stored in every task's `run_id` field in the state file.
+- **Writing:** After marking a task completed, immediately write the handoff to disk. Store the path in the task's `handoff_file` field in the state file.
 - **Reading:** When briefing downstream agents, read relevant handoff files and include content in the Context section.
 - **Cleanup:** Delete this run's handoff subdirectory on successful completion (Phase 4). Keep on pause/cancel. Never delete other runs' handoffs.
 
@@ -527,7 +622,7 @@ When `--worktree` is set (or when parallel agents are likely to touch overlappin
 - Any parallel work where file independence is uncertain
 - High-risk changes where you want easy rollback per agent
 
-**Merge strategy:** After all worktree agents complete, their branches must be merged. Dispatch the **git-master** to merge branches sequentially, resolving conflicts if any. If conflicts exist, flag to the user before force-merging.
+**Merge strategy:** After all worktree agents complete, their branches must be merged. Dispatch the **git-master** via `Agent(agent="git-master")` to merge branches sequentially, resolving conflicts if any. If conflicts exist, flag to the user before force-merging.
 
 **When NOT to use worktrees:**
 
@@ -545,7 +640,7 @@ Not every task on the board is user-facing work. The team manager may create **i
 - Run final integration verification
 - Compile the completion summary
 
-Mark these with `metadata._internal: true`. When displaying progress to the user, **filter internal tasks out** of the progress bar and task count. Show them in the dashboard only under a collapsed "Internal" section.
+Mark these with `"_internal": true` in the state file. When displaying progress to the user, **filter internal tasks out** of the progress bar and task count. Show them in the dashboard only under a collapsed "Internal" section.
 
 ---
 
@@ -644,7 +739,7 @@ When an agent discovers the plan is wrong or incomplete, the team-manager decide
 | :--- | :--- |
 | **Missing task** — agent finds work the plan didn't account for | Create the task, wire dependencies, slot it into the board. Log it as an adaptation. In interactive mode, mention it at the next checkpoint. |
 | **Wrong sequencing** — a task's dependency was incorrect | Update the dependency graph. Re-order the dispatch queue. Log the change. |
-| **Task too large** — agent reports the task needs splitting | Pause the task. Dispatch the **planner** to break it into subtasks. Replace the original task with the subtasks. Resume. |
+| **Task too large** — agent reports the task needs splitting | Pause the task. Dispatch the **planner** via `Agent(agent="planner")` to break it into subtasks. Replace the original task with the subtasks. Resume. |
 | **Scope change** — agent reports the approach needs rethinking | In autonomous mode: if the change is small (affects < 3 tasks), adapt in-place. If large (affects a whole stage), pause and escalate to the user. In interactive mode: always present at the next checkpoint. |
 
 **Guardrail:** The team-manager may add tasks or re-sequence, but must not silently remove tasks or reduce scope. Scope reduction always requires user approval.
@@ -663,8 +758,8 @@ When an agent fails, the team-manager can escalate to a more capable model befor
 The model escalation is logged in the task metadata:
 
 ```
-metadata.model_history: ["sonnet", "sonnet", "opus"]
-metadata.adaptation: "model escalated sonnet→opus after 2 failures"
+model_history: ["sonnet", "sonnet", "opus"]
+adaptation: "model escalated sonnet→opus after 2 failures"
 ```
 
 **Skip model escalation when:**
@@ -746,15 +841,15 @@ The interruption handling below applies at the points where the team manager has
 
 | User says | Team manager action |
 | :--- | :--- |
-| "stop" / "cancel" / "abort" | Stop dispatching, let active agents finish, preserve task list |
+| "stop" / "cancel" / "abort" | Stop dispatching, let active agents finish, preserve state file |
 | "status" | Show dashboard without interrupting active agents |
-| "skip [stage/task]" | Delete the tasks, update dependencies, resume |
-| "do #N next" | Promote task priority, dispatch immediately if ready |
-| "add [task]" | Create task, wire dependencies, slot into dispatch loop |
-| "drop #N" | Delete task, clear downstream blockers, resume |
+| "skip [stage/task]" | Update state file: mark tasks as cancelled, update dependencies, resume |
+| "do #N next" | Promote task priority in state file, dispatch immediately if ready |
+| "add [task]" | Add task to state file, wire dependencies, slot into dispatch loop |
+| "drop #N" | Remove task from state file, clear downstream blockers, resume |
 | "reprioritize" | Pause, show board, wait for user instructions |
-| "resume" | Recover from task list, verify in-progress tasks, continue |
-| "pause" | Stop dispatching but keep task state. Resume with `resume`. |
+| "resume" | Read state file from disk, verify in-progress tasks, continue |
+| "pause" | Stop dispatching but keep state file. Resume with `resume`. |
 
 ---
 

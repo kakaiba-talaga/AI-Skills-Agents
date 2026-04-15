@@ -59,6 +59,8 @@ Think of yourself as the person in front of a task board, moving tickets and bri
 
 The ops skill uses a **dual-layer task board**: a JSON state file on disk for full metadata, and TodoWrite for IDE-visible status display. Both are updated on every state change.
 
+**CRITICAL — The state file on disk is MANDATORY.** TodoWrite alone is not sufficient — it cannot store dependencies, timing, estimates, or agent metadata. Without the state file, `resume`, `status`, timing reports, and cost tracking all break. Every Phase 2 run MUST create the `.ops-state/` directory and write the JSON state file to disk before proceeding. If you skip the state file, the run is broken.
+
 ### State File
 
 The state file is stored at `.ops-state/<run-id>-board.json`. This is the source of truth for all task data — dependencies, timing, estimates, agent assignments, and adaptation notes.
@@ -102,16 +104,16 @@ The state file is stored at `.ops-state/<run-id>-board.json`. This is the source
 
 ### State Operations
 
-All task board operations use the state file as the primary store and TodoWrite as the display layer:
+All task board operations use the state file as the primary store and TodoWrite as the display layer. **Every mutation must write the state file to disk using the `Write` tool** — do not rely on in-memory state alone.
 
-| Operation | State file action | TodoWrite action |
+| Operation | State file action (via `Write` tool) | TodoWrite action |
 | :--- | :--- | :--- |
-| **Create task** | Append to `tasks` array, Write file | `TodoWrite(merge=false)` with full task list |
-| **Update status** | Update task's `status`, `started_at`, etc., Write file | `TodoWrite(merge=true)` with `[{id, content, status}]` |
-| **Scan for ready** | Read file, filter tasks where `status=="pending"` and all `blocked_by` entries are `"completed"` | — (read-only) |
-| **Complete task** | Update `status`, `completed_at`, `duration_seconds`, Write file | `TodoWrite(merge=true)` with `[{id, status: "completed"}]` |
-| **Resume** | Read file from disk — full state recovered | `TodoWrite(merge=false)` to recreate display from state file |
-| **Report** | Read file, compute timing/estimates/variance | — (read-only) |
+| **Create task** | Append to `tasks` array, `Write` file to disk | `TodoWrite(merge=false)` with full task list |
+| **Update status** | Update task's `status`, `started_at`, etc., `Write` file to disk | `TodoWrite(merge=true)` with `[{id, content, status}]` |
+| **Scan for ready** | `Read` file from disk, filter tasks where `status=="pending"` and all `blocked_by` entries are `"completed"` | — (read-only) |
+| **Complete task** | Update `status`, `completed_at`, `duration_seconds`, `Write` file to disk | `TodoWrite(merge=true)` with `[{id, status: "completed"}]` |
+| **Resume** | `Read` file from disk — full state recovered | `TodoWrite(merge=false)` to recreate display from state file |
+| **Report** | `Read` file from disk, compute timing/estimates/variance | — (read-only) |
 
 ### TodoWrite Display Format
 
@@ -281,7 +283,7 @@ When skipping, **always log it as an adaptation**: "Adapted: skipped branch crea
 
 Parse the plan into discrete, assignable tasks. Create the state file and TodoWrite display.
 
-**1. Initialize the state file:**
+**1. Initialize the state file (MANDATORY — do not skip):**
 
 ```text
 Run ID: <plan-slug>-<ISO-date>
@@ -289,7 +291,11 @@ State file: .ops-state/<run-id>-board.json
 Plan file: docs/plan/<name>-plan.md (if one was written in Phase 1)
 ```
 
-Create the `.ops-state/` directory if it doesn't exist. Write the initial state file with an empty `tasks` array.
+Create the directory and file using these exact steps:
+
+1. Run `Shell(command="mkdir -p .ops-state")` (or `mkdir .ops-state` on Windows if it doesn't exist — check first with `ls .ops-state` or `dir .ops-state`).
+2. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.
+3. Verify the file exists by reading it back with `Read(path=".ops-state/<run-id>-board.json")`. If the read fails, the state file was not created — stop and fix before proceeding.
 
 **2. Parse and populate tasks:**
 
@@ -315,7 +321,7 @@ Read the plan hierarchy (milestones > stages > tasks). For each actionable task,
 
 **4. Write state file and create TodoWrite display:**
 
-Write the complete state file to disk. Then call `TodoWrite(merge=false)` with all tasks:
+Use the `Write` tool to overwrite `.ops-state/<run-id>-board.json` with the complete JSON (all tasks populated from steps 2-3). Then call `TodoWrite(merge=false)` with all tasks. **Both writes are mandatory** — the state file is the source of truth, TodoWrite is the display layer.
 
 ```text
 TodoWrite items (one per task):
@@ -396,7 +402,15 @@ Extract the first 3-5 meaningful words from the task description, drop articles 
 
 These deliverable tasks must be on the board **from the start**, blocked by the analysis/implementation tasks they depend on, and dispatched automatically when their blockers complete. The workflow is not complete until deliverable files exist on disk. Chat summaries are not deliverables.
 
-**Display the task board after creation.** After the state file is written and TodoWrite is populated, render a full Status Dashboard — the same table format used for `status` and completion displays. This shows the user the complete board at a glance (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section with estimates) before any dispatch begins. This applies to every run, not just `--dry-run`.
+**5. Verify state file on disk (MANDATORY):**
+
+Before displaying the task board, confirm the state file exists and is valid:
+
+1. `Read(path=".ops-state/<run-id>-board.json")` — verify the file contains valid JSON with a non-empty `tasks` array.
+2. If the file is missing or empty, **stop and re-create it** from the in-memory task data. Do not proceed to dispatch without a valid state file on disk.
+3. Check whether `.ops-state/` is in `.gitignore`. If not, add it (append `.ops-state/` to `.gitignore`).
+
+**Display the task board after creation.** After the state file is verified and TodoWrite is populated, render a full Status Dashboard — the same table format used for `status` and completion displays. This shows the user the complete board at a glance (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section with estimates) before any dispatch begins. This applies to every run, not just `--dry-run`.
 
 If `--dry-run` is set, display the task board and stop. Do not dispatch.
 
@@ -410,7 +424,9 @@ After the task board is created and before the first dispatch, run a preflight c
 
 This is the core orchestration loop. Repeat until all tasks are completed or the user intervenes:
 
-**Step 1 — Scan for ready tasks.** Read the state file. A task is ready when:
+**Step 1 — Scan for ready tasks.** Read the state file from `.ops-state/<run-id>-board.json` using the `Read` tool. If the state file does not exist, **stop** — the state file should have been created in Phase 2. Re-run Phase 2 step 1 to create it before continuing.
+
+A task is ready when:
 
 - `status` is `"pending"`
 - All entries in `blocked_by` refer to tasks whose `status` is `"completed"`
@@ -435,7 +451,7 @@ This is the core orchestration loop. Repeat until all tasks are completed or the
 | :--- | :--- |
 | **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Update TodoWrite. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
 | **Failed — 1st attempt** | Re-dispatch with the error appended to the brief. Narrow the scope or add constraints based on what went wrong. |
-| **Failed — 2nd attempt** | Dispatch the **debugger** via `Task(subagent_type="debugger")` (or `debugger-build` if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
+| **Failed — 2nd attempt** | Dispatch the **debugger** via `Task(subagent_type="debugger")` (or `Task(subagent_type="debugger-build")` if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
 | **Failed — 3rd attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
 | **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task in the state file and TodoWrite. Pause dependent chain. Flag to user. |
 | **Scope issue** — agent says the plan is wrong or incomplete | Pause chain. Ask the user whether to re-plan or adjust. |
