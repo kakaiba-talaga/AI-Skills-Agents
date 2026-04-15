@@ -159,7 +159,17 @@ Build the ssh-executor brief. Every brief targets one host and one host only. Fo
 
 ### Phase 4 — Dispatch
 
-Dispatch the ssh-executor via the Agent tool. The dispatch pattern depends on the deployment pattern selected in Phase 1.
+Dispatch the ssh-executor via the Agent tool. The Agent tool's `subagent_type` parameter does not accept custom agent types — `ssh-executor` is not a built-in type. You must read the agent file and include its instructions in the prompt.
+
+**ssh-executor Dispatch Procedure** (applies to ALL ssh-executor dispatches in this skill — deployment, rollback, state-check, and monitoring):
+
+1. **Read** `~/.claude/agents/ssh-executor.md`. Extract the `model` from YAML frontmatter and the full instruction body (everything after the closing `---`).
+2. **`description`**: Set to `"ssh-executor(<target_host>: <action>)"` — e.g., `"ssh-executor(prod-web-01: deploy v1.4.2)"` or `"ssh-executor(prod-web-01: rollback)"`. Always include the host and action so the user can identify which dispatch targets which server.
+3. **`model`**: Set from the agent's frontmatter `model` field.
+4. **`subagent_type`**: **Omit** — `ssh-executor` is not a built-in type.
+5. **`prompt`**: Concatenate the agent definition body + `\n\n---\n\n` + the deployment brief (JSON). The agent has no conversation history — the prompt must be fully self-contained.
+
+The dispatch pattern depends on the deployment pattern selected in Phase 1.
 
 **Simple push (1 host):**
 - Construct one brief for the single target host.
