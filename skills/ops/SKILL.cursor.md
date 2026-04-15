@@ -760,7 +760,7 @@ REMINDER: The Cost section is **mandatory** in the **completion** dashboard. Do 
 ## Autonomy Modes
 
 | Mode | Checkpoints | Stops when |
-|------|------------|------------|
+| :--- | :--- | :--- |
 | Interactive (default) | After each pipeline stage | User confirms, adjusts, skips, stops, or injects/reprioritizes tasks |
 | Autonomous (`--autonomous`) | None | 3x task failure, scope/plan issue, blocker, all tasks complete |
 | Supervised (`--supervised`) | After every task | User approves before next dispatch |
