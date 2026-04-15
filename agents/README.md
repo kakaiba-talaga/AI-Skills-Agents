@@ -35,6 +35,14 @@ The model in each agent's frontmatter is the default. It can be overridden in tw
 
 For example, to run the executor on opus for a particularly complex implementation, the ops would spawn it with `model: "opus"`. Or to use haiku for documentation tasks in a cost-sensitive project, drop a `documentor.md` in that project's `.claude/agents/` with `model: haiku`.
 
+### Programmatic dispatch (ops skill)
+
+When the ops skill dispatches agents programmatically via the `Agent` tool, the `subagent_type` parameter only accepts a limited built-in enum (`general-purpose`, `Explore`, `Plan`, `debugger-build`, `git-master`, `claude-code-guide`, `statusline-setup`). Only `debugger-build` and `git-master` from this taxonomy have matching entries; all other agents dispatch as `general-purpose`.
+
+Custom agent files at `~/.claude/agents/` are loaded when a user invokes an agent by name in conversation, but they do **not** extend the `subagent_type` enum for programmatic dispatch. The ops skill works around this by reading the agent definition file, injecting its instructions into the prompt, and labeling the dispatch via the `description` field (e.g., `"executor(Implement auth middleware)"`). See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure.
+
+In Cursor, this is not an issue — Cursor's `Task` tool `subagent_type` enum includes all 18 agent types natively.
+
 ## Usage
 
 Agents are invoked automatically by Claude Code when a task matches their description. You can also request them explicitly by name or by describing the task.

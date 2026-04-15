@@ -108,6 +108,15 @@ The manager creates bookkeeping tasks (merging branches, final verification, com
 
 Spawned agents are workers, not managers. They cannot spawn sub-agents, make scope decisions, or invoke orchestration commands. The team manager enforces these rules in every brief.
 
+### Agent Dispatch
+
+Agent dispatch differs between Claude Code and Cursor due to platform limitations:
+
+- **Cursor** — The `Task` tool's `subagent_type` enum includes all agent types natively. Dispatch is direct: `Task(subagent_type="executor", prompt=<brief>)`.
+- **Claude Code** — The `Agent` tool's `subagent_type` enum only includes `debugger-build` and `git-master` from the ops taxonomy. All other agents (executor, verifier, planner, etc.) dispatch as `general-purpose`. The ops skill works around this by reading the agent definition from `~/.claude/agents/<agent_type>.md`, injecting the full instructions into the prompt, and labeling the dispatch via the `description` field (e.g., `"executor(Implement auth middleware)"`). This preserves the agent's specialized behavior and model while making the role visible in dispatch notifications.
+
+See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure and rationale.
+
 ### Adaptability
 
 The team manager adapts strategy at runtime instead of rigidly following the initial plan. All adaptations are logged and visible in the dashboard.

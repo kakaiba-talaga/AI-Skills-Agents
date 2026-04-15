@@ -79,7 +79,12 @@ User → /deploy skill → constructs brief → ssh-executor agent → remote se
                      ← interprets response ←
 ```
 
-The deploy skill never SSHs directly. It translates your deployment intent into a structured brief (target host, ordered commands, rollback commands, health check, timeouts), then dispatches the ssh-executor via the Agent tool. The ssh-executor handles all remote operations and returns a structured response. The deploy skill reads that response, decides what to do next, and reports to you.
+The deploy skill never SSHs directly. It translates your deployment intent into a structured brief (target host, ordered commands, rollback commands, health check, timeouts), then dispatches the ssh-executor agent. The ssh-executor handles all remote operations and returns a structured response. The deploy skill reads that response, decides what to do next, and reports to you.
+
+**Dispatch mechanism differs by platform:**
+
+- **Cursor** — Dispatches via `Task(subagent_type="ssh-executor")` directly. The `ssh-executor` type is a built-in value in Cursor's `Task` tool.
+- **Claude Code** — The `Agent` tool's `subagent_type` enum does not include `ssh-executor`. The skill reads the agent definition from `~/.claude/agents/ssh-executor.md`, injects the full instructions into the prompt, sets the `description` to `"ssh-executor(<host>: <action>)"` for UI labeling, and sets the `model` from the agent's frontmatter. See `docs/portability-guide.md` § Agent Dispatch Mechanism for the general pattern.
 
 Each brief targets exactly one host. Multi-host patterns (rolling, canary) produce one brief per host, dispatched sequentially and gated on health checks.
 

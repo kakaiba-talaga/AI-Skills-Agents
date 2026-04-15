@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-04-14 (state unification)
-**Previous assessment:** 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-04-15 (agent dispatch fix)
+**Previous assessment:** 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents and skills in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -74,6 +74,22 @@
 | ssh-agent-plan.md | Plan for ssh-executor and ops/deploy integration |
 | next-steps-roadmap.md | Roadmap for restructure, portability, and deployment automation |
 | cursor-portability-gaps.md | Plan for Cursor-native adaptations of ops and deploy (completed) |
+
+---
+
+## Changes Since Last Assessment (2026-04-15 — agent dispatch fix)
+
+### Agent dispatch procedure for Claude Code
+
+| Change | Detail |
+|--------|--------|
+| **Claude Code `subagent_type` gap documented** | Claude Code's `Agent` tool `subagent_type` enum only includes `debugger-build` and `git-master` from the ops taxonomy. All other agent types (executor, verifier, planner, etc.) dispatch as `general-purpose` and display as "Agent" — custom agent files at `~/.claude/agents/` do not extend the enum for programmatic dispatch. |
+| **Read-and-inject workaround in ops `SKILL.md`** | Phase 3 now includes an Agent Dispatch Procedure: read the agent definition, set `description` to `"<agent_type>(<subject>)"` for UI labeling, set `model` from frontmatter, inject full agent instructions into the prompt. |
+| **Cursor `SKILL.cursor.md` explicit dispatch** | `debugger-build` dispatch in failure handling made explicit: `Task(subagent_type="debugger-build")`. |
+| **Portability guide expanded** | New "Agent Dispatch Mechanism" section documenting the platform difference and workaround. Feature gap table updated with `subagent_type` coverage row. |
+| **`agents/README.md` updated** | New "Programmatic dispatch" subsection documenting the `subagent_type` limitation and read-and-inject workaround. |
+| **`skills/ops/README.md` updated** | Dispatch section added explaining the difference between Claude Code and Cursor dispatch mechanisms. |
+| **`skills/deploy/README.md` updated** | Architecture section expanded with platform-specific dispatch mechanism (Cursor uses `Task(subagent_type="ssh-executor")` directly; Claude Code uses read-and-inject pattern). |
 
 ---
 
@@ -184,6 +200,7 @@ These are not defects — they are patterns worth monitoring.
 - **Planning docs gitignored:** `docs/plan/` is in `.gitignore`, meaning planning context is local-only and won't survive a machine change or clone.
 - **Cursor transform is text-based:** Tool name replacements (`Bash`→`Shell`, `Edit`→`StrReplace`, `Agent`→`Task`) use word-boundary matching, which may produce false positives in prose that coincidentally matches tool names. No issues observed in current files.
 - **ops and deploy have Cursor-native versions:** Both skills have `SKILL.cursor.md` files. State management (`.ops-state/` JSON files) is now unified across both versions; the Cursor-native file is still needed for `Task` tool dispatch, TodoWrite display layer, read-and-dispatch skill invocation, and Cursor-specific limitations. Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
+- **Agent dispatch mechanism differs between platforms:** Claude Code's `subagent_type` enum is limited — only `debugger-build` and `git-master` from the ops taxonomy are built-in. All other agents dispatch as `general-purpose` and require a read-and-inject workaround. Cursor's `Task` tool has all 18 types natively. This is the primary reason ops needs a `SKILL.cursor.md` companion. See `docs/portability-guide.md` § Agent Dispatch Mechanism.
 
 ---
 
@@ -233,4 +250,4 @@ Skills invoked within pipeline stages:
 
 ---
 
-*Assessment updated 2026-04-14 (state unification). Files assessed: 13 agents, 9 skills (58 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 3 tooling, 10 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore. Active issues: 0. Carried from previous: 3.*
+*Assessment updated 2026-04-15 (agent dispatch fix). Files assessed: 13 agents, 9 skills (58 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 3 tooling, 10 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore. Active issues: 0. Carried from previous: 3.*
