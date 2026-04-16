@@ -55,6 +55,8 @@ If the conversation is interrupted (terminal closed, context reset, session time
 - **Plan document on disk** survives — it contains the overall work scope and acceptance criteria.
 - Tasks that were `in_progress` when the session died remain marked as such, but the agent that was working on them is gone.
 
+All `in_progress` tasks are considered **orphaned** after a session boundary — the agents from the prior session no longer exist (see `agent-health-monitoring.md` Section 3b for the formal orphan detection logic). The dedup verification procedure (`resume-dedup.md`) determines whether each orphaned task's work was actually applied.
+
 On `/ops resume`:
 
 1. Read the state file from `.ops-state/` to recover the board.
