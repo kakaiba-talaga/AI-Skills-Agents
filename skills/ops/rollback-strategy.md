@@ -89,3 +89,18 @@ This document defines when and how the `/ops` skill rolls back changes after cha
 - Changes are partially correct and the user wants to build on them
 - The failure is in verification (test setup), not in the code itself
 - Documentation-only changes — these are never risky enough to warrant rollback
+
+## Model Escalation
+
+The model escalation is logged in the task metadata:
+
+```
+model_history: ["sonnet", "sonnet", "opus"]
+adaptation: "model escalated sonnet→opus after 2 failures"
+```
+
+**Skip model escalation when:**
+
+- Agent is already on opus — go straight to user escalation at strike 3.
+- The failure is a blocker (environment, dependency) — model upgrade won't help.
+- The failure is a scope issue — route to re-planning instead.

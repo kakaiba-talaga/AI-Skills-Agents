@@ -152,3 +152,15 @@ When the ssh-executor completes a task and feeds into a downstream task (e.g., v
 ```
 
 This format ensures that if the verifier needs to check remote state, or if a rollback is needed, all information is in the handoff file — no need to re-derive it from the task description.
+
+## SSH Handoff Chains
+
+```
+executor → ssh-executor → verifier  (build locally, deploy remotely, verify)
+ssh-executor → verifier              (standalone remote task, then verify)
+```
+
+## SSH Parallel Safety
+
+- SSH tasks targeting the same remote host must NOT be parallelized (unless the brief confirms no shared state)
+- SSH tasks targeting different remote hosts CAN be parallelized

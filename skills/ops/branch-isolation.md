@@ -34,3 +34,21 @@ When Phase 4 (Completion) finishes:
 - **Ralph loop** — ralph snapshot tags (`ralph/<task_id>/iter-<N>`) are branch-independent. No conflict.
 - **Git-master pause/resume** — WIP commits and stashes happen on the working branch. Resuming restores to the same branch.
 - **`resume` command** — checks task board metadata for the working branch name and switches to it before resuming dispatch.
+
+## Git Worktree Isolation
+
+When `--worktree` is set (or when parallel agents are likely to touch overlapping files), spawn agents with `isolation: "worktree"`. This gives each agent its own copy of the repo on an isolated branch, eliminating file conflicts entirely.
+
+**When to use worktrees:**
+
+- 2+ executor agents running in parallel on code that might share imports or config files
+- Any parallel work where file independence is uncertain
+- High-risk changes where you want easy rollback per agent
+
+**Merge strategy:** After all worktree agents complete, their branches must be merged. Dispatch a **git-master** agent to merge branches sequentially, resolving conflicts if any. If conflicts exist, flag to the user before force-merging.
+
+**When NOT to use worktrees:**
+
+- Single-agent dispatch (no conflict risk)
+- Read-only agents (verifier, code-reviewer running checks without edits)
+- Tasks that intentionally modify the same files in sequence
