@@ -243,7 +243,6 @@ No active issues.
 | File | Issue | Reason Not Changed |
 |------|-------|--------------------|
 | git-master.md | "No Co-Authored-By trailer" rule contradicts the Claude Code system prompt | Intentional user override — explicitly stated preference. |
-| code-reviewer.md | Has Edit/Write tools despite being a review-only agent | Supports the "Offer to apply fixes" feature. Intentional design. |
 | agents/README.md | References `/schedule` skill not found in `skills/` | `/schedule` is a built-in Claude Code skill, not a custom skill. Valid reference. |
 
 ---
@@ -324,4 +323,4 @@ Skills invoked within pipeline stages:
 
 ---
 
-*Assessment updated 2026-04-17 (project audit). Files assessed: 15 agents, 9 skills (62 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 1 cursor rule, 3 tooling, 14 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 3.*
+*Assessment updated 2026-04-17 (project audit). Files assessed: 15 agents, 9 skills (62 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 1 cursor rule, 3 tooling, 14 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2.*
