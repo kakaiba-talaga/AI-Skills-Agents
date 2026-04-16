@@ -11,6 +11,7 @@ A companion helper for the `/ops` team manager skill. This procedure runs during
 - **For tasks with status `in_progress`** at the time of resume — these are the ambiguous cases where work may or may not have finished before the interruption.
 - **Does NOT apply to `pending` tasks** — they were never started; dispatch normally.
 - **Does NOT apply to `completed` tasks** — already done; skip as usual.
+- Tasks flagged as **possibly orphaned** by the health monitoring system (`agent-health-monitoring.md` Section 3b) also enter this procedure — even mid-session, if the user triggers `resume` due to a suspected orphan.
 
 ---
 
@@ -95,7 +96,7 @@ This prevents the agent from duplicating work or overwriting good output with a 
 
 This dedup step slots in between the existing steps in `interruption-recovery.md`:
 
-1. Read the state file (existing — load run state, identify `in_progress` tasks)
+1. Read the state file (existing — load run state, identify `in_progress` tasks). All `in_progress` tasks are treated as potentially orphaned after a session boundary.
 2. **For each `in_progress` task: run dedup verification** (NEW — this file)
 3. **Mark verified-complete tasks as `completed`** (NEW — update the state file, write any missing handoffs)
 4. Re-dispatch remaining `in_progress` tasks, with context briefs where applicable (existing dispatch loop, now context-aware)

@@ -3,6 +3,7 @@
 **/config/
 **/docs/plan/
 /rules
+.ops-state/
 
 # Exceptions
 !.gitignore

@@ -113,8 +113,8 @@ Determine the starting point from the parsed arguments:
 | :--- | :--- |
 | Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
-| `resume` | Read the state file from `.ops-state/`. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). For full recovery procedure, see Interruption Handling → Session Recovery. |
-| `status` | Read the state file, display the dashboard (see Status Dashboard), stop. |
+| `resume` | Read the state file from `.ops-state/`. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). For full recovery procedure, see Interruption Handling → Session Recovery. |
+| `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
 
@@ -425,7 +425,36 @@ For each dispatch:
 Use the brief format below.
 3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
 
+**Foreground vs. Background Dispatch Policy**
+
+Default is **foreground** — the team manager blocks until the agent returns. Use foreground for:
+
+- Tasks with `estimated_minutes` under 5 (fast enough that blocking is fine).
+- Tasks on the critical path where downstream tasks are immediately blocked.
+- The only ready task (no benefit to backgrounding when nothing else can run).
+
+Use **background** (`run_in_background: true`) when the following conditions are met (guideline — adapt based on runtime conditions):
+
+- The task's `estimated_minutes` is 8 or more (long enough that blocking the session is costly).
+- At least one other task is ready or will become ready soon (backgrounding is pointless if there is nothing else to do).
+- The run is not in `--supervised` mode (supervised mode implies tighter user control).
+
+Additional background triggers:
+
+- The user explicitly requests it ("run this in the background", "keep the session interactive").
+- Two or more independent chains can advance concurrently — dispatch one chain's task in the background and the other in the foreground, or both in the background if the team manager has no foreground work to do.
+
+The 8-minute threshold is a guideline, not a hard rule. Adapt based on runtime conditions — if a 6-minute task has 3 downstream dependents waiting, foreground is better to unblock them quickly. If a 5-minute task is the only one running and the user is actively interacting, background may be appropriate.
+
+When dispatching a parallel batch, apply the foreground/background decision per-task independently. Short tasks in a batch (under 5 minutes) can still run in foreground while longer tasks in the same batch run in background — or background the entire batch for simplicity when any task in it exceeds the threshold.
+
+**Interaction with health monitoring:** Background agents are subject to the check-in schedule and proactive warnings defined in `agent-health-monitoring.md` Sections 3 and 3a. The team manager must check background agent health at every check-in event.
+
+**Interaction with worktree isolation:** `run_in_background` and `isolation: "worktree"` are orthogonal — they can be combined. `run_in_background` controls whether the team manager blocks while waiting; `isolation: "worktree"` controls whether the agent gets its own copy of the repo. A long-running executor task that also needs file isolation can use both. When combining, the team manager must track both the background notification and the worktree branch for later merge.
+
 **Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (REMINDER: Do not skip timing. Every result must record an end time before any other processing.)
+
+After updating timing, evaluate health status for all in-progress background agents (see `agent-health-monitoring.md` Sections 3 and 3a). Emit proactive warnings for any threshold crossings before proceeding to result processing.
 
 | Outcome | Action |
 | :--- | :--- |
@@ -437,7 +466,7 @@ Use the brief format below.
 | **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task describing the issue. Pause dependent chain. Flag to user. |
 | **Scope issue** — agent says the plan is wrong or incomplete | Pause chain. Ask the user whether to re-plan or adjust. |
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/agent-health-monitoring.md` for timeout budgets, stall detection rules, and health escalation procedures. If the file is missing, proceed without health monitoring.
+> **Reference:** You MUST Read `~/.claude/skills/ops/agent-health-monitoring.md` for timeout budgets, stall detection rules, health escalation procedures, proactive health warnings, and orphan detection. If the file is missing, proceed without health monitoring.
 
 **Step 5 — Stage transition check.** When all tasks in a pipeline stage finish:
 
@@ -726,7 +755,9 @@ Show this on `status` command, at stage transitions, and at completion:
 ## Team Manager — Status
 
 ### Active
-- <agent> → Task #N: "<subject>" (in_progress, Xs elapsed)
+- <agent> → Task #N: "<subject>" (in_progress, Xs elapsed) [health indicator]
+
+Health indicators (✓ ON TRACK, ⚠️ SLOW, 🔴 OVERRUN, 👻 ORPHAN?) are defined in `agent-health-monitoring.md` Section 6. Show the appropriate indicator for each in-progress task based on elapsed time vs. estimate and agent-type timeout.
 
 ### Task Board
 | # | Task | Agent | Status | Est. | Actual | Blocked By |
@@ -883,11 +914,7 @@ When invoked with `ralph`, the team manager wraps its entire workflow inside a `
 
 By default, the team manager spawns agents in the **foreground** — the session blocks until each agent (or parallel batch) returns. The user cannot send messages while a foreground agent is running.
 
-For longer-running tasks, spawn agents with `run_in_background: true`. The session remains interactive — the user can send messages, and the team manager gets notified when background agents complete. Use background dispatch when:
-
-- Tasks are expected to take a long time (large implementations, full test suites)
-- The user has indicated they want to interact while work proceeds
-- Multiple independent chains can advance concurrently without blocking each other
+For longer-running tasks, spawn agents with `run_in_background: true`. The session remains interactive — the user can send messages, and the team manager gets notified when background agents complete. See Phase 3 Step 3 "Foreground vs. Background Dispatch Policy" for the specific criteria governing when to use background dispatch.
 
 The interruption handling below applies at the points where the team manager has control — between foreground agent returns, or any time during background dispatch.
 
