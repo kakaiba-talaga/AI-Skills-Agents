@@ -41,6 +41,9 @@ By default, the script prompts for confirmation before writing files. Use `-Forc
 # Deploy only skills to Cursor
 .\tooling\deploy.ps1 -Target cursor -Category skills
 
+# Deploy to WSL only
+.\tooling\deploy.ps1 -Target wsl -Force
+
 # Preview what would change (writes nothing)
 .\tooling\deploy.ps1 -DryRun
 
@@ -54,6 +57,7 @@ On Linux/macOS (requires `jq`):
 ./tooling/deploy.sh                          # prompts for confirmation
 ./tooling/deploy.sh -t claude -f             # skip confirmation
 ./tooling/deploy.sh -t cursor -c skills
+./tooling/deploy.sh -t wsl -f              # deploy to WSL only
 ./tooling/deploy.sh --dry-run
 ./tooling/deploy.sh --diff
 ```
@@ -111,3 +115,8 @@ Listed here are the global directories for the AI development tools or agentic h
 
 - `~/.cursor/agents/`
 - `~/.cursor/skills/`
+
+### Claude Code (WSL)
+
+- `//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/agents/`
+- `//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/skills/`

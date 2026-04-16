@@ -1,7 +1,7 @@
 **/.*/
 **/.*
-**/config
-**/docs/plan
+**/config/
+**/docs/plan/
 /rules
 
 # Exceptions

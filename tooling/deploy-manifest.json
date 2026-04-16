@@ -14,6 +14,21 @@
       "transform": false
     }
   },
+  "claude-code-wsl": {
+    "agents": {
+      "source": "agents/",
+      "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/agents/",
+      "include": ["*.md"],
+      "exclude": ["README.md"],
+      "transform": false
+    },
+    "skills": {
+      "source": "skills/",
+      "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/skills/",
+      "include": ["**/*"],
+      "transform": false
+    }
+  },
   "cursor": {
     "agents": {
       "source": "agents/",

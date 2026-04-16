@@ -34,7 +34,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("all", "claude", "cursor")]
+    [ValidateSet("all", "claude", "cursor", "wsl")]
     [string]$Target = "all",
 
     [ValidateSet("agents", "skills", "")]
@@ -369,6 +369,7 @@ function Deploy-Section {
 $targets = @()
 if ($Target -eq "all" -or $Target -eq "claude") { $targets += "claude-code" }
 if ($Target -eq "all" -or $Target -eq "cursor")  { $targets += "cursor" }
+if ($Target -eq "all" -or $Target -eq "wsl")     { $targets += "claude-code-wsl" }
 
 $categories = @()
 if ($Category -eq "" -or $Category -eq "agents") { $categories += "agents" }
@@ -391,7 +392,20 @@ if (-not $DryRun -and -not $Diff -and -not $Force) {
 $totalStats = @{ Copied = 0; Skipped = 0; Updated = 0 }
 
 foreach ($t in $targets) {
-    $displayName = if ($t -eq "claude-code") { "Claude Code" } else { "Cursor" }
+    $displayName = switch ($t) {
+        "claude-code"     { "Claude Code" }
+        "claude-code-wsl" { "Claude Code (WSL)" }
+        "cursor"          { "Cursor" }
+    }
+
+    if ($t -eq "claude-code-wsl") {
+        $wslCheck = Resolve-TargetPath $Manifest.$t.agents.target
+        if (-not (Test-Path (Split-Path $wslCheck -Parent))) {
+            Write-Host "`n[$displayName] Skipped - WSL path not accessible" -ForegroundColor Yellow
+            continue
+        }
+    }
+
     Write-Host "`n[$displayName]" -ForegroundColor Magenta
 
     $toolConfig = $Manifest.$t

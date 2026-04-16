@@ -6,7 +6,7 @@
 #   ./deploy.sh [options]
 #
 # Options:
-#   -t, --target <all|claude|cursor>    Target tool (default: all)
+#   -t, --target <all|claude|cursor|wsl> Target tool (default: all)
 #   -c, --category <agents|skills>      Deploy one category only (default: both)
 #   -n, --dry-run                       Show what would change without copying
 #   -d, --diff                          Show diffs between repo and deployed files
@@ -334,6 +334,7 @@ deploy_section() {
 targets=()
 [[ "$TARGET" == "all" || "$TARGET" == "claude" ]] && targets+=("claude-code")
 [[ "$TARGET" == "all" || "$TARGET" == "cursor" ]] && targets+=("cursor")
+[[ "$TARGET" == "all" || "$TARGET" == "wsl" ]] && targets+=("claude-code-wsl")
 
 categories=()
 [[ -z "$CATEGORY" || "$CATEGORY" == "agents" ]] && categories+=("agents")
@@ -362,8 +363,19 @@ if ! $DRY_RUN && ! $DIFF_MODE && ! $FORCE; then
 fi
 
 for t in "${targets[@]}"; do
-    display_name="Claude Code"
-    [[ "$t" == "cursor" ]] && display_name="Cursor"
+    case "$t" in
+        claude-code)     display_name="Claude Code" ;;
+        claude-code-wsl) display_name="Claude Code (WSL)" ;;
+        cursor)          display_name="Cursor" ;;
+    esac
+    if [[ "$t" == "claude-code-wsl" ]]; then
+        wsl_check=$(jq -r ".\"$t\".agents.target" "$MANIFEST")
+        wsl_base=$(dirname "$wsl_check")
+        if ! test -d "$wsl_base"; then
+            echo -e "  ${YELLOW}WSL target not accessible - skipping${NC}"
+            continue
+        fi
+    fi
     echo -e "\n${MAGENTA}[$display_name]${NC}"
 
     for cat in "${categories[@]}"; do
