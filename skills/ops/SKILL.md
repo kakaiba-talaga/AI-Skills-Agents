@@ -525,6 +525,34 @@ A vague brief produces vague work. If you can't write a specific brief, the task
 
 **Temporary files go in the project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
 
+### Team manager tool restrictions
+
+The team manager orchestrates — it does not perform work directly. **Always dispatch an agent or invoke a skill first.** Only fall back to direct tool use when no agent or skill covers the task.
+
+**Delegate-first principle:** Before using any tool to perform work (as opposed to reading state or displaying information), check whether an agent or skill should handle it:
+
+| Work type | Dispatch to | Team manager may NOT do directly |
+| :--- | :--- | :--- |
+| Git operations (branch, commit, merge, rebase, PR, tag) | `git-master` | `git checkout -b`, `git commit`, `git merge`, `git rebase`, `git push` |
+| File creation or modification | `executor` or `documentor` | `Edit`, `Write` on project files |
+| Code review | `code-reviewer` or `security-reviewer` | Reading code to form review judgments |
+| Testing or verification | `verifier` | Running test suites, checking acceptance criteria |
+| Deployment | `/deploy` skill or `ssh-executor` | `ssh`, `scp`, deploy scripts |
+| Documentation | `documentor` | Writing or updating README, docs, guides |
+
+**What the team manager MAY do directly:**
+
+- **Read files** to understand context for briefing agents (Read, Glob, Grep)
+- **Read-only git commands** for state checks: `git status`, `git branch --show-current`, `git log`, `git diff --stat`, `git stash list`
+- **Write to `.ops-state/`** — state files are team manager infrastructure, not project content
+- **Write to `docs/plan/.handoffs/`** — handoff documents are team manager infrastructure
+- **Run `mkdir -p`** for `.ops-state/` and handoff directories
+- **Run `rm`** for cleanup of `_tmp_*`, `.ops-state/`, and handoff files at completion
+- **Invoke skills** via the Skill tool (`/deploy`, `/deslop`, `/code-review`, etc.)
+- **Run general commands** only when the task falls outside all agent and skill definitions — log it as an adaptation: "Direct command: [reason no agent/skill covers this]"
+
+**Self-check:** If you are about to run `git commit`, `git checkout -b`, `git rebase`, `git merge`, or any mutating git command — stop. Dispatch `git-master` instead. If you are about to use `Edit` or `Write` on a project file — stop. Dispatch the appropriate agent instead.
+
 ### Agent-specific rules
 
 Spawned agents are workers, not managers. Enforce these rules in every brief:
