@@ -65,42 +65,7 @@ The ops skill uses a **dual-layer task board**: a JSON state file on disk for fu
 
 The state file is stored at `.ops-state/<run-id>-board.json`. This is the source of truth for all task data — dependencies, timing, estimates, agent assignments, and adaptation notes.
 
-**Directory conventions:**
-- `.ops-state/` holds one board file per run (supports concurrent/sequential runs without collision)
-- `.ops-state/` should be in `.gitignore` (ephemeral runtime state, not project content)
-- Cleaned up on successful completion (same lifecycle as ralph-loop's `.ralph-state/`)
-
-**State file structure:**
-
-```json
-{
-  "run_id": "auth-middleware-2026-04-14",
-  "state_dir": ".ops-state/",
-  "plan_file": "docs/plan/auth-middleware-plan.md",
-  "tasks": [
-    {
-      "id": "task-1",
-      "subject": "Implement auth middleware",
-      "description": "Full task details with acceptance criteria...",
-      "status": "pending",
-      "agent_type": "executor",
-      "stage": "implement",
-      "priority": 1,
-      "estimated_minutes": 15,
-      "estimate_source": "ops",
-      "blocked_by": ["task-0"],
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "model_used": null,
-      "attempts": 0,
-      "adaptation": null,
-      "handoff_file": null,
-      "_internal": false
-    }
-  ]
-}
-```
+> **Reference:** You MUST Read `~/.cursor/skills/ops/state-schema.md` for the state file JSON structure, field definitions, and directory conventions. If the file is missing, proceed using the State Operations table below.
 
 ### State Operations
 
@@ -144,14 +109,7 @@ Determine the starting point from the parsed arguments:
 
 If no arguments are given, ask the user what they want to manage.
 
-**Spec clarity evaluation:** Before dispatching the planner, assess whether the user's input is clear enough to plan from. The interviewer should run **before** the planner when specifications are ambiguous — planning from vague specs produces plans that need revision, wasting the planner's tokens and the user's time.
-
-| Signal | Clarity level | Action |
-| :--- | :--- | :--- |
-| User provides specific requirements, acceptance criteria, or references an existing spec/ticket | **Clear** | Dispatch planner directly. |
-| User's input names a goal but leaves key decisions open ("make it better", "add caching", "improve performance") | **Vague** | Dispatch **interviewer** to crystallize: what specifically needs to change, what are the success criteria, what are the constraints? Then dispatch planner with the interviewer's requirements document. |
-| User's input is contradictory, references unknown context, or has multiple possible interpretations | **Ambiguous** | Dispatch **interviewer** to resolve the ambiguity before planning. |
-| User says "just plan it" or explicitly asks for planning despite vague input | **User override** | Dispatch planner directly — the user wants to see what the planner produces and will refine from there. Log: "Adapted: skipped interviewer — user requested direct planning despite vague spec." |
+**Spec clarity evaluation:** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says "just plan it", dispatch planner regardless.
 
 In **interactive mode**, when the spec is vague or ambiguous, the team manager can also just ask the user directly instead of dispatching the interviewer — a quick clarifying question is often faster than a full Socratic interview. Use the interviewer agent when the ambiguity is deep (multiple dimensions unclear, conflicting requirements, or the user has indicated they want structured requirements gathering).
 
@@ -182,26 +140,9 @@ After the planner returns a plan (or when `execute` is used with an existing pla
 
 **Skip Phase 1a when:** `resume`, `status`, or when the user explicitly says "just do it" / "skip validation" (or equivalent phrasing).
 
-**Detecting already-validated plans on `execute`:** When the user provides a plan via `execute`, check whether it has already been through scoping and/or critique before deciding to skip Phase 1a:
-1. A companion scoping document exists on disk at `docs/plan/<plan-name>-scoping.md` alongside the plan file.
-2. The plan document itself contains a "Critic Verdict" or "Scoping" section (indicating it was reviewed in a prior session).
-3. The conversation context contains a critic verdict or scoper output for this plan.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/plan-validation.md` for spec clarity evaluation criteria, plan complexity scoring signals, critic verdict handling, scoper/critic output descriptions, execute-skip detection, mode-specific behavior, and adaptation rules. If the file is missing, proceed using the tier table and display format above.
 
-If **any** of these signals are present, skip Phase 1a. If **none** are present, run Phase 1a normally — the plan needs validation even though it entered via `execute`.
-
-**Step 1 — Score plan complexity.** Evaluate the plan against these signals:
-
-| Signal | Weight | Triggers when |
-| :--- | :--- | :--- |
-| **Task count** | High | >5 implementation tasks |
-| **Architectural decisions** | High | New agent, new skill, new integration pattern, security model, API design, data model changes |
-| **Multi-system scope** | Medium | Plan touches 3+ modules, files across different systems, or external integrations |
-| **Ambiguity in spec** | Medium | User's original input was vague, had open questions, or the planner flagged uncertainties |
-| **Risk level** | Medium | Touches security, auth, data, infrastructure, or production systems |
-| **Time estimate** | Low | Plan estimates >2 hours total work |
-| **Novelty** | Low | First time this type of work appears in the project, or no precedent in codebase |
-
-**Step 2 — Determine validation tier.**
+**Determine validation tier:**
 
 | Tier | Criteria | Action | Cost |
 | :--- | :--- | :--- | :--- |
@@ -209,16 +150,7 @@ If **any** of these signals are present, skip Phase 1a. If **none** are present,
 | **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates and gap analysis, OR medium signals present | Dispatch **project-scoper** via `Task(subagent_type="project-scoper")` to produce a scoping document. Proceed to Phase 1.5 after scoping. | 1 agent |
 | **Tier 3 — Scope + Critique** | >5 tasks, OR any high-weight signal (architectural decisions, security/risk), OR multiple medium signals | Dispatch **project-scoper** first, then dispatch **critic** via `Task(subagent_type="critic")` to review the combined plan + scoping document. Handle the critic's verdict as described below. | 2 agents |
 
-**Critic verdict handling (Tier 3):**
-
-| Verdict | Action |
-| :--- | :--- |
-| **ACCEPT** | Proceed to Phase 1.5. |
-| **ACCEPT WITH RESERVATIONS** | Display the reservations. In all modes (interactive, autonomous, supervised), **stop and present the reservations to the user**. The user decides: proceed as-is, address the reservations first, or send it back for revision. This is a decision point — autonomous mode stops here per the Autonomy Modes rules. |
-| **REVISE** | Route the critic's findings back to the **planner** via `Task(subagent_type="planner")`. The planner updates the existing plan document. Re-run Phase 1a. Maximum 2 revision loops — if the planner produces a substantively similar plan after 2 revisions, escalate to the user: "The planner produced a similar plan after 2 revisions. The critic's findings may require rethinking the approach, not just revising the plan." |
-| **REJECT** | Escalate to the user with the critic's full findings. Do not proceed to Phase 2. |
-
-**Step 3 — Display the tier decision.** Always show the tier decision to the user, regardless of autonomy mode:
+**Display the tier decision:** Always show the tier decision to the user, regardless of autonomy mode:
 
 ```text
 Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]
@@ -235,23 +167,6 @@ In **interactive mode**, show the tier decision and wait for the user to confirm
 In **autonomous mode**, display the tier decision and proceed automatically. The decision is always visible so the user knows what validation level was applied — the team manager never silently skips validation without reporting it.
 
 In **supervised mode**, show the tier decision and wait for approval before each agent dispatch (same as other tasks in supervised mode).
-
-**What the project-scoper adds (Tier 2 and 3):**
-- **Gap analysis** — what the plan missed (edge cases, error handling, dependencies)
-- **Effort estimates** — hours per task, sourced from scoping analysis (these feed into `estimated_minutes` with `estimate_source: "scoping-doc"` in Phase 2)
-- **Risk flags** — what could go wrong and how to mitigate
-- **Scope boundaries** — what's explicitly out of scope to prevent creep
-- **Scoping document** — persisted to `docs/plan/` alongside the plan document
-
-**What the critic adds (Tier 3 only):**
-- **Feasibility review** — can this plan actually be implemented as described?
-- **Assumption audit** — what assumptions does the plan make that might not hold?
-- **Verdict** — ACCEPT / ACCEPT WITH RESERVATIONS / REVISE / REJECT
-- **Revision loop** — if REVISE, findings go back to the planner. The planner updates the plan, and Phase 1a re-evaluates (maximum 2 revision loops before escalating to the user)
-
-**Adaptation:**
-- If past runs show this project type consistently needs critique, upgrade the default tier. Log: "Applied learned pattern: Tier 3 for auth-related work (past run required revision)."
-- If the user overrides the tier decision, note the override for future runs. Example: "User overrode Tier 3 → Tier 1 for config-only changes. Apply Tier 1 default for config changes."
 
 ### Phase 1.5 — Branch Isolation (adaptive)
 
@@ -277,7 +192,7 @@ Branch isolation is the default — create a working branch before agents modify
 
 When skipping, **always log it as an adaptation**: "Adapted: skipped branch creation — current branch `develop` already contains related Phase 1 work."
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/branch-isolation.md` for complete branch handling procedures (uncommitted changes, branch creation, after-completion cleanup, worktree/ralph/resume interaction). If the file is missing, proceed using the decision table above.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/branch-isolation.md` for complete branch handling procedures (uncommitted changes, branch creation, after-completion cleanup, worktree/ralph/resume interaction) and git worktree isolation rules (when to use, merge strategy). If the file is missing, proceed using the decision table above.
 
 ### Phase 2 — Task Board Creation
 
@@ -587,13 +502,6 @@ executor(task2) ──┤→ verifier(all) → deslop(all) → code-reviewer(all
 executor(task3) ──┘
 ```
 
-SSH deployment chains:
-
-```text
-executor → ssh-executor → verifier  (build locally, deploy remotely, verify)
-ssh-executor → verifier              (standalone remote task, then verify)
-```
-
 > **Reference:** You MUST Read `~/.cursor/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, and handoff format. If the file is missing, proceed without SSH-specific guidance.
 
 ---
@@ -649,27 +557,10 @@ After all verify tasks pass and before code review, run deslop with `--conservat
 - A task and any task it blocks
 - Multiple reviewers on the same diff
 - Git operations on the same branch
-- SSH tasks targeting the same remote host (unless brief confirms no shared state)
 
 When spawning parallel agents, always verify file independence first. If two tasks might touch the same file, sequence them.
 
-### Git Worktree Isolation
-
-When `--worktree` is set (or when parallel agents are likely to touch overlapping files), spawn agents via `Task(subagent_type="best-of-n-runner")`. This gives each agent its own copy of the repo on an isolated branch, eliminating file conflicts entirely.
-
-**When to use worktrees:**
-
-- 2+ executor agents running in parallel on code that might share imports or config files
-- Any parallel work where file independence is uncertain
-- High-risk changes where you want easy rollback per agent
-
-**Merge strategy:** After all worktree agents complete, their branches must be merged. Dispatch the **git-master** via `Task(subagent_type="git-master")` to merge branches sequentially, resolving conflicts if any. If conflicts exist, flag to the user before force-merging.
-
-**When NOT to use worktrees:**
-
-- Single-agent dispatch (no conflict risk)
-- Read-only agents (verifier, code-reviewer running checks without edits)
-- Tasks that intentionally modify the same files in sequence
+> When `--worktree` is set, see the worktree isolation rules in `branch-isolation.md` above.
 
 ---
 
@@ -723,21 +614,8 @@ Show this on `status` command, at stage transitions, and at completion:
 |-------|-------|------|--------|----------|
 | **Total** | | | | |
 
-### Cost (completion only — omit from mid-run dashboards)
-Either a per-task table (preferred for small runs, <10 tasks) OR a per-model rollup (preferred for large runs):
-
-Per-task:
-| # | Agent | Model | Tokens | Tool uses | Cost |
-|---|-------|-------|--------|-----------|------|
-| Ops overhead | — | (session model) | ~?K | — | ~$X.XX |
-| **Total** | | | | | |
-
-Per-model rollup:
-| Model | Tasks | Tokens | Cost |
-|-------|-------|--------|------|
-| **Total** | | | |
-
-All $ and token figures prefixed with `~`. Ranges acceptable (e.g., `~$1.50–3.00`).
+### Cost
+(Completion only. Read `cost-tracking.md` for dashboard format.)
 
 ### Preflight
 - (show checklist if preflight was run this session)
@@ -855,19 +733,7 @@ When invoked with `ralph`, the team manager wraps its entire workflow inside a `
 
 ## Interruption Handling
 
-### How dispatch works (foreground vs background)
-
-By default, the team manager spawns agents in the **foreground** — the session blocks until each agent (or parallel batch) returns. The user cannot send messages while a foreground agent is running.
-
-For longer-running tasks, spawn agents with `Task(run_in_background=true)`. The session remains interactive — the user can send messages, and the team manager can poll for completion using the Await tool. Use background dispatch when:
-
-- Tasks are expected to take a long time (large implementations, full test suites)
-- The user has indicated they want to interact while work proceeds
-- Multiple independent chains can advance concurrently without blocking each other
-
-The interruption handling below applies at the points where the team manager has control — between foreground agent returns, or any time during background dispatch.
-
-> **Reference:** You MUST Read `~/.cursor/skills/ops/interruption-recovery.md` for detailed procedures for cancel/abort, reprioritize, inject tasks, remove tasks, and session recovery. If the file is missing, proceed using the summary table below.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/interruption-recovery.md` for detailed procedures for cancel/abort, reprioritize, inject tasks, remove tasks, session recovery, and how foreground vs. background dispatch works. If the file is missing, proceed using the summary table below.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/resume-dedup.md` for the resume deduplication procedure and work verification checks. If the file is missing, re-dispatch in_progress tasks without dedup checks.
 
