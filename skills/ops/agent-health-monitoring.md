@@ -63,6 +63,7 @@ The team manager checks health at these points:
 
 - When a background agent's elapsed time crosses the **SLOW** threshold (1.5× estimate, per Section 6), the team manager emits a warning to the user on the next check-in event.
 - When elapsed time crosses the **OVERRUN** threshold (2.5× estimate), the team manager emits an urgent warning.
+- **Estimate-source sensitivity:** For tasks with `estimate_source: "ops"` (rough estimates with wide error margins), suppress SLOW warnings — emit OVERRUN only. For tasks with `estimate_source: "scoping-doc"` (calibrated estimates from the project-scoper), apply the full SLOW and OVERRUN thresholds. This prevents noisy warnings on rough estimates while preserving early-warning value on calibrated ones.
 - Warnings are emitted **once per threshold crossing per task** — not repeated on every check-in. Track which thresholds have been reported in-memory (this does not need state file persistence since warnings are best-effort).
 - On session resume, warning state resets — SLOW and OVERRUN warnings may re-fire for tasks that already crossed these thresholds before the interruption. This is expected and harmless.
 - Warning format:

@@ -446,7 +446,11 @@ Additional background triggers:
 
 The 8-minute threshold is a guideline, not a hard rule. Adapt based on runtime conditions — if a 6-minute task has 3 downstream dependents waiting, foreground is better to unblock them quickly. If a 5-minute task is the only one running and the user is actively interacting, background may be appropriate.
 
+When dispatching a parallel batch, apply the foreground/background decision per-task independently. Short tasks in a batch (under 5 minutes) can still run in foreground while longer tasks in the same batch run in background — or background the entire batch for simplicity when any task in it exceeds the threshold.
+
 **Interaction with health monitoring:** Background agents are subject to the check-in schedule and proactive warnings defined in `agent-health-monitoring.md` Sections 3 and 3a. The team manager must check background agent health at every check-in event.
+
+**Interaction with worktree isolation:** `run_in_background` and `isolation: "worktree"` are orthogonal — they can be combined. `run_in_background` controls whether the team manager blocks while waiting; `isolation: "worktree"` controls whether the agent gets its own copy of the repo. A long-running executor task that also needs file isolation can use both. When combining, the team manager must track both the background notification and the worktree branch for later merge.
 
 **Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (REMINDER: Do not skip timing. Every result must record an end time before any other processing.)
 
@@ -751,7 +755,9 @@ Show this on `status` command, at stage transitions, and at completion:
 ## Team Manager — Status
 
 ### Active
-- <agent> → Task #N: "<subject>" (in_progress, Xs elapsed)
+- <agent> → Task #N: "<subject>" (in_progress, Xs elapsed) [health indicator]
+
+Health indicators (✓ ON TRACK, ⚠️ SLOW, 🔴 OVERRUN, 👻 ORPHAN?) are defined in `agent-health-monitoring.md` Section 6. Show the appropriate indicator for each in-progress task based on elapsed time vs. estimate and agent-type timeout.
 
 ### Task Board
 | # | Task | Agent | Status | Est. | Actual | Blocked By |
