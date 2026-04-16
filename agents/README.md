@@ -21,10 +21,11 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
 | [git-master](git-master.md) | sonnet | Utility agent for git operations — branching, commits, PRs, merges, conflict resolution, releases, repo hygiene, and work-in-progress pause/resume. Generates commit messages standalone when `/commit-message` is unavailable. Available at any pipeline stage. |
 | [interviewer](interviewer.md) | opus | Conducts structured Socratic interviews to crystallize ambiguous requirements. Identifies ambiguity dimensions, scores them 0.0–1.0, asks one targeted question at a time, and produces a requirements document. Dispatched before the planner when specs are vague. |
+| [architect](architect.md) | opus | Explores design alternatives and produces Architecture Decision Documents (ADDs) that define component boundaries, evaluate trade-offs, and establish the structural foundation before planning begins. |
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor.
 
 ### Overriding the default model
 
@@ -46,6 +47,13 @@ In Cursor, this is not an issue — Cursor's `Task` tool `subagent_type` enum in
 ## Usage
 
 Agents are invoked automatically by Claude Code when a task matches their description. You can also request them explicitly by name or by describing the task.
+
+### Architect
+
+- _"Use the architect to explore design options for the new caching layer"_
+- _"Have the architect evaluate trade-offs between a queue-based vs event-driven approach"_
+- _"Design the component boundaries for the notification system"_
+- _"Produce an ADD for the authentication migration"_
 
 ### Planner
 
@@ -193,17 +201,18 @@ Autonomous mode is per-request, not a persistent setting. The next run defaults 
 All agents work as a pipeline with explicit handoffs between each stage:
 
 1. **Interviewer** _(optional)_ — when specs are ambiguous, conducts a structured Socratic Q&A with the user to crystallize requirements before planning. Produces a requirements document. Skipped when specs are already clear.
-2. **Planner** — breaks down specifications into a structured plan (what, how, in what order). Classifies scope, identifies dependencies, flags risks. Does not estimate hours.
-3. **Project Scoper** — receives the plan, runs requirements analysis (gap detection, guardrails, scope risks, edge cases), then produces the formal scoping document with estimates, timelines, and traceability.
-4. **Critic** — reviews the combined plan and scoping document for flawed assumptions, gaps, ambiguities, and feasibility issues. Issues a verdict before implementation begins.
-5. **Executor** — implements code changes precisely as specified. Works through tasks in order, verifies against acceptance criteria, flags blockers.
-6. **Verifier** — validates that acceptance criteria are met, assesses test coverage, writes missing tests, and runs integration checks.
-7. **Deslop** _(automatic)_ — runs `/deslop --conservative` on modified files to clean AI-generated structural bloat. Enabled by default; skipped with `--no-deslop`. Skipped silently if the skill is unavailable.
-8. **Code Reviewer** — reviews the cleaned changes before commit. Delegates to `/code-review` for git diff reviews when available, or handles them directly with its built-in fallback.
-9. **Documentor** — writes new documentation for implemented features, documents decisions, updates project scoping, then runs `/doc-sync` for a final consistency check (or its built-in audit fallback if the skill is unavailable).
+2. **Architect** _(optional)_ — when the spec involves significant design decisions (new subsystems, technology choices, competing strategies, component boundary changes), explores alternatives and produces an Architecture Decision Document (ADD). The planner uses the ADD as structural input. Skipped when the implementation approach is clear.
+3. **Planner** — breaks down specifications into a structured plan (what, how, in what order). Classifies scope, identifies dependencies, flags risks. Does not estimate hours.
+4. **Project Scoper** — receives the plan, runs requirements analysis (gap detection, guardrails, scope risks, edge cases), then produces the formal scoping document with estimates, timelines, and traceability.
+5. **Critic** — reviews the combined plan and scoping document for flawed assumptions, gaps, ambiguities, and feasibility issues. Issues a verdict before implementation begins.
+6. **Executor** — implements code changes precisely as specified. Works through tasks in order, verifies against acceptance criteria, flags blockers.
+7. **Verifier** — validates that acceptance criteria are met, assesses test coverage, writes missing tests, and runs integration checks.
+8. **Deslop** _(automatic)_ — runs `/deslop --conservative` on modified files to clean AI-generated structural bloat. Enabled by default; skipped with `--no-deslop`. Skipped silently if the skill is unavailable.
+9. **Code Reviewer** — reviews the cleaned changes before commit. Delegates to `/code-review` for git diff reviews when available, or handles them directly with its built-in fallback.
+10. **Documentor** — writes new documentation for implemented features, documents decisions, updates project scoping, then runs `/doc-sync` for a final consistency check (or its built-in audit fallback if the skill is unavailable).
 
 ```text
-[Interviewer] → Planner → Project Scoper → Critic → Executor → Verifier → [Deslop] → Code Reviewer → Documentor → Done
+[Interviewer] → [Architect] → Planner → Project Scoper → Critic → Executor → Verifier → [Deslop] → Code Reviewer → Documentor → Done
 ```
 
 _Brackets indicate optional/automatic stages. Interviewer runs only when specs are ambiguous. Deslop runs automatically unless disabled._
@@ -306,6 +315,7 @@ Agents cannot spawn subagents themselves (Claude Code limitation). The main sess
 | Agent | Threshold | Split dimension |
 | :--- | :--- | :--- |
 | Planner | 3+ subsystems | Parallel Explore agents for codebase research. |
+| Architect | 3+ subsystems | Parallel Explore agents for domain research. |
 | Project Scoper | 3+ milestones | Gap analysis and estimation per milestone. |
 | Critic | 3+ milestones | Review per milestone, single-pass verdict. |
 | Executor | 5+ independent tasks | Task groups by module (no shared files). |

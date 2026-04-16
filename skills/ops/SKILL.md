@@ -127,6 +127,8 @@ If no arguments are given, ask the user what they want to manage.
 | User's input is contradictory, references unknown context, or has multiple possible interpretations | **Ambiguous** | Dispatch **interviewer** to resolve the ambiguity before planning. |
 | User says "just plan it" or explicitly asks for planning despite vague input | **User override** | Dispatch planner directly — the user wants to see what the planner produces and will refine from there. Log: "Adapted: skipped interviewer — user requested direct planning despite vague spec." |
 
+**Architect dispatch (optional):** After assessing spec clarity — and before dispatching the planner — evaluate whether the spec involves significant architectural decisions that would benefit from design exploration. Dispatch an **architect** agent when the spec involves: new subsystems or components, significant technology choices, competing implementation strategies, changes to component boundaries, or API/data model design. The architect produces an Architecture Decision Document (ADD) that the planner then uses as structural input. Skip the architect for well-understood work where the implementation approach is clear.
+
 In **interactive mode**, when the spec is vague or ambiguous, the team manager can also just ask the user directly instead of dispatching the interviewer — a quick clarifying question is often faster than a full Socratic interview. Use the interviewer agent when the ambiguity is deep (multiple dimensions unclear, conflicting requirements, or the user has indicated they want structured requirements gathering).
 
 In **autonomous mode**, dispatch the interviewer when the spec scores as vague/ambiguous — the team manager cannot ask the user interactively.
@@ -316,7 +318,8 @@ Before displaying the task board, confirm the state file exists and is valid:
 | Debug, investigate, diagnose, root cause, unexpected behavior, test failure, regression | `debugger` |
 | Build error, import error, ModuleNotFoundError, type error, dependency error, compilation error, config error, broken build | `debugger-build` |
 | Commit, branch, merge, PR, tag, release, changelog | `git-master` |
-| Plan, break down, design, architect | `planner` |
+| Plan, break down, task hierarchy, milestone structure | `planner` |
+| Architect, design system, explore design alternatives, evaluate trade-offs, component boundaries, API design, data model design | `architect` |
 | Scope, estimate, analyze requirements, gap analysis, revise architecture/planning docs from review findings | `project-scoper` |
 | Interview, clarify, gather requirements, crystallize spec, resolve ambiguity | `interviewer` |
 | Deploy, deploy to, ssh, scp, remote command, remote server, transfer files to, upload to, restart service on, check remote, verify endpoint on, tail logs on | `ssh-executor` |
@@ -340,6 +343,7 @@ Each agent must stay in its lane:
 - **debugger-build** fixes build/compilation errors — does not investigate runtime bugs or write features
 - **git-master** handles git operations only — does not write code, docs, or tests
 - **planner** produces plans and task breakdowns only — does not implement or review
+- **architect** explores design alternatives and produces Architecture Decision Documents — does not implement, test, review, plan task breakdowns, or document
 - **interviewer** gathers requirements and resolves ambiguity only — does not implement or decide
 - **critic** reviews plans for feasibility — does not implement, test, or modify
 
@@ -549,6 +553,14 @@ When a task completes and feeds into a downstream task, write a **handoff docume
 ---
 
 ## Handoff Chains
+
+Pre-planning chain (optional, for work requiring design exploration):
+
+```
+interviewer → architect → planner → project-scoper → critic → executor → ...
+```
+
+The architect dispatches when the spec involves significant architectural decisions. When not needed, the team manager goes directly to the planner.
 
 ```
 executor → verifier → deslop → code-reviewer → documentor
