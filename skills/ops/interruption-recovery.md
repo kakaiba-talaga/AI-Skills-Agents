@@ -67,3 +67,11 @@ On `/ops resume`:
 6. Show the recovered dashboard — including a note about which handoff files were recovered — and ask the user to confirm before resuming.
 
 The team manager does not rely on conversation history for stage-to-stage context — everything is on disk (plan doc + handoff files + state file).
+
+## How Dispatch Works (Foreground vs Background)
+
+By default, the team manager spawns agents in the **foreground** — the session blocks until each agent (or parallel batch) returns. The user cannot send messages while a foreground agent is running.
+
+For longer-running tasks, spawn agents with `run_in_background: true`. The session remains interactive — the user can send messages, and the team manager gets notified when background agents complete. See Phase 3 Step 3 "Foreground vs. Background Dispatch Policy" for the specific criteria governing when to use background dispatch.
+
+The interruption handling below applies at the points where the team manager has control — between foreground agent returns, or any time during background dispatch.

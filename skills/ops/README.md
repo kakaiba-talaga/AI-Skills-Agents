@@ -357,23 +357,28 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | File | Content | Loaded when |
 | :--- | :--- | :--- |
 | `help-card.md` | Quick-reference card for commands, flags, and mid-run actions | `help` command |
-| `branch-isolation.md` | Detailed branch handling procedures (uncommitted changes, worktree/ralph/resume interaction) | Branching decisions in Phase 1.5 |
+| `plan-validation.md` | Spec clarity evaluation, plan complexity scoring, critic verdict handling, scoper/critic output descriptions, execute-skip detection, adaptation rules | Phase 1a Plan Validation (Tier 2/3 runs) |
+| `branch-isolation.md` | Detailed branch handling procedures (uncommitted changes, worktree isolation rules, merge strategy, worktree/ralph/resume interaction) | Branching decisions in Phase 1.5 and `--worktree` flag |
+| `state-schema.md` | State file JSON structure, field definitions, directory conventions | Phase 2 state file creation |
 | `preflight-validation.md` | Preflight validation procedure, check categories, agent brief template | Phase 2.5 before first dispatch |
+| `dispatch-policy.md` | Foreground/background dispatch decision criteria, thresholds, batch rules, interaction with health monitoring and worktree isolation | Phase 3 dispatch decisions (tasks 8+ min) |
 | `agent-health-monitoring.md` | Timeout budgets, stall detection rules, health escalation procedures | Phase 3 dispatch loop (agent monitoring) |
+| `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules | Team manager tool use decisions |
 | `handoffs.md` | Full handoff template, run identity rules, naming examples, accumulation rules, cleanup lifecycle | Writing or reading handoff documents |
-| `ssh-integration.md` | SSH-specific preflight checks, brief template, handoff format | SSH tasks on the board |
+| `ssh-integration.md` | SSH-specific preflight checks, brief template, handoff format, SSH handoff chains, SSH parallel safety rules | SSH tasks on the board |
 | `deslop-integration.md` | Full deslop procedure, skip conditions, dashboard display, re-verification logic | Verify→review stage transition |
-| `rollback-strategy.md` | Rollback procedure, scope levels, guardrails | Failure handling (chain failures, cancellations) |
+| `rollback-strategy.md` | Rollback procedure, scope levels, guardrails, model escalation metadata format and skip conditions | Failure handling (chain failures, model escalation) |
 | `timing-edge-cases.md` | 7 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time) | Phase 4 completion and Status Dashboard display |
-| `estimation-feedback.md` | Estimation feedback loop, memory format, calibration procedure | Phase 4 completion (estimate accuracy) |
-| `cost-tracking.md` | Token estimation heuristics, model pricing, cost dashboard format | Phase 4 completion (cost estimate) |
+| `estimation-feedback.md` | Estimation feedback loop, memory format, calibration procedure, cross-run learning patterns | Phase 4 completion (estimate accuracy and learning) |
+| `cost-tracking.md` | Token estimation heuristics, model pricing, cost dashboard format, per-task and per-model rollup templates | Phase 4 completion (cost estimate and dashboard) |
 | `conditional-stage-skip.md` | Per-stage skip conditions and evaluation procedure | Edge case evaluation (trivial changes) |
-| `interruption-recovery.md` | Detailed procedures for cancel, reprioritize, inject tasks, remove tasks, and session recovery | User interrupts and `resume` command |
+| `interruption-recovery.md` | Detailed procedures for cancel, reprioritize, inject tasks, remove tasks, session recovery, foreground/background dispatch explainer | User interrupts, `resume` command, dispatch context |
 | `resume-dedup.md` | Resume deduplication procedure and work verification checks | `resume` command |
 | `permissions.md` | Permission reference, always-prompt table, and opt-in instructions | Permission issues |
 | `ralph-integration.md` | Ralph loop integration protocol, iteration behavior, when to use | `ralph` flag |
+| `pointer-format.md` | Standard format for pointer lines, usage notes for extraction agents | Meta-reference for maintaining pointer consistency |
 
-These companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
+These 22 companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
 
 ---
 

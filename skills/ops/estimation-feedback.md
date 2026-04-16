@@ -118,3 +118,16 @@ When writing to an existing `feedback_ops_timing_patterns.md`:
 **Different project structures:** Memory is per-project (stored in `~/.claude/projects/<project>/memory/`). Calibration data does not transfer between projects. A project with many small executor tasks and a project with large refactors will have different natural baselines.
 
 **Run with no timing data:** If task metadata is missing `started_at` or `completed_at` values (e.g., timing was not recorded due to a session interruption), skip the write for that run. Do not overwrite valid historical data with incomplete observations.
+
+## Cross-Run Learning
+
+Informs decisions but doesn't override them.
+
+- **Record:** Task patterns needing adaptation, agent effectiveness, timing patterns.
+- **Don't record:** Specific file paths/line numbers, task descriptions, anything derivable from git history.
+- **Use:** Check memory at run start, apply as soft defaults, log when applied: "Applied learned pattern: using opus for auth module tasks (based on past run)."
+  - Assign preferred model from the start (don't wait for failure to escalate).
+  - Default to sequential dispatch or suggest `--worktree` if past runs hit conflicts.
+  - Use the mapped agent type directly (don't route to a wrong agent then reassign).
+
+Write patterns as a feedback-type memory file (e.g., `feedback_team_patterns.md`). One pattern per entry with a **Why** and **How to apply** line.

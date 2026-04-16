@@ -155,3 +155,25 @@ Omit this row only if the run had zero agent dispatches (e.g., a `status` or `--
 - **Cost data informs decisions, not blocks them.** The team manager may surface cost context when deciding whether to escalate (e.g., "This task has failed twice on sonnet — escalating to opus will cost approximately $X. Proceeding."), but it must NOT refuse to escalate based on cost alone. Cost tracking is informational only.
 - **Cost tracking is not a budget enforcement mechanism.** There are no hard limits, thresholds, or automatic stops based on estimated spend.
 - **Prices change.** The rates in Section 3 are snapshots. If a run produces numbers that seem inconsistent with known pricing, note the discrepancy and use the most current rates available.
+
+## Dashboard Cost Format
+
+Display in the completion dashboard only — omit from mid-run dashboards.
+
+Either a per-task table (preferred for small runs, <10 tasks) OR a per-model rollup (preferred for large runs):
+
+**Per-task:**
+
+| # | Agent | Model | Tokens | Tool uses | Cost |
+|---|-------|-------|--------|-----------|------|
+| Team manager overhead | — | (orchestration model) | ~?K | — | ~$X.XX |
+| **Total** | | | | | |
+
+**Per-model rollup:**
+
+| Model | Tasks | Tokens | Cost |
+|-------|-------|--------|------|
+| **Total** | | | |
+
+Model escalation overhead: ~$X.XX (N tasks escalated) — omit if no escalations.
+All $ and token figures prefixed with `~`. Ranges acceptable (e.g., `~$1.50–3.00`).
