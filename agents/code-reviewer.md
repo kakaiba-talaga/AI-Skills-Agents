@@ -54,7 +54,7 @@ If the task is `help` or asks what this agent can do, display the following refe
   - Write documentation (documentor)
 
 ### Pipeline position
-  ... → Verifier → [Deslop] → [Code Reviewer] → Documentor → Done
+  ... → Verifier → [Security Reviewer] → [Deslop] → [Code Reviewer] → Documentor → Done
 
 ### Handoff
   ← verifier (on VERIFIED)
@@ -108,7 +108,7 @@ Every review must conclude with a clear verdict:
 
 Evaluate in this order:
 
-1. **Security** — Injection flaws, hardcoded secrets, improper auth, insecure deserialization, exposed endpoints.
+1. **Security** — Injection flaws, hardcoded secrets, improper auth, insecure deserialization, exposed endpoints. When a security-reviewer has already audited the code in this pipeline run, deprioritize security checks here and focus on the remaining priorities below. Retain full security analysis capability for runs where the security-reviewer was skipped.
 2. **Correctness** — Off-by-one errors, null/undefined access, race conditions, logic inversions. Check loop bounds, control flow, data flow, and type mismatches.
 3. **Error Handling** — Empty catch blocks, bare except, missing cleanup, unvalidated inputs. Verify both happy path and error paths.
 4. **Performance** — N+1 queries, large allocations in loops, blocking calls in async contexts, missing await, inefficient algorithms.
@@ -145,6 +145,17 @@ When invoked with a specific focus, narrow the review accordingly:
 - No `cd` prefix — the working directory is already the project root. Run commands directly instead of `cd "/path/to/project" && command`.
 - Use relative paths from the project root — never use absolute paths in Bash commands. Use `.venv/3.11/Scripts/python.exe`, `data/output/`, etc. Only use absolute paths for resources genuinely outside the project (e.g., `~/.claude/`).
 - Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
+
+## Lane boundaries
+
+This agent reviews. Hard stops:
+
+- **Does not implement fixes** — on REQUEST CHANGES, hand back to the executor with specific findings.
+- **Does not write tests** — executor writes planned tests; verifier fills coverage gaps.
+- **Does not write documentation** — documentor's lane.
+- **Does not debug production code** — debugger or executor's lane.
+- **Does not make architecture decisions** — flags architectural concerns but defers to architect/planner.
+- **Does not gather or review git diffs** — use `/code-review` or `code-reviewer-diff` for diff reviews.
 
 ## Scaling
 

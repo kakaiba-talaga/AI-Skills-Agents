@@ -8,24 +8,25 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 | Agent | Model | Description |
 | :--- | :---: | :--- |
+| [interviewer](interviewer.md) | opus | Conducts structured Socratic interviews to crystallize ambiguous requirements. Identifies ambiguity dimensions, scores them 0.0–1.0, asks one targeted question at a time, and produces a requirements document. Dispatched before the planner when specs are vague. |
+| [architect](architect.md) | opus | Explores design alternatives and produces Architecture Decision Documents (ADDs) that define component boundaries, evaluate trade-offs, and establish the structural foundation before planning begins. |
 | [planner](planner.md) | opus | Breaks specifications and requirements into structured implementation plans (Milestones > Stages > Tasks > Subtasks). Identifies dependencies, sequencing, and risks. Writes in clear, natural language. Does not estimate hours. |
 | [project-scoper](project-scoper.md) | opus | Analyzes requirements, identifies gaps and ambiguities, scopes projects with effort estimates, deliverables, dependencies, and produces formal scoping documents with timelines. Writes in clear, natural language. Also revises architecture and planning documents based on review or critic findings. |
 | [critic](critic.md) | opus | Final quality gate. Reviews plans and scoping documents for flawed assumptions, gaps, ambiguities, and feasibility issues. Verdicts: ACCEPT / ACCEPT WITH RESERVATIONS / REVISE / REJECT. |
 | [executor](executor.md) | sonnet | Implements code changes precisely as specified in validated plans. Works through tasks in order, verifies against acceptance criteria, and flags blockers. |
-| [ssh-executor](ssh-executor.md) | sonnet | Executes commands on remote servers via SSH. Handles remote command execution, file transfer (scp), remote verification, and service management. Uses SSH config for host resolution and key-based auth only. |
 | [verifier](verifier.md) | sonnet | Validates that implementation meets acceptance criteria, assesses test coverage, writes missing tests, and runs integration checks before code review. |
+| [security-reviewer](security-reviewer.md) | opus | Dedicated security auditor that analyzes implemented code for vulnerabilities, producing severity-rated findings with remediation guidance. Verdicts: SECURE / SECURE WITH FINDINGS / INSECURE. |
 | [code-reviewer](code-reviewer.md) | sonnet | Two-stage code review (spec compliance then quality) for pipeline and targeted module reviews. Severity-rated findings with verdicts. For standalone diff reviews, see `code-reviewer-diff` or use the `/code-review` slash command. |
 | [code-reviewer-diff](code-reviewer-diff.md) | sonnet | Standalone diff review variant. Full diff-gathering protocol, exclusion filters, cross-file impact analysis, language-specific checks. Used when `/code-review` skill is unavailable. |
 | [documentor](documentor.md) | sonnet | Writes new documentation for implemented features, creates guides, documents architectural decisions, and updates project scoping after milestones. Writes in clear, natural language tailored to the audience. Delegates to `/doc-sync` for accuracy checks, or runs its own audit when the skill is unavailable. |
 | [debugger](debugger.md) | opus | Runtime bug investigation — hypothesis-driven root cause analysis, circuit breaker, similar pattern scan, regression verification. For build errors, see `debugger-build`. Available at any pipeline stage. |
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
 | [git-master](git-master.md) | sonnet | Utility agent for git operations — branching, commits, PRs, merges, conflict resolution, releases, repo hygiene, and work-in-progress pause/resume. Generates commit messages standalone when `/commit-message` is unavailable. Available at any pipeline stage. |
-| [interviewer](interviewer.md) | opus | Conducts structured Socratic interviews to crystallize ambiguous requirements. Identifies ambiguity dimensions, scores them 0.0–1.0, asks one targeted question at a time, and produces a requirements document. Dispatched before the planner when specs are vague. |
-| [architect](architect.md) | opus | Explores design alternatives and produces Architecture Decision Documents (ADDs) that define component boundaries, evaluate trade-offs, and establish the structural foundation before planning begins. |
+| [ssh-executor](ssh-executor.md) | sonnet | Executes commands on remote servers via SSH. Handles remote command execution, file transfer (scp), remote verification, and service management. Uses SSH config for host resolution and key-based auth only. |
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor.
 
 ### Overriding the default model
 
@@ -96,6 +97,13 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Check if all acceptance criteria for Milestone 3 are met"_
 - _"Assess test coverage for the new detection module"_
 - _"Run integration checks on the changes"_
+
+### Security Reviewer
+
+- _"Have the security reviewer audit the auth middleware changes"_
+- _"Run a security review on the API endpoint implementations"_
+- _"Check the payment processing code for vulnerabilities"_
+- _"Security audit the user input handling in the new form"_
 
 ### Code Reviewer
 
@@ -207,15 +215,16 @@ All agents work as a pipeline with explicit handoffs between each stage:
 5. **Critic** — reviews the combined plan and scoping document for flawed assumptions, gaps, ambiguities, and feasibility issues. Issues a verdict before implementation begins.
 6. **Executor** — implements code changes precisely as specified. Works through tasks in order, verifies against acceptance criteria, flags blockers.
 7. **Verifier** — validates that acceptance criteria are met, assesses test coverage, writes missing tests, and runs integration checks.
-8. **Deslop** _(automatic)_ — runs `/deslop --conservative` on modified files to clean AI-generated structural bloat. Enabled by default; skipped with `--no-deslop`. Skipped silently if the skill is unavailable.
-9. **Code Reviewer** — reviews the cleaned changes before commit. Delegates to `/code-review` for git diff reviews when available, or handles them directly with its built-in fallback.
-10. **Documentor** — writes new documentation for implemented features, documents decisions, updates project scoping, then runs `/doc-sync` for a final consistency check (or its built-in audit fallback if the skill is unavailable).
+8. **Security Reviewer** _(optional)_ — dedicated security audit of implemented code. Dispatched when changes involve security-sensitive patterns (auth, input handling, data access, cryptography, network calls). Produces severity-rated vulnerability findings with remediation guidance. Does not fix issues — hands off to the executor for remediation.
+9. **Deslop** _(automatic)_ — runs `/deslop --conservative` on modified files to clean AI-generated structural bloat. Enabled by default; skipped with `--no-deslop`. Skipped silently if the skill is unavailable.
+10. **Code Reviewer** — reviews the cleaned changes before commit. Delegates to `/code-review` for git diff reviews when available, or handles them directly with its built-in fallback.
+11. **Documentor** — writes new documentation for implemented features, documents decisions, updates project scoping, then runs `/doc-sync` for a final consistency check (or its built-in audit fallback if the skill is unavailable).
 
 ```text
-[Interviewer] → [Architect] → Planner → Project Scoper → Critic → Executor → Verifier → [Deslop] → Code Reviewer → Documentor → Done
+[Interviewer] → [Architect] → Planner → Project Scoper → Critic → Executor → Verifier → [Security Reviewer] → [Deslop] → Code Reviewer → Documentor → Done
 ```
 
-_Brackets indicate optional/automatic stages. Interviewer runs only when specs are ambiguous. Deslop runs automatically unless disabled._
+_Brackets indicate optional/automatic stages. Interviewer runs only when specs are ambiguous. Security Reviewer runs when changes involve security-sensitive patterns. Deslop runs automatically unless disabled._
 
 _The `ssh-executor` can be inserted between executor and verifier for deployment workflows: `executor → ssh-executor → verifier`. It can also operate standalone for remote verification tasks._
 
@@ -322,6 +331,7 @@ Agents cannot spawn subagents themselves (Claude Code limitation). The main sess
 | SSH Executor | 2+ SSH tasks to different hosts | By target host (never same host). |
 | Verifier | 10+ criteria or 3+ modules | Verification per module or criteria group. |
 | Code Reviewer | 5+ files | File groups of 3–5, single-pass spec compliance. |
+| Security Reviewer | 3+ modules | Parallel instances per module (same pattern as code-reviewer). |
 | Documentor | 3+ independent docs | One doc per instance, single-pass map update. |
 | Debugger | 2+ independent bugs | One bug per instance (shared root cause → same instance). |
 | Debugger (Build) | 5+ errors | Error groups by type (import, type, config). |

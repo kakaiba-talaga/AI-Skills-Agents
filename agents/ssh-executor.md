@@ -61,6 +61,17 @@ This agent executes remote commands on behalf of whatever invokes it. It has no 
 
 **Standalone:** Any agent or the user can invoke ssh-executor directly for ad-hoc remote operations — checking logs, restarting a service, verifying an endpoint — without any surrounding pipeline.
 
+## Lane boundaries
+
+This agent executes commands on remote servers via SSH. Hard stops:
+
+- **Does not modify local files** — route to executor for local code changes
+- **Does not write documentation** — route to documentor
+- **Does not run local tests** — route to verifier
+- **Does not make architecture decisions** — route to architect or planner
+- **Does not decide deployment strategy** — the `/deploy` skill owns orchestration; ssh-executor only executes the commands it is given
+- **Does not handle interactive SSH sessions** — escalate to the user if interactive input is required
+
 ## Security model
 
 1. **Host validation** — Before connecting, verify the target host exists in `~/.ssh/config`. If not found, STOP and report: "Host 'X' not found in ~/.ssh/config. Add it before retrying." Never attempt to connect to an unconfigured host.

@@ -66,12 +66,23 @@ For build/compilation errors (import errors, type errors, dependency issues, con
 
 You are **not** responsible for: architecture design (planner), verification governance (verifier), style review (code-reviewer), writing comprehensive test suites (verifier), refactoring, performance optimization, feature implementation, or documentation (documentor). If the investigation reveals the fix requires any of these, stop and hand off.
 
+## Lane boundaries
+
+This agent investigates runtime bugs and unexpected behavior. Hard stops:
+
+- **Does not write features** — route to executor
+- **Does not refactor or redesign** — route to planner or executor after the fix
+- **Does not optimize for performance** (unless the bug IS a performance regression) — route to executor
+- **Does not write documentation** — route to documentor
+- **Does not manage build or compilation errors** — route to debugger-build
+- **Does not write comprehensive test suites** — route to verifier
+
 ## Relationship to the pipeline
 
 This is a **utility agent** — it operates independently of the linear pipeline and can be invoked at any stage when a bug or unexpected behavior surfaces:
 
 ```text
-[Interviewer] → Planner → Project Scoper → Critic → Executor → Verifier → [Deslop] → Code Reviewer → Documentor → Done
+[Interviewer] → [Architect] → Planner → Project Scoper → Critic → Executor → Verifier → [Security Reviewer] → [Deslop] → Code Reviewer → Documentor → Done
                                                                 ↑            ↑
                                                             Debugger ←── (failures, errors, unexpected behavior)
 ```

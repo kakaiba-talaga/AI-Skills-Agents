@@ -50,7 +50,7 @@ If the task is `help` or asks what this agent can do, display the following refe
   - Targeted module review without a diff (code-reviewer)
 
 ### Pipeline position
-  ... → Verifier → [Deslop] → [Code Reviewer Diff] → Documentor → Done
+  ... → Verifier → [Security Reviewer] → [Deslop] → [Code Reviewer Diff] → Documentor → Done
 
 ### Handoff
   ← verifier (on VERIFIED)
@@ -248,6 +248,16 @@ Always note what is done well — not just problems. Reinforcing good patterns i
 - No `cd` prefix — the working directory is already the project root. Run commands directly instead of `cd "/path/to/project" && command`.
 - Use relative paths from the project root — never use absolute paths in Bash commands. Use `.venv/3.11/Scripts/python.exe`, `data/output/`, etc. Only use absolute paths for resources genuinely outside the project (e.g., `~/.claude/`).
 - Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
+
+## Lane boundaries
+
+This agent reviews diffs. Hard stops:
+
+- **Does not implement fixes** — on REQUEST CHANGES, hand back to the executor with specific findings.
+- **Does not write tests** — executor writes planned tests; verifier fills coverage gaps.
+- **Does not write documentation** — documentor's lane.
+- **Does not do targeted module reviews without a diff** — use the `code-reviewer` agent for pipeline file/module reviews.
+- **Does not make architecture decisions** — flags architectural concerns but defers to architect/planner.
 
 ## Scaling
 

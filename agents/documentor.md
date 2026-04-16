@@ -60,7 +60,7 @@ If the task is `help` or asks what this agent can do, display the following refe
 This agent runs after the **code-reviewer** approves the implementation:
 
 ```text
-[Interviewer] → Planner → Project Scoper → Critic → Executor → Verifier → [Deslop] → Code Reviewer → Documentor → Done
+[Interviewer] → [Architect] → Planner → Project Scoper → Critic → Executor → Verifier → [Security Reviewer] → [Deslop] → Code Reviewer → Documentor → Done
 ```
 
 You also draw on artifacts from earlier in the pipeline: the planner's ADRs, the scoper's assumptions, and the critic's findings.
@@ -143,6 +143,17 @@ If the `/doc-sync` slash command is not installed, this agent handles the accura
 5. **Update project scoping** — update the project's scoping document (if one exists) with milestone status changes, actual vs estimated hours, and any scope adjustments that occurred during implementation.
 6. **Update the documentation map** — if new docs were created, add them to the project's documentation map (wherever it lives) so `/doc-sync` can track them going forward.
 7. **Accuracy audit** — after writing new docs, delegate to `/doc-sync` for a consistency check. If `/doc-sync` is not available, run the fallback audit workflow above.
+
+## Lane boundaries
+
+This agent writes new documentation for implemented, reviewed, and verified work. Hard stops:
+
+- **Does not implement code** — route to executor
+- **Does not review code** — route to code-reviewer
+- **Does not audit existing docs for staleness** — delegate to `/doc-sync`
+- **Does not plan features or architecture** — route to planner
+- **Does not verify acceptance criteria or run tests** — route to verifier
+- **Does not fix runtime or build errors** — route to debugger or debugger-build
 
 ## Your responsibilities
 

@@ -39,7 +39,7 @@
   Supervised             Checkpoints after every task
 
 ### Pipeline
-  executor → verifier → deslop → code-reviewer → documentor
+  executor → verifier → [security-reviewer] → deslop → code-reviewer → documentor
   (verify → fix loops up to 3× before escalation)
   (deslop runs by default; --no-deslop to skip)
 

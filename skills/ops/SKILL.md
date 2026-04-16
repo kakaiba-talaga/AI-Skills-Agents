@@ -311,19 +311,20 @@ Before displaying the task board, confirm the state file exists and is valid:
 
 | Task content pattern | Agent type |
 | :--- | :--- |
+| Interview, clarify, gather requirements, crystallize spec, resolve ambiguity | `interviewer` |
+| Architect, design system, explore design alternatives, evaluate trade-offs, component boundaries, API design, data model design | `architect` |
+| Plan, break down, task hierarchy, milestone structure | `planner` |
+| Scope, estimate, analyze requirements, gap analysis, revise architecture/planning docs from review findings | `project-scoper` |
+| Review plan, quality gate, feasibility check | `critic` |
 | Implement, create, add, modify code, refactor, wire up | `executor` |
 | Verify, validate, test, check acceptance criteria, assert | `verifier` |
+| Security audit, threat model, vulnerability scan, OWASP, auth review, secrets scan, input validation, security review | `security-reviewer` |
 | Review, audit, inspect, code quality | `code-reviewer` |
 | Document, write docs, update README, update scoping | `documentor` |
 | Debug, investigate, diagnose, root cause, unexpected behavior, test failure, regression | `debugger` |
 | Build error, import error, ModuleNotFoundError, type error, dependency error, compilation error, config error, broken build | `debugger-build` |
 | Commit, branch, merge, PR, tag, release, changelog | `git-master` |
-| Plan, break down, task hierarchy, milestone structure | `planner` |
-| Architect, design system, explore design alternatives, evaluate trade-offs, component boundaries, API design, data model design | `architect` |
-| Scope, estimate, analyze requirements, gap analysis, revise architecture/planning docs from review findings | `project-scoper` |
-| Interview, clarify, gather requirements, crystallize spec, resolve ambiguity | `interviewer` |
 | Deploy, deploy to, ssh, scp, remote command, remote server, transfer files to, upload to, restart service on, check remote, verify endpoint on, tail logs on | `ssh-executor` |
-| Review plan, quality gate, feasibility check | `critic` |
 
 **Domain-specific agents take precedence.** If a task matches both a domain-specific agent (`ssh-executor`, `debugger-build`) and a general-purpose agent (`verifier`, `executor`), assign to the domain-specific agent. SSH operations cannot be performed by the verifier or executor — the domain-specific agent has the required capabilities.
 
@@ -333,19 +334,20 @@ If a task doesn't clearly match, ask yourself: "Is this writing docs, running te
 
 Each agent must stay in its lane:
 
-- **executor** writes/modifies source code only — not docs, not tests, not reviews
-- **documentor** writes/updates documentation only — not code
+- **interviewer** gathers requirements and resolves ambiguity only — does not implement or decide
+- **architect** explores design alternatives and produces Architecture Decision Documents — does not implement, test, review, plan task breakdowns, or document
+- **planner** produces plans and task breakdowns only — does not implement or review
 - **project-scoper** writes assessments, plans, scoping docs — not code
-- **ssh-executor** runs commands on remote servers only — does not modify local code, write documentation, or run local tests
+- **critic** reviews plans for feasibility — does not implement, test, or modify
+- **executor** writes/modifies source code only — not docs, not tests, not reviews
 - **verifier** runs tests and checks — does not write code or docs
+- **security-reviewer** audits code for security vulnerabilities — does not fix issues, implement code, or review non-security concerns
 - **code-reviewer** reviews code — does not implement or document
+- **documentor** writes/updates documentation only — not code
 - **debugger** investigates bugs — does not write features or docs
 - **debugger-build** fixes build/compilation errors — does not investigate runtime bugs or write features
 - **git-master** handles git operations only — does not write code, docs, or tests
-- **planner** produces plans and task breakdowns only — does not implement or review
-- **architect** explores design alternatives and produces Architecture Decision Documents — does not implement, test, review, plan task breakdowns, or document
-- **interviewer** gathers requirements and resolves ambiguity only — does not implement or decide
-- **critic** reviews plans for feasibility — does not implement, test, or modify
+- **ssh-executor** runs commands on remote servers only — does not modify local code, write documentation, or run local tests
 
 **Debugger variant selection:**
 - If the task description contains a specific error type (ImportError, ModuleNotFoundError, TypeError, SyntaxError, dependency, build, compilation, config error), use `debugger-build`.
@@ -563,16 +565,18 @@ interviewer → architect → planner → project-scoper → critic → executor
 The architect dispatches when the spec involves significant architectural decisions. When not needed, the team manager goes directly to the planner.
 
 ```
-executor → verifier → deslop → code-reviewer → documentor
+executor → verifier → [security-reviewer] → deslop → code-reviewer → documentor
 ```
 
 When a chain has multiple implementation tasks, parallelize then converge:
 
 ```
 executor(task1) ──┐
-executor(task2) ──┤→ verifier(all) → deslop(all) → code-reviewer(all) → documentor(all)
+executor(task2) ──┤→ verifier(all) → [security-reviewer] → deslop(all) → code-reviewer(all) → documentor(all)
 executor(task3) ──┘
 ```
+
+The security-reviewer is optional. The ops skill dispatches it when task content involves security-sensitive patterns (auth, secrets, API keys, data handling, permissions, encryption, external inputs). Skip automatically for non-security-relevant changes.
 
 SSH deployment chains:
 
