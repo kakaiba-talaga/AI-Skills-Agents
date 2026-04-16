@@ -349,8 +349,8 @@ If you experience an unexpected permission prompt, find the relevant entry below
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
-| `Edit` | executor, verifier, code-reviewer, documentor, debugger, git-master, project-scoper | Edit existing files |
-| `Write` | executor, verifier, code-reviewer, documentor, debugger, git-master, project-scoper | Create new files |
+| `Edit` | executor, verifier, documentor, debugger, git-master, project-scoper | Edit existing files |
+| `Write` | executor, verifier, documentor, debugger, git-master, project-scoper | Create new files |
 | `Read` | all agents | Read files |
 | `Glob` | all agents | Find files by pattern |
 | `Grep` | all agents | Search file contents |
