@@ -19,6 +19,26 @@ The state file JSON structure:
   "plan_file": "docs/plan/auth-middleware-plan.md",
   "tasks": [
     {
+      "id": "task-0",
+      "subject": "Plan auth middleware implementation",
+      "description": "Break down the auth feature into subtasks...",
+      "status": "completed",
+      "agent_type": "planner",
+      "stage": "plan",
+      "priority": 1,
+      "estimated_minutes": 5,
+      "estimate_source": "ops",
+      "blocked_by": [],
+      "started_at": "2026-04-14T10:00:00Z",
+      "completed_at": "2026-04-14T10:03:00Z",
+      "duration_seconds": 180,
+      "model_used": "opus",
+      "attempts": 1,
+      "adaptation": null,
+      "handoff_file": null,
+      "_internal": false
+    },
+    {
       "id": "task-1",
       "subject": "Implement auth middleware",
       "description": "Full task details with acceptance criteria...",

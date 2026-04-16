@@ -41,6 +41,8 @@ The team manager auto-detects which agent to assign based on task content:
 | planner | Breaking down work, designing |
 | project-scoper | Estimating effort, analyzing requirements |
 | interviewer | Clarifying ambiguous requirements via structured Socratic Q&A |
+| architect | Design exploration, architecture decision documents, trade-off evaluation |
+| security-reviewer | Security audits, vulnerability scanning, OWASP checks, auth review |
 | ssh-executor | Deploying to remote servers, SSH commands, file transfer, remote verification |
 | critic | Reviewing plans, quality gates |
 
@@ -153,10 +155,10 @@ Edge cases are handled:
 The team manager understands the full agent pipeline:
 
 ```
-[interviewer] → planner → project-scoper → critic → executor → verifier → [deslop] → code-reviewer → documentor
+[interviewer] → [architect] → planner → project-scoper → critic → executor → verifier → [security-reviewer] → [deslop] → code-reviewer → documentor
 ```
 
-_Brackets indicate optional/automatic stages._
+_Brackets indicate optional/automatic stages. Architect runs when the spec involves significant design decisions. Security reviewer runs when changes involve security-sensitive patterns._
 
 For deployment workflows, the `ssh-executor` can be inserted between executor and verifier:
 
@@ -378,7 +380,7 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | `ralph-integration.md` | Ralph loop integration protocol, iteration behavior, when to use | `ralph` flag |
 | `pointer-format.md` | Standard format for pointer lines, usage notes for extraction agents | Meta-reference for maintaining pointer consistency |
 
-These 22 companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
+These 21 companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
 
 ---
 

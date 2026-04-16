@@ -104,8 +104,8 @@ Determine the starting point from the parsed arguments:
 | :--- | :--- |
 | Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
-| `resume` | Read the state file from `.ops-state/`. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
-| `status` | Read the state file, display the dashboard (see Status Dashboard), stop. |
+| `resume` | Read the state file from `.ops-state/`. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
+| `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
 
@@ -114,6 +114,8 @@ If no arguments are given, ask the user what they want to manage.
 In **interactive mode**, when the spec is vague or ambiguous, the team manager can also just ask the user directly instead of dispatching the interviewer — a quick clarifying question is often faster than a full Socratic interview. Use the interviewer agent when the ambiguity is deep (multiple dimensions unclear, conflicting requirements, or the user has indicated they want structured requirements gathering).
 
 In **autonomous mode**, dispatch the interviewer when the spec scores as vague/ambiguous — the team manager cannot ask the user interactively.
+
+**Architect dispatch (optional):** After assessing spec clarity — and before dispatching the planner — evaluate whether the spec involves significant architectural decisions that would benefit from design exploration. Dispatch an **architect** agent via `Task(subagent_type="architect")` when the spec involves: new subsystems or components, significant technology choices, competing implementation strategies, changes to component boundaries, or API/data model design. The architect produces an Architecture Decision Document (ADD) that the planner then uses as structural input. Skip the architect for well-understood work where the implementation approach is clear.
 
 **Plan document persistence:** When the planner produces a plan, persist it to disk as the source of truth for the run:
 
@@ -255,18 +257,20 @@ TodoWrite items (one per task):
 
 | Task content pattern | Agent type |
 | :--- | :--- |
+| Interview, clarify, gather requirements, crystallize spec, resolve ambiguity | `interviewer` |
+| Architect, design system, explore design alternatives, evaluate trade-offs, component boundaries, API design, data model design | `architect` |
+| Plan, break down, task hierarchy, milestone structure | `planner` |
+| Scope, estimate, analyze requirements, gap analysis, revise architecture/planning docs from review findings | `project-scoper` |
+| Review plan, quality gate, feasibility check | `critic` |
 | Implement, create, add, modify code, refactor, wire up | `executor` |
 | Verify, validate, test, check acceptance criteria, assert | `verifier` |
+| Security audit, threat model, vulnerability scan, OWASP, auth review, secrets scan, input validation, security review | `security-reviewer` |
 | Review, audit, inspect, code quality | `code-reviewer` |
 | Document, write docs, update README, update scoping | `documentor` |
 | Debug, investigate, diagnose, root cause, unexpected behavior, test failure, regression | `debugger` |
 | Build error, import error, ModuleNotFoundError, type error, dependency error, compilation error, config error, broken build | `debugger-build` |
 | Commit, branch, merge, PR, tag, release, changelog | `git-master` |
-| Plan, break down, design, architect | `planner` |
-| Scope, estimate, analyze requirements, gap analysis, revise architecture/planning docs from review findings | `project-scoper` |
-| Interview, clarify, gather requirements, crystallize spec, resolve ambiguity | `interviewer` |
 | Deploy, deploy to, ssh, scp, remote command, remote server, transfer files to, upload to, restart service on, check remote, verify endpoint on, tail logs on | `ssh-executor` |
-| Review plan, quality gate, feasibility check | `critic` |
 
 **Domain-specific agents take precedence.** If a task matches both a domain-specific agent (`ssh-executor`, `debugger-build`) and a general-purpose agent (`verifier`, `executor`), assign to the domain-specific agent. SSH operations cannot be performed by the verifier or executor — the domain-specific agent has the required capabilities.
 
@@ -276,18 +280,20 @@ If a task doesn't clearly match, ask yourself: "Is this writing docs, running te
 
 Each agent must stay in its lane:
 
-- **executor** writes/modifies source code only — not docs, not tests, not reviews
-- **documentor** writes/updates documentation only — not code
+- **interviewer** gathers requirements and resolves ambiguity only — does not implement or decide
+- **architect** explores design alternatives and produces Architecture Decision Documents — does not implement, test, review, plan task breakdowns, or document
+- **planner** produces plans and task breakdowns only — does not implement or review
 - **project-scoper** writes assessments, plans, scoping docs — not code
-- **ssh-executor** runs commands on remote servers only — does not modify local code, write documentation, or run local tests
+- **critic** reviews plans for feasibility — does not implement, test, or modify
+- **executor** writes/modifies source code only — not docs, not tests, not reviews
 - **verifier** runs tests and checks — does not write code or docs
+- **security-reviewer** audits code for security vulnerabilities — does not fix issues, implement code, or review non-security concerns
 - **code-reviewer** reviews code — does not implement or document
+- **documentor** writes/updates documentation only — not code
 - **debugger** investigates bugs — does not write features or docs
 - **debugger-build** fixes build/compilation errors — does not investigate runtime bugs or write features
 - **git-master** handles git operations only — does not write code, docs, or tests
-- **planner** produces plans and task breakdowns only — does not implement or review
-- **interviewer** gathers requirements and resolves ambiguity only — does not implement or decide
-- **critic** reviews plans for feasibility — does not implement, test, or modify
+- **ssh-executor** runs commands on remote servers only — does not modify local code, write documentation, or run local tests
 
 **Debugger variant selection:**
 - If the task description contains a specific error type (ImportError, ModuleNotFoundError, TypeError, SyntaxError, dependency, build, compilation, config error), use `debugger-build`.
@@ -449,6 +455,14 @@ A vague brief produces vague work. If you can't write a specific brief, the task
 
 ## Constraints (applies to team manager AND all spawned agents)
 
+### Team manager tool restrictions
+
+The team manager orchestrates — it does not perform work directly. **Always dispatch an agent or invoke a skill first.** Only fall back to direct tool use when no agent or skill covers the task.
+
+**Delegate-first principle:** Before using any tool to perform work (as opposed to reading state or displaying information), check whether an agent or skill should handle it:
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+
 ### Shell rules
 
 **No compound Shell commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Shell tool calls instead — use parallel calls for independent commands. This applies to the team manager's own Shell calls AND all spawned agents.
@@ -479,7 +493,7 @@ When a task completes and feeds into a downstream task, write a **handoff docume
 
 - **Storage:** `docs/plan/.handoffs/<run_id>/` — each run gets its own subdirectory.
 - **Naming:** `handoff-<task_number>-<from_stage>-to-<to_stage>.md` (e.g., `handoff-003-implement-to-verify.md`).
-- **Run ID:** `<plan-slug>-<ISO-date>` stored in every task's state file entry.
+- **Run ID:** `<plan-slug>-<ISO-date>` stored in the state file's root `run_id` field.
 - **Writing:** After marking a task completed, immediately write the handoff to disk. Store the path in the task's `handoff_file` field in the state file.
 - **Reading:** When briefing downstream agents, read relevant handoff files and include content in the Context section.
 - **Cleanup:** Delete this run's handoff subdirectory on successful completion (Phase 4). Keep on pause/cancel. Never delete other runs' handoffs.
@@ -490,15 +504,25 @@ When a task completes and feeds into a downstream task, write a **handoff docume
 
 ## Handoff Chains
 
+Pre-planning chain (optional, for work requiring design exploration):
+
 ```text
-executor → verifier → deslop → code-reviewer → documentor
+interviewer → architect → planner → project-scoper → critic → executor → ...
 ```
+
+The architect dispatches when the spec involves significant architectural decisions. When not needed, the team manager goes directly to the planner.
+
+```text
+executor → verifier → [security-reviewer] → deslop → code-reviewer → documentor
+```
+
+The security-reviewer is optional. The ops skill dispatches it when task content involves security-sensitive patterns (auth, secrets, API keys, data handling, permissions, encryption, external inputs). Skip automatically for non-security-relevant changes.
 
 When a chain has multiple implementation tasks, parallelize then converge:
 
 ```text
 executor(task1) ──┐
-executor(task2) ──┤→ verifier(all) → deslop(all) → code-reviewer(all) → documentor(all)
+executor(task2) ──┤→ verifier(all) → [security-reviewer] → deslop(all) → code-reviewer(all) → documentor(all)
 executor(task3) ──┘
 ```
 

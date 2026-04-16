@@ -15,7 +15,7 @@
 - In the Timing table, show both: `"Agent: 30m / Wall: 12m (parallel)"`.
 - Estimated total is agent time (sequential sum). Compare estimated agent time to actual agent time for accuracy. Show wall time separately as an efficiency metric.
 
-**3. Internal tasks:** Internal bookkeeping tasks (`metadata._internal: true`) have no estimates. Exclude them from the estimated total and variance calculation. Show them in a separate row: `"Internal (unestimated): 1:15"`.
+**3. Internal tasks:** Internal bookkeeping tasks (`"_internal": true` on the task object) have no estimates. Exclude them from the estimated total and variance calculation. Show them in a separate row: `"Internal (unestimated): 1:15"`.
 
 **4. Resume after session loss:** When resuming, tasks marked `in_progress` have a stale `started_at`. Fix this:
 

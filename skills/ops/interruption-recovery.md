@@ -21,7 +21,7 @@ When the user asks to change priority, reorder tasks, or skip a stage mid-run:
 2. **Show the current task board** so the user sees the full picture.
 3. **Apply the change:**
    - **Skip a stage** — mark all pending tasks in that stage as `deleted`. Update dependency chains so downstream tasks are no longer blocked by the skipped tasks.
-   - **Reorder tasks** — update `metadata.priority` values. The dispatch loop picks the highest-priority ready tasks first.
+   - **Reorder tasks** — update task `priority` values in the state file. The dispatch loop picks the highest-priority ready tasks first.
    - **Promote a task** — if the user says "do task #7 next", mark it as priority `1` and dispatch it immediately (if its dependencies are met).
    - **Demote or defer a task** — set priority to `5` or add a manual blocker.
 4. **Show the updated board** and resume dispatching.
@@ -51,7 +51,7 @@ When the user says to drop a task ("skip #4", "we don't need the documentation")
 If the conversation is interrupted (terminal closed, context reset, session timeout):
 
 - The **state file persists on disk** — `.ops-state/<run-id>-board.json` survives conversation boundaries.
-- **Handoff files on disk** survive — they contain the full inter-stage context (what was done, key decisions, files changed, guidance for next agent), referenced by file path in task metadata (`metadata.handoff_file`).
+- **Handoff files on disk** survive — they contain the full inter-stage context (what was done, key decisions, files changed, guidance for next agent), referenced by file path in each task's `handoff_file` field.
 - **Plan document on disk** survives — it contains the overall work scope and acceptance criteria.
 - Tasks that were `in_progress` when the session died remain marked as such, but the agent that was working on them is gone.
 
@@ -61,8 +61,8 @@ On `/ops resume`:
 
 1. Read the state file from `.ops-state/` to recover the board.
 2. For tasks still marked `in_progress` — check whether the agent's work was actually applied (read the files, check git status). If changes are present and look correct, mark as `completed`. If not, reset to `pending` for re-dispatch.
-3. **Read the plan document** from `docs/plan/` (look for the most recently modified `*-plan.md` file, or use the path stored in task board metadata `metadata.plan_file`).
-4. **Read handoff files** from the run's subdirectory in `docs/plan/.handoffs/<run_id>/` (the run_id is stored in `metadata.run_id` on every task). Use these to reconstruct the context chain when briefing the next agent to dispatch.
+3. **Read the plan document** from `docs/plan/` (look for the most recently modified `*-plan.md` file, or use the path stored in the state file's root `plan_file` field).
+4. **Read handoff files** from the run's subdirectory in `docs/plan/.handoffs/<run_id>/` (the `run_id` is stored at the root of the state file). Use these to reconstruct the context chain when briefing the next agent to dispatch.
 5. Rebuild the dispatch state from the task board (what's done, what's blocked, what's ready).
 6. Show the recovered dashboard — including a note about which handoff files were recovered — and ask the user to confirm before resuming.
 

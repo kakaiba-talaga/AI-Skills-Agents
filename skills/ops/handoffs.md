@@ -19,7 +19,7 @@ A **new run** is created only when the team manager enters Phase 1 with a new sp
 | `/ops resume/status/add/pause/stop` | No — continuation |
 | `/ops` with mid-run instructions ("yes proceed", "also do X") | No — continuation |
 
-**Run ID format:** `<plan-slug>-<ISO-date>` derived from the plan document name + run start date (e.g., `caching-layer-2026-04-09`). Stored in every task's metadata: `metadata.run_id`. This allows any invocation to check "am I part of an existing run?" by reading the state file.
+**Run ID format:** `<plan-slug>-<ISO-date>` derived from the plan document name + run start date (e.g., `caching-layer-2026-04-09`). Stored in the state file's root `run_id` field. This allows any invocation to check "am I part of an existing run?" by reading the state file.
 
 ## Storage location
 
@@ -73,7 +73,7 @@ This ensures multiple concurrent sessions (or sequential runs) never interfere w
 
 ## Writing handoffs
 
-After marking a task `completed` in the dispatch loop (Phase 3, Step 4), immediately write the handoff document to the run's subdirectory on disk. Store the handoff file path in the task metadata: `metadata.handoff_file: "docs/plan/.handoffs/<run_id>/handoff-003-implement-to-verify.md"`. This allows `resume` to locate handoffs from the state file.
+After marking a task `completed` in the dispatch loop (Phase 3, Step 4), immediately write the handoff document to the run's subdirectory on disk. Store the handoff file path in the task's `handoff_file` field in the state file: `"handoff_file": "docs/plan/.handoffs/<run_id>/handoff-003-implement-to-verify.md"`. This allows `resume` to locate handoffs from the state file.
 
 ## Reading handoffs for downstream briefs
 

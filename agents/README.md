@@ -43,7 +43,7 @@ When the ops skill dispatches agents programmatically via the `Agent` tool, the 
 
 Custom agent files at `~/.claude/agents/` are loaded when a user invokes an agent by name in conversation, but they do **not** extend the `subagent_type` enum for programmatic dispatch. The ops skill works around this by reading the agent definition file, injecting its instructions into the prompt, and labeling the dispatch via the `description` field (e.g., `"executor(Implement auth middleware)"`). See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure.
 
-In Cursor, this is not an issue — Cursor's `Task` tool `subagent_type` enum includes all 18 agent types natively.
+In Cursor, this is not an issue — Cursor's `Task` tool `subagent_type` enum includes all 15 agent types natively.
 
 ## Usage
 
@@ -361,16 +361,12 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `TodoWrite` | any agent | Legacy todo list |
 | `Skill` | ops | Invoke skills (`/ralph-loop`, `/doc-sync`, `/code-review`, etc.) |
 
-#### Task tools
+#### State file tools (ops)
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
-| `TaskCreate` | ops | Create tasks on the shared board |
-| `TaskUpdate` | ops | Update task status, owners, dependencies |
-| `TaskList` | ops | List all tasks |
-| `TaskGet` | ops | Get full task details |
-| `TaskOutput` | ops | Read task output |
-| `TaskStop` | ops | Stop a running task |
+| `Write` | ops | Create/update `.ops-state/<run-id>-board.json` state file |
+| `Read` | ops | Read state file for resume, status, and dispatch |
 
 #### Plan and worktree tools
 

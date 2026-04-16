@@ -239,7 +239,7 @@ Five built-in templates are available:
 | `bug-hunt` | Systematic reproduce-fix-verify cycles |
 | `migration` | Moving code from one pattern/framework to another |
 
-See the [Templates README](../skills/ralph-loop/templates/README.md) for the full YAML schema, parameter reference, and guide to writing your own.
+See the [Templates README](templates/README.md) for the full YAML schema, parameter reference, and guide to writing your own.
 
 ## Output format
 
@@ -249,12 +249,13 @@ Every assistant turn during an active loop starts with the **`Ralph Loop`** badg
 **`Ralph Loop`** Iteration 3 -- Verify
 
 Ralph Wiggum Loop Progress (Iteration 3)
-- [x] 1) Frame the task.
-- [x] 2) Plan the smallest useful step.
-- [x] 3) Execute
-- [ ] 4) Verify
-- [ ] 5) Cleanup (deslop)
-- [ ] 6) Reflect and Adjust
+
+✅ 1) Frame the task.
+✅ 2) Plan the smallest useful step.
+✅ 3) Execute
+🟦 4) Verify
+🟦 5) Cleanup (deslop)
+🟦 6) Reflect and Adjust
 ```
 
 In lightweight mode: **`Ralph Loop`** (lightweight) with a 2-step checklist.

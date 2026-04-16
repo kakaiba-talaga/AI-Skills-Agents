@@ -10,7 +10,7 @@ After all verify tasks pass and before code review begins, the team manager runs
 
 1. After all verify tasks complete, collect the list of files modified by executor agents during the run.
 2. Check if the `/deslop` skill is available (file exists at `~/.claude/skills/deslop/SKILL.md`). If not, skip silently and log: "Adapted: skipped deslop — skill not available."
-3. Create an internal task (`metadata._internal: true`) for the deslop pass.
+3. Create an internal task (`"_internal": true` on the task object) for the deslop pass.
 4. Invoke `/deslop --conservative` on the modified file set. Conservative mode ensures only high-confidence deletions are auto-applied — deslop will not undo intentional executor work.
 5. If deslop makes changes, dispatch a verifier agent to re-verify the modified files. If re-verification fails, revert all deslop changes and proceed to code review with the original (pre-deslop) code. Log: "Adapted: reverted deslop changes — re-verification failed."
 6. If deslop makes no changes (all findings were report-only), proceed directly to code review.

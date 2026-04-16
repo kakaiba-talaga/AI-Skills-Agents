@@ -11,17 +11,19 @@
 
 ### Agents (`agents/`)
 
-13 agent definitions + 1 README. Unchanged from previous assessment.
+15 agent definitions + 1 README.
 
 | File | Model | Role |
 |------|-------|------|
 | interviewer.md | opus | Socratic requirements interview before planning |
+| architect.md | opus | Design exploration and Architecture Decision Documents (ADDs) |
 | planner.md | opus | Breaks specs into structured implementation plans |
 | project-scoper.md | opus | Requirements analysis, gap detection, effort estimates |
 | critic.md | opus | Quality gate on plans and scoping documents |
 | executor.md | sonnet | Implements code changes from validated plans |
 | ssh-executor.md | sonnet | Remote command execution and file transfer via SSH |
 | verifier.md | sonnet | Validates implementation against acceptance criteria |
+| security-reviewer.md | opus | Security audit with severity-rated vulnerability findings |
 | code-reviewer.md | sonnet | Two-stage pipeline code review with severity-rated findings |
 | code-reviewer-diff.md | sonnet | Standalone diff review with full diff-gathering protocol |
 | documentor.md | sonnet | Documentation writer, delegates accuracy checks to `/doc-sync` |
@@ -41,7 +43,7 @@
 | Deslop | `skills/deslop/` | 2 | ~670 | AI slop cleanup (dead code, redundant comments, over-abstraction) |
 | Doc Sync | `skills/doc-sync/` | 2 | ~276 | Documentation audit and sync against codebase |
 | Linter | `skills/linter/` | 2 | ~453 | Source file linting with auto-fix and incremental cache |
-| Ops | `skills/ops/` | 20 | ~872 (Claude), ~922 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
+| Ops | `skills/ops/` | 24 | ~958 (Claude), ~788 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
 | Deploy | `skills/deploy/` | 9 | ~403 (Claude), ~400 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Ralph Loop | `skills/ralph-loop/` | 17 (incl. 5 YAML templates) | ~320 | Iterative execute-verify-reflect loop with state persistence |
 
@@ -120,7 +122,7 @@
 
 ### File count changes
 
-- `skills/ops/`: 19 → 20 files (+`SKILL.cursor.md`)
+- `skills/ops/`: 19 → 20 files (+`SKILL.cursor.md`), then 20 → 24 files (+`dispatch-policy.md`, `plan-validation.md`, `state-schema.md`, `tool-restrictions.md`)
 - `skills/deploy/`: 8 → 9 files (+`SKILL.cursor.md`)
 
 ---
@@ -182,10 +184,10 @@ No active issues.
 ### Strengths
 
 - **Unified skill structure:** All 9 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
-- **Consistent structure** across all 13 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
+- **Consistent structure** across all 15 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
 - **Shared constraints repeated verbatim** in all agents: no compound Bash commands, no `cd` prefix, relative paths only. No variations.
-- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master). No mismatches between frontmatter and README.
+- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master). No mismatches between frontmatter and README.
 - **Valid cross-references** between agents and skills — no broken path references.
 - **Deployment automation** in place — deploy script with dry-run, diff, per-target, and per-category support. Cursor transform is fully automatic.
 - **Portability documented** — format differences, tool gaps, and verified findings captured in `docs/portability-guide.md`.
@@ -200,7 +202,7 @@ These are not defects — they are patterns worth monitoring.
 - **Planning docs gitignored:** `docs/plan/` is in `.gitignore`, meaning planning context is local-only and won't survive a machine change or clone.
 - **Cursor transform is text-based:** Tool name replacements (`Bash`→`Shell`, `Edit`→`StrReplace`, `Agent`→`Task`) use word-boundary matching, which may produce false positives in prose that coincidentally matches tool names. No issues observed in current files.
 - **ops and deploy have Cursor-native versions:** Both skills have `SKILL.cursor.md` files. State management (`.ops-state/` JSON files) is now unified across both versions; the Cursor-native file is still needed for `Task` tool dispatch, TodoWrite display layer, read-and-dispatch skill invocation, and Cursor-specific limitations. Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
-- **Agent dispatch mechanism differs between platforms:** Claude Code's `subagent_type` enum is limited — only `debugger-build` and `git-master` from the ops taxonomy are built-in. All other agents dispatch as `general-purpose` and require a read-and-inject workaround. Cursor's `Task` tool has all 18 types natively. This is the primary reason ops needs a `SKILL.cursor.md` companion. See `docs/portability-guide.md` § Agent Dispatch Mechanism.
+- **Agent dispatch mechanism differs between platforms:** Claude Code's `subagent_type` enum is limited — only `debugger-build` and `git-master` from the ops taxonomy are built-in. All other agents dispatch as `general-purpose` and require a read-and-inject workaround. Cursor's `Task` tool includes all 15 agent types as built-in `subagent_type` values. This is the primary reason ops needs a `SKILL.cursor.md` companion. See `docs/portability-guide.md` § Agent Dispatch Mechanism.
 
 ---
 
@@ -231,14 +233,14 @@ Skills invoked within pipeline stages:
 
 | Category | Files | Total |
 |----------|-------|-------|
-| Agents | 13 definitions + 1 README | 14 |
+| Agents | 15 definitions + 1 README | 16 |
 | Skills (clickup) | 2 | 2 |
 | Skills (code-review) | 2 | 2 |
 | Skills (commit-message) | 2 | 2 |
 | Skills (deslop) | 2 | 2 |
 | Skills (doc-sync) | 2 | 2 |
 | Skills (linter) | 2 | 2 |
-| Skills (ops) | 20 (incl. SKILL.cursor.md) | 20 |
+| Skills (ops) | 24 (incl. SKILL.cursor.md) | 24 |
 | Skills (deploy) | 9 (incl. SKILL.cursor.md) | 9 |
 | Skills (ralph-loop) | 17 (incl. 5 templates + templates README) | 17 |
 | Documentation | 2 (ASSESSMENT.md, portability-guide.md) | 2 |
@@ -246,8 +248,8 @@ Skills invoked within pipeline stages:
 | Planning (gitignored) | 10 | 10 |
 | Config | 1 (.gitignore) | 1 |
 | Root | 1 (README.md) | 1 |
-| **Total** | | **88** |
+| **Total** | | **94** |
 
 ---
 
-*Assessment updated 2026-04-15 (agent dispatch fix). Files assessed: 13 agents, 9 skills (58 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 3 tooling, 10 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore. Active issues: 0. Carried from previous: 3.*
+*Assessment updated 2026-04-16 (doc sync). Files assessed: 15 agents, 9 skills (62 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 3 tooling, 10 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore. Active issues: 0. Carried from previous: 3.*

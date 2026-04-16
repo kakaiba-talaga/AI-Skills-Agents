@@ -11,7 +11,7 @@ This document describes the format differences between Claude Code and Cursor, w
 | Skill entry point | `SKILL.md`; may have no frontmatter; can use `$ARGUMENTS` | `SKILL.md` with required `name` + `description` frontmatter |
 | Skill location | `~/.claude/skills/` | `~/.cursor/skills/` |
 | Tool names | `Bash`, `Edit`, `Write`, `Agent`, `Skill` | `Shell`, `StrReplace`, `Write`, `Task`, no `Skill` equivalent |
-| Subagent spawning | `Agent` tool (`subagent_type` has limited built-in enum; custom agents loaded via read-and-inject pattern) | `Task` tool (`subagent_type` enum covers all 18 agent types natively; `model` limited to `"fast"`) |
+| Subagent spawning | `Agent` tool (`subagent_type` has limited built-in enum; custom agents loaded via read-and-inject pattern) | `Task` tool (`subagent_type` enum covers all 15 agent types natively plus utility types; `model` limited to `"fast"`) |
 | Invocation | `/skill-name args` with `$ARGUMENTS` | Description-matched by IDE; no slash commands |
 | Config/state paths | `~/.claude/config/`, `.claude/state/` | `~/.cursor/config/`, `.cursor/state/` |
 | Size limits | No formal limit | SKILL.md under 500 lines; use companion files |
@@ -62,7 +62,7 @@ These Claude Code features have no direct counterpart in Cursor. The mechanical 
 | `TaskCreate`/`TaskUpdate`/`TaskList` | No shared task board for multi-agent coordination. | **Mitigated** | Both Claude Code and Cursor versions of ops now use a JSON state file (`.ops-state/<run-id>-board.json`) as the task board. Cursor adds `TodoWrite` as a display layer on top. Full metadata, dependencies, and timing preserved. |
 | `Agent` tool with custom `model`/`tools` | Cannot spawn agents with a specific model or restrict their tool access. | **Mitigated** | Ops and deploy use `Task(subagent_type=...)` for dispatch. Deploy script injects `## Tool Constraints` markdown into agent bodies for tool-restricted agents. Model selection is not possible — documented as accepted limitation. |
 | `Skill` tool | Cannot programmatically invoke another skill from within a skill. | **Mitigated** | Read-and-dispatch pattern: read the target skill's `SKILL.md` from `~/.cursor/skills/<name>/SKILL.md`, then follow inline or pass to `Task(subagent_type="generalPurpose")`. |
-| Agent `subagent_type` coverage | Cursor's `Task` tool `subagent_type` enum includes all 18 agent types natively (executor, verifier, planner, etc.). Claude Code's `Agent` tool `subagent_type` only includes `debugger-build` and `git-master` from the ops taxonomy — all others dispatch as `general-purpose` and display as "Agent." | **Mitigated** | See Agent Dispatch Mechanism section below. |
+| Agent `subagent_type` coverage | Cursor's `Task` tool `subagent_type` enum includes all 15 agent types natively (executor, verifier, planner, architect, security-reviewer, etc.) plus utility types (generalPurpose, explore, shell, etc.). Claude Code's `Agent` tool `subagent_type` only includes `debugger-build` and `git-master` from the ops taxonomy — all others dispatch as `general-purpose` and display as "Agent." | **Mitigated** | See Agent Dispatch Mechanism section below. |
 | `EnterWorktree`/`ExitWorktree` | No git worktree isolation for parallel agents. | **Mitigated** | `Task(subagent_type="best-of-n-runner")` provides isolated worktrees per agent. |
 | Model enforcement per agent | Cursor runs all agents on the session model. The `model` field is stripped during transform. | **Accepted** | No workaround. All subagents run on session model or `model="fast"`. Cost implications only. |
 | Tool surface restriction per agent | All tools are available to all agents in Cursor. | **Partially mitigated** | Deploy script injects `## Tool Constraints` section into agents whose Claude Code frontmatter restricted tools (critic, ssh-executor, interviewer, verifier). Advisory only — not enforced. |
@@ -128,7 +128,7 @@ The two platforms differ significantly in how agents are dispatched programmatic
 
 ### Cursor — native `subagent_type` enum
 
-Cursor's `Task` tool includes all 18 agent types as built-in `subagent_type` values: `generalPurpose`, `explore`, `shell`, `browser-use`, `best-of-n-runner`, `code-reviewer-diff`, `code-reviewer`, `critic`, `debugger-build`, `debugger`, `documentor`, `executor`, `git-master`, `interviewer`, `planner`, `project-scoper`, `ssh-executor`, `verifier`.
+Cursor's `Task` tool includes all 15 agent types as built-in `subagent_type` values, plus utility types: `generalPurpose`, `explore`, `shell`, `browser-use`, `best-of-n-runner`, `architect`, `code-reviewer-diff`, `code-reviewer`, `critic`, `debugger-build`, `debugger`, `documentor`, `executor`, `git-master`, `interviewer`, `planner`, `project-scoper`, `security-reviewer`, `ssh-executor`, `verifier`.
 
 The ops skill dispatches directly: `Task(subagent_type="executor", prompt=<brief>)`. The agent type appears as the label in dispatch notifications. No additional setup is needed.
 

@@ -20,7 +20,7 @@ Initially, these should work on Claude Code and Cursor. Other AI development too
 
 The project is organized into the following directories:
 
-- `/agents` — 13 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
+- `/agents` — 15 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
 - `/skills` — 9 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
 - `/docs` — Assessment and portability guide.
 - `/tooling` — Deploy script and manifest for syncing to global directories.
@@ -79,11 +79,13 @@ See `docs/portability-guide.md` for the full format differences and tool gap ana
 | :--- | :---: | :---: | :--- |
 | **Agents** | | | |
 | planner | Yes | Yes | Auto-transformed by deploy script |
+| architect | Yes | Yes | |
 | project-scoper | Yes | Yes | |
 | critic | Yes | Yes | |
 | executor | Yes | Yes | |
 | ssh-executor | Yes | Yes | |
 | verifier | Yes | Yes | |
+| security-reviewer | Yes | Yes | |
 | code-reviewer | Yes | Yes | |
 | code-reviewer-diff | Yes | Yes | |
 | documentor | Yes | Yes | |

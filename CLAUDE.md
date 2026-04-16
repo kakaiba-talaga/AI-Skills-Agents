@@ -16,7 +16,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
-| `agents/README.md` | `agents/*.md` (13 agent definitions) |
+| `agents/README.md` | `agents/*.md` (15 agent definitions) |
 | `skills/clickup/README.md` | `skills/clickup/SKILL.md` |
 | `skills/code-review/README.md` | `skills/code-review/SKILL.md` |
 | `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |

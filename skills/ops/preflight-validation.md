@@ -6,7 +6,7 @@ Before the first agent dispatch in Phase 3, the team manager dispatches a **veri
 
 ## When to Run
 
-- **Phase 3 start** — always run before the first task dispatch in a new run.
+- **After Phase 2, before Phase 3 Step 1** — always run before the first task dispatch in a new run.
 - **`resume`** — run before re-dispatching if the environment may have changed since the last successful preflight. Skip if a successful preflight was completed earlier in the same session and no environment-affecting changes have occurred.
 - **Non-code task runs** — if the plan contains only documentation or planning tasks (no code execution), reduce to critical checks only.
 
@@ -53,7 +53,7 @@ The team manager dispatches a **verifier** agent to run the preflight checks. Th
 3. Returns a structured checklist with `[PASS]`, `[FAIL]`, or `[WARN]` per check
 4. Attempts auto-fix for standard checks that support it, then re-checks once
 
-The team manager creates this as an **internal task** (`metadata._internal: true`) so it doesn't appear in user-facing progress counts.
+The team manager creates this as an **internal task** (`"_internal": true` on the task object in the state file) so it doesn't appear in user-facing progress counts.
 
 ### Agent Brief Template
 
@@ -109,4 +109,4 @@ This blocker must be manually resolved (marked `deleted` or `completed`) before 
 - Preflight runs after Phase 2 (Task Board Creation) and before Phase 3 Step 1 (first dispatch).
 - The checklist is displayed in the dashboard under a **Preflight** section, between the task board and the first dispatch notification.
 - A failed preflight creates a blocker task (see Failure Behavior above) that is visible on the task board.
-- The preflight result is stored in `metadata.preflight` on the run's tasks and included in the Phase 4 completion summary.
+- The preflight result is stored in the state file's run-level metadata and included in the Phase 4 completion summary.

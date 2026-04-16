@@ -28,12 +28,12 @@ to reference companion files in the same directory.
 | The companion file contains content the model **must act on** (e.g., exact text to emit, required decision logic, exhaustive rule sets) | `You MUST Read` |
 | The companion file is **supplementary detail** the model may consult for edge cases or background, but inline summary is sufficient for most runs | `See` or `Refer to` |
 
-For all 16 companion files the content is load-bearing, so all examples below
+For all 21 companion files the content is load-bearing, so all examples below
 use `You MUST Read`.
 
 ---
 
-## Examples — all 16 companion files
+## Examples — all 21 companion files
 
 ### 1. `help-card.md`
 > **Reference:** You MUST Read `~/.claude/skills/ops/help-card.md` for the full help card text. If the file is missing, display a brief usage summary instead.
@@ -82,6 +82,21 @@ use `You MUST Read`.
 
 ### 16. `ssh-integration.md`
 > **Reference:** You MUST Read `~/.claude/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, and handoff format. If the file is missing, proceed without SSH-specific guidance.
+
+### 17. `plan-validation.md`
+> **Reference:** You MUST Read `~/.claude/skills/ops/plan-validation.md` for spec clarity evaluation criteria, plan complexity scoring signals, critic verdict handling, scoper/critic output descriptions, execute-skip detection, mode-specific behavior, and adaptation rules. If the file is missing, proceed using the tier table and display format above.
+
+### 18. `state-schema.md`
+> **Reference:** You MUST Read `~/.claude/skills/ops/state-schema.md` for the state file JSON structure, field definitions, and directory conventions. If the file is missing, proceed using the State Operations table below.
+
+### 19. `dispatch-policy.md`
+> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.
+
+### 20. `tool-restrictions.md`
+> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+
+### 21. `pointer-format.md`
+> **Reference:** You MUST Read `~/.claude/skills/ops/pointer-format.md` for the standard format for pointer lines and usage notes for extraction agents. If the file is missing, follow the inline template above.
 
 ---
 

@@ -9,7 +9,7 @@ Parse the arguments as follows:
 - If a PR number is present (e.g., `#123`, `123`), or a PR URL (e.g., `https://github.com/owner/repo/pull/123`), review that PR's diff using `gh pr diff <number>`.
 - If a commit hash or range is present (e.g., `abc1234`, `HEAD~3..HEAD`, `main...HEAD`), review that range.
 - If `--no-exclude` is present, skip file exclusions and review all files.
-- If no target is specified, review the latest commit (`git diff HEAD~1 HEAD`).
+- If no target is specified, default to staged changes (`git diff --cached`); if the staged diff is empty, ask the user to clarify what they want reviewed.
 
 ## Workflow
 

@@ -67,12 +67,15 @@ The team manager checks health at these points:
 - Warnings are emitted **once per threshold crossing per task** — not repeated on every check-in. Track which thresholds have been reported in-memory (this does not need state file persistence since warnings are best-effort).
 - On session resume, warning state resets — SLOW and OVERRUN warnings may re-fire for tasks that already crossed these thresholds before the interruption. This is expected and harmless.
 - Warning format:
+
   ```
   ⚠️ Agent health: executor → Task #3 "Implement auth middleware" — SLOW (8m elapsed, est. 5m)
   ```
+
   ```
   🔴 Agent health: verifier → Task #5 "Run unit tests" — OVERRUN (12m elapsed, est. 3m, timeout 10m)
   ```
+
 - **Foreground limitation:** No proactive warning is possible while a foreground agent is running (the session is blocked). The warning is emitted retroactively when the agent returns — this is already covered by the existing escalation procedure in Section 4.
 - **Delivery mechanism:** Warnings are included as text in the team manager's next response to the user. Claude Code has no push notification or terminal alert mechanism — the warning appears the next time the team manager speaks.
 

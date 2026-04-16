@@ -466,7 +466,7 @@ When a task completes and feeds into a downstream task, write a **handoff docume
 
 - **Storage:** `docs/plan/.handoffs/<run_id>/` — each run gets its own subdirectory.
 - **Naming:** `handoff-<task_number>-<from_stage>-to-<to_stage>.md` (e.g., `handoff-003-implement-to-verify.md`).
-- **Run ID:** `<plan-slug>-<ISO-date>` stored in every task's `run_id` field in the state file.
+- **Run ID:** `<plan-slug>-<ISO-date>` stored in the state file's root `run_id` field.
 - **Writing:** After marking a task completed, immediately write the handoff to disk. Store the path in the task's `handoff_file` field in the state file.
 - **Reading:** When briefing downstream agents, read relevant handoff files and include content in the Context section.
 - **Cleanup:** Delete this run's handoff subdirectory on successful completion (Phase 4). Keep on pause/cancel. Never delete other runs' handoffs.

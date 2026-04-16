@@ -22,7 +22,7 @@ Gather diff --> Filter exclusions --> Scope check --> Analyze --> Cross-file imp
 # Review staged changes
 /code-review staged
 
-# Review the latest commit
+# Review staged changes (or asks if nothing staged)
 /code-review
 
 # Review a specific commit
@@ -229,9 +229,6 @@ Quick scan mode outputs only Critical/Warning findings and the verdict.
 ### Reviewing commits
 
 ```bash
-# Review the latest commit (default when no target given)
-/code-review
-
 # Review a specific commit by hash
 /code-review abc1234
 
