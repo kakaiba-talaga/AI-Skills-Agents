@@ -282,10 +282,10 @@ These are not defects — they are patterns worth monitoring.
 The canonical agent pipeline:
 
 ```text
-[Interviewer] → Planner → Project Scoper → Critic → Executor → Verifier → [Deslop] → Code Reviewer → Documentor → Done
+[Interviewer] → [Architect] → Planner → Project Scoper → Critic → Executor → Verifier → [Security Reviewer] → [Deslop] → Code Reviewer → Documentor → Done
 ```
 
-_Brackets indicate optional/automatic stages. Interviewer runs only when specs are ambiguous. Deslop runs automatically unless disabled with `--no-deslop`._
+_Brackets indicate optional/automatic stages. Interviewer runs only when specs are ambiguous. Architect runs when the spec involves significant architectural decisions. Security Reviewer runs when task content involves security-sensitive patterns (auth, secrets, data handling, permissions). Deslop runs automatically unless disabled with `--no-deslop`._
 
 _The `ssh-executor` can be inserted between Executor and Verifier for deployment workflows. It can also operate standalone._
 
