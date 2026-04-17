@@ -640,11 +640,11 @@ ANCHOR: ### Learning across runs
 ACTION: replace_through
 ANCHOR: With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → implement → verify → review per iteration).
 @@STOP
-> **Reference:** See `~/.claude/skills/ops/ralph-integration.md` for the full integration protocol (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
+> **Reference:** See `~/.claude/skills/ops/integrations.md` (Ralph Loop Integration section) for the full integration protocol (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
 @@CONTENT
 When invoked with `ralph`, the team manager wraps its entire workflow inside a `/ralph-loop` persistence loop. Each loop pass runs one full team-manager cycle (plan → implement → verify → review).
 
-> **Reference:** See `~/.cursor/skills/ops/ralph-integration.md` for the full Ralph Loop integration protocol, iteration behavior, and when to use/not use ralph mode (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
+> **Reference:** See `~/.cursor/skills/ops/integrations.md` (Ralph Loop Integration section) for the full Ralph Loop integration protocol, iteration behavior, and when to use/not use ralph mode (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
 @@END
 
 @@PATCH
@@ -672,16 +672,11 @@ ANCHOR: | "resume" | Read state file from disk, verify in-progress tasks, contin
 ACTION: replace_through
 ANCHOR: ## Permission Notes
 @@STOP
-> **Reference:** You MUST Read `~/.claude/skills/ops/permissions.md` for the complete permissions reference, always-prompt table, and opt-in instructions. If the file is missing, proceed without permission-specific guidance.
+If a dispatched agent needs one of these, warn the user before dispatch. In autonomous mode, pause the affected task and continue other chains. To opt in per project, add to `.claude/settings.json`: `{"permissions": {"allow": ["RemoteTrigger", "Bash(npx *)", "Bash(make *)", "Bash(cmake *)"]}}`. Detailed permission guidance is rarely needed beyond this.
 @@CONTENT
 ## Permission Notes
 
-Cursor does not have a permission enforcement system like Claude Code's `settings.json` allowlists. All spawned agents have full access to all tools available in the session.
-
-**Implications:**
-- Tool restriction constraints in agent briefs are advisory, not enforced. Agents are instructed not to use certain tools but could still invoke them.
-- There is no equivalent of Claude Code's `RemoteTrigger` permission prompt.
-- The team manager should still include tool constraint instructions in briefs (see Agent-specific rules under Constraints) to guide agent behavior, even though enforcement is not guaranteed.
+Cursor does not have a permission enforcement system like Claude Code's `settings.json` allowlists. All spawned agents have full access to all tools available in the session. Tool restriction constraints in agent briefs are advisory only — agents are instructed not to use certain tools but enforcement is not guaranteed. There is no equivalent of Claude Code's `RemoteTrigger` permission prompt. The team manager should still include tool constraint instructions in briefs (see Agent-specific rules under Constraints) to guide agent behavior.
 @@END
 
 @@PATCH

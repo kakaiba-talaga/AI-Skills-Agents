@@ -810,8 +810,8 @@ Since Cursor has no `Skill` tool, the ops skill invokes other skills by reading 
 # PATCH 52 — Ralph Loop Integration paragraph
 # ---------------------------------------------------------------------------
 rep(
-    "With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → implement → verify → review per iteration).\n\n> **Reference:** See `~/.claude/skills/ops/ralph-integration.md` for the full integration protocol (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.",
-    "When invoked with `ralph`, the team manager wraps its entire workflow inside a `/ralph-loop` persistence loop. Each loop pass runs one full team-manager cycle (plan → implement → verify → review).\n\n> **Reference:** See `~/.cursor/skills/ops/ralph-integration.md` for the full Ralph Loop integration protocol, iteration behavior, and when to use/not use ralph mode (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.",
+    "With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → implement → verify → review per iteration).\n\n> **Reference:** See `~/.claude/skills/ops/integrations.md` (Ralph Loop Integration section) for the full integration protocol (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.",
+    "When invoked with `ralph`, the team manager wraps its entire workflow inside a `/ralph-loop` persistence loop. Each loop pass runs one full team-manager cycle (plan → implement → verify → review).\n\n> **Reference:** See `~/.cursor/skills/ops/integrations.md` (Ralph Loop Integration section) for the full Ralph Loop integration protocol, iteration behavior, and when to use/not use ralph mode (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.",
 )
 
 # ---------------------------------------------------------------------------
@@ -836,15 +836,10 @@ rep(
 # PATCH 54 — Permission Notes: replace entire section
 # ---------------------------------------------------------------------------
 rep(
-    "## Permission Notes\n\n> **Reference:** You MUST Read `~/.claude/skills/ops/permissions.md` for the complete permissions reference, always-prompt table, and opt-in instructions. If the file is missing, proceed without permission-specific guidance.",
+    "## Permission Notes\n\nThe team manager and its agents require a broad set of permissions to run without prompts. See the **Permissions Reference** in [`~/.claude/agents/README.md`](../agents/README.md) for the complete list.\n\nSome operations **always prompt** even in autonomous mode:\n\n| Command / Tool | Risk | When it comes up |\n| :--- | :--- | :--- |\n| `RemoteTrigger` | Spins up remote agents that consume API credits unattended. | Ralph integration with remote scheduling. |\n| `Bash(npx *)` | Executes arbitrary npm packages. | Node.js agents running tooling not installed globally. |\n| `Bash(make *)` / `Bash(cmake *)` | Runs arbitrary Makefile targets. | Build steps, `make test`, native compilation. |\n\nIf a dispatched agent needs one of these, warn the user before dispatch. In autonomous mode, pause the affected task and continue other chains. To opt in per project, add to `.claude/settings.json`: `{\"permissions\": {\"allow\": [\"RemoteTrigger\", \"Bash(npx *)\", \"Bash(make *)\", \"Bash(cmake *)\"]}}`. Detailed permission guidance is rarely needed beyond this.",
     """## Permission Notes
 
-Cursor does not have a permission enforcement system like Claude Code's `settings.json` allowlists. All spawned agents have full access to all tools available in the session.
-
-**Implications:**
-- Tool restriction constraints in agent briefs are advisory, not enforced. Agents are instructed not to use certain tools but could still invoke them.
-- There is no equivalent of Claude Code's `RemoteTrigger` permission prompt.
-- The team manager should still include tool constraint instructions in briefs (see Agent-specific rules under Constraints) to guide agent behavior, even though enforcement is not guaranteed.""",
+Cursor does not have a permission enforcement system like Claude Code's `settings.json` allowlists. All spawned agents have full access to all tools available in the session. Tool restriction constraints in agent briefs are advisory only — agents are instructed not to use certain tools but enforcement is not guaranteed. There is no equivalent of Claude Code's `RemoteTrigger` permission prompt. The team manager should still include tool constraint instructions in briefs (see Agent-specific rules under Constraints) to guide agent behavior.""",
 )
 
 # ---------------------------------------------------------------------------

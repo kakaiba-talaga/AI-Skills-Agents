@@ -580,7 +580,7 @@ After all verify tasks pass and before code review, run `/deslop --conservative`
 
 **Skip when:** `--no-deslop` set, `/deslop` skill unavailable, run produced no code changes, or all changes are trivial/mechanical.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/deslop-integration.md` for the full deslop procedure, skip conditions, dashboard display rules, and re-verification logic. If the file is missing, proceed using the inline summary above.
+> **Reference:** You MUST Read `~/.claude/skills/ops/integrations.md` (Deslop Integration section) for the full deslop procedure, skip conditions, dashboard display rules, and re-verification logic. If the file is missing, proceed using the inline summary above.
 
 ---
 
@@ -734,7 +734,7 @@ Every adaptation is tracked, reported in the dashboard's **Adaptations** section
 
 With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → implement → verify → review per iteration).
 
-> **Reference:** See `~/.claude/skills/ops/ralph-integration.md` for the full integration protocol (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
+> **Reference:** See `~/.claude/skills/ops/integrations.md` (Ralph Loop Integration section) for the full integration protocol (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
 
 ---
 
@@ -776,7 +776,17 @@ With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → i
 
 ## Permission Notes
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/permissions.md` for the complete permissions reference, always-prompt table, and opt-in instructions. If the file is missing, proceed without permission-specific guidance.
+The team manager and its agents require a broad set of permissions to run without prompts. See the **Permissions Reference** in [`~/.claude/agents/README.md`](../agents/README.md) for the complete list.
+
+Some operations **always prompt** even in autonomous mode:
+
+| Command / Tool | Risk | When it comes up |
+| :--- | :--- | :--- |
+| `RemoteTrigger` | Spins up remote agents that consume API credits unattended. | Ralph integration with remote scheduling. |
+| `Bash(npx *)` | Executes arbitrary npm packages. | Node.js agents running tooling not installed globally. |
+| `Bash(make *)` / `Bash(cmake *)` | Runs arbitrary Makefile targets. | Build steps, `make test`, native compilation. |
+
+If a dispatched agent needs one of these, warn the user before dispatch. In autonomous mode, pause the affected task and continue other chains. To opt in per project, add to `.claude/settings.json`: `{"permissions": {"allow": ["RemoteTrigger", "Bash(npx *)", "Bash(make *)", "Bash(cmake *)"]}}`. Detailed permission guidance is rarely needed beyond this.
 
 ---
 

@@ -369,7 +369,7 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules | Team manager tool use decisions |
 | `handoffs.md` | Full handoff template, run identity rules, naming examples, accumulation rules, cleanup lifecycle | Writing or reading handoff documents |
 | `ssh-integration.md` | SSH-specific preflight checks, brief template, handoff format, SSH handoff chains, SSH parallel safety rules | SSH tasks on the board |
-| `deslop-integration.md` | Full deslop procedure, skip conditions, dashboard display, re-verification logic | Verify→review stage transition |
+| `integrations.md` | Deslop and Ralph Loop integration procedures | Verify→review stage transition; `ralph` flag |
 | `rollback-strategy.md` | Rollback procedure, scope levels, guardrails, model escalation metadata format and skip conditions | Failure handling (chain failures, model escalation) |
 | `timing-edge-cases.md` | 7 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time) | Phase 4 completion and Status Dashboard display |
 | `estimation-feedback.md` | Estimation feedback loop, memory format, calibration procedure, cross-run learning patterns | Phase 4 completion (estimate accuracy and learning) |
@@ -377,11 +377,9 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | `conditional-stage-skip.md` | Per-stage skip conditions and evaluation procedure | Edge case evaluation (trivial changes) |
 | `interruption-recovery.md` | Detailed procedures for cancel, reprioritize, inject tasks, remove tasks, session recovery, foreground/background dispatch explainer | User interrupts, `resume` command, dispatch context |
 | `resume-dedup.md` | Resume deduplication procedure and work verification checks | `resume` command |
-| `permissions.md` | Permission reference, always-prompt table, and opt-in instructions | Permission issues |
-| `ralph-integration.md` | Ralph loop integration protocol, iteration behavior, when to use | `ralph` flag |
 | `pointer-format.md` | Standard format for pointer lines, usage notes for extraction agents | Meta-reference for maintaining pointer consistency |
 
-These 21 companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
+These 19 companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
 
 ---
 

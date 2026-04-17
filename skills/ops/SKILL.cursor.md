@@ -596,7 +596,7 @@ After all verify tasks pass and before code review, run deslop with `--conservat
 
 **Skip when:** `--no-deslop` set, deslop skill file unavailable, run produced no code changes, or all changes are trivial/mechanical.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/deslop-integration.md` for the full deslop procedure, skip conditions, dashboard display rules, and re-verification logic. If the file is missing, proceed using the inline summary above.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/integrations.md` (Deslop Integration section) for the full deslop procedure, skip conditions, dashboard display rules, and re-verification logic. If the file is missing, proceed using the inline summary above.
 
 ---
 
@@ -762,7 +762,7 @@ Since Cursor has no `Skill` tool, the ops skill invokes other skills by reading 
 
 When invoked with `ralph`, the team manager wraps its entire workflow inside a `/ralph-loop` persistence loop. Each loop pass runs one full team-manager cycle (plan → implement → verify → review).
 
-> **Reference:** See `~/.cursor/skills/ops/ralph-integration.md` for the full Ralph Loop integration protocol, iteration behavior, and when to use/not use ralph mode (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
+> **Reference:** See `~/.cursor/skills/ops/integrations.md` (Ralph Loop Integration section) for the full Ralph Loop integration protocol, iteration behavior, and when to use/not use ralph mode (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
 
 ---
 
@@ -804,12 +804,7 @@ When invoked with `ralph`, the team manager wraps its entire workflow inside a `
 
 ## Permission Notes
 
-Cursor does not have a permission enforcement system like Claude Code's `settings.json` allowlists. All spawned agents have full access to all tools available in the session.
-
-**Implications:**
-- Tool restriction constraints in agent briefs are advisory, not enforced. Agents are instructed not to use certain tools but could still invoke them.
-- There is no equivalent of Claude Code's `RemoteTrigger` permission prompt.
-- The team manager should still include tool constraint instructions in briefs (see Agent-specific rules under Constraints) to guide agent behavior, even though enforcement is not guaranteed.
+Cursor does not have a permission enforcement system like Claude Code's `settings.json` allowlists. All spawned agents have full access to all tools available in the session. Tool restriction constraints in agent briefs are advisory only — agents are instructed not to use certain tools but enforcement is not guaranteed. There is no equivalent of Claude Code's `RemoteTrigger` permission prompt. The team manager should still include tool constraint instructions in briefs (see Agent-specific rules under Constraints) to guide agent behavior.
 
 ---
 
