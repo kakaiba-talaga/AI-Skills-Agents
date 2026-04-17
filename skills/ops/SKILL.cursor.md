@@ -98,7 +98,7 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 ## Non-negotiables
 
 1. **State file on disk** — verify file exists (Phase 2 step 5) before dispatch. Without it, `resume`, `status`, and timing break.
-2. **Self-contained agent prompts** — every prompt fully self-contained; the agent has no conversation history. (Dispatch Procedure item e.)
+2. **Self-contained agent prompts** — every prompt fully self-contained; the agent has no conversation history. Self-containment is achieved via the agent's self-read: the spawned agent reads its own definition as its first action, then executes the task brief. (Dispatch Procedure items a and e.)
 3. **Timing on every outcome** — record `completed_at` immediately when an agent returns (Phase 3 step 4, Phase 4 step 4). Do not defer.
 4. **Deliverables on disk** — real files must exist before reporting completion (Phase 4 step 2). Chat output is not a deliverable.
 5. **Lane boundaries** — each agent stays in its lane (Phase 2 table). Review-type agents never use Edit/Write.
@@ -147,7 +147,7 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Shell(command="mkdir -p .ops-state")`. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with `Read`. Also call `TodoWrite(merge=false)` with the single task item.
 2. **Assign agent type:** Apply the Agent Assignment Rules table (Phase 2) — same lookup, same precedence rules. No manual override.
 3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. Use `description_inline` directly to compose the Context, Scope, and Acceptance Criteria sections. The agent has no conversation history — the prompt must be fully self-contained.
-4. **Dispatch:** Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<brief>)`. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<agent skill content + brief>)`.
+4. **Dispatch:** Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`. The prompt instructs the agent to read its own definition as its first action (see Agent Dispatch Procedure for the self-read prompt template).
 5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
@@ -385,8 +385,24 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk.
 2. Update TodoWrite: `TodoWrite(merge=true, todos=[{id: "task-N", content: "...", status: "in_progress"}])`.
 3. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read(path="docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
-4. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<brief>)` using the brief format below.
-5. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
+4. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
+
+**Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):
+
+```
+You are running as agent type: <agent_type>.
+
+**Your first action:** Read your full agent definition from `~/.cursor/agents/<agent_type>.md`. This file contains your workflow, responsibilities, lane boundaries, and constraints. Do not proceed with the task until you have read this file in full.
+
+Once you have read the agent definition, execute the task below following the agent's instructions verbatim.
+
+---
+
+<task brief here>
+```
+
+5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
+6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
 
 **Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (Non-negotiable — see #3.)
 

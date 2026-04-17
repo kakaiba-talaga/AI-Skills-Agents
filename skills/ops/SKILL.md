@@ -72,7 +72,7 @@ All task board operations use the state file as the primary store. **Every mutat
 ## Non-negotiables
 
 1. **State file on disk** — verify file exists (Phase 2 step 5) before dispatch. Without it, `resume`, `status`, and timing break.
-2. **Self-contained agent prompts** — every prompt fully self-contained; the agent has no conversation history. (Dispatch Procedure item e.)
+2. **Self-contained agent prompts** — every prompt fully self-contained; the agent has no conversation history. Self-containment is achieved via the agent's self-read: the spawned agent reads its own definition as its first action, then executes the task brief. (Dispatch Procedure items a and e.)
 3. **Timing on every outcome** — record `completed_at` immediately when an agent returns (Phase 3 step 4, Phase 4 step 4). Do not defer.
 4. **Deliverables on disk** — real files must exist before reporting completion (Phase 4 step 2). Chat output is not a deliverable.
 5. **Lane boundaries** — each agent stays in its lane (Phase 2 table). Review-type agents never use Edit/Write.
@@ -121,7 +121,7 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Bash(command="mkdir -p .ops-state")`. Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back.
 2. **Assign agent type:** Apply the Agent Assignment Rules table (Phase 2) — same lookup, same precedence rules. No manual override.
 3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. Use `description_inline` directly to compose the Context, Scope, and Acceptance Criteria sections. The agent has no conversation history — the prompt must be fully self-contained.
-4. **Dispatch:** Spawn the agent via the Agent tool using the same Agent Dispatch Procedure (Phase 3 Step 3) — read the agent `.md`, set description/model/prompt.
+4. **Dispatch:** Spawn the agent via the Agent tool using the same Agent Dispatch Procedure (Phase 3 Step 3) — read frontmatter for `model`, set description/model/prompt (agent reads its own body as first action).
 5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
@@ -339,13 +339,44 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 
 **Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
 
-The Agent tool only accepts built-in `subagent_type` values (`debugger-build`, `git-master`). For all other agents, read `~/.claude/agents/<agent_type>.md` and inject instructions into the prompt. For each dispatch:
+The Agent tool only accepts built-in `subagent_type` values (`debugger-build`, `git-master`). For all other agents, read `~/.claude/agents/<agent_type>.md` frontmatter and construct a self-read prompt. For each dispatch:
 
-   a. **Read** `~/.claude/agents/<agent_type>.md` where `<agent_type>` is the task's `agent_type` value from the state file. Extract the `model` from YAML frontmatter and the full instruction body (everything after the closing `---`).
+   a. **Read** `~/.claude/agents/<agent_type>.md` where `<agent_type>` is the task's `agent_type` value from the state file. Extract the `model` from YAML frontmatter **only** — do NOT read or store the agent body in the team manager's context.
    b. **`description`**: Set to `"<agent_type>(<task subject>)"` — e.g., `"executor(Implement auth middleware)"`. This is the label shown in the UI. Always include the agent type name so the user can identify which agent is working on which task.
    c. **`model`**: Set from the agent's frontmatter `model` field (e.g., `"sonnet"`, `"opus"`).
    d. **`subagent_type`**: Set **only** when `agent_type` is `debugger-build` or `git-master` (these are the only custom agents that match a built-in type). For all other agents (executor, verifier, planner, critic, etc.), **omit** this parameter.
-   e. **`prompt`**: Concatenate the agent definition body + `\n\n---\n\n` + the task brief (see Agent Briefing Format). The agent has no conversation history — the prompt must be fully self-contained.
+   e. **`prompt`**: Compose using the self-read template below, followed by the task brief (see Agent Briefing Format). The agent reads its full definition as its first action — self-containment is preserved because the agent body materializes in the agent's own context, not the team manager's.
+
+**Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):
+
+```
+You are running as agent type: <agent_type>.
+
+**Your first action:** Read your full agent definition from `~/.claude/agents/<agent_type>.md`. This file contains your workflow, responsibilities, lane boundaries, and constraints. Do not proceed with the task until you have read this file in full.
+
+Once you have read the agent definition, execute the task below following the agent's instructions verbatim.
+
+---
+
+<task brief here>
+```
+
+**Example** (executor agent):
+
+```
+You are running as agent type: executor.
+
+**Your first action:** Read your full agent definition from `~/.claude/agents/executor.md`. This file contains your workflow, responsibilities, lane boundaries, and constraints. Do not proceed with the task until you have read this file in full.
+
+Once you have read the agent definition, execute the task below following the agent's instructions verbatim.
+
+---
+
+## Task Brief
+**Context:** Auth middleware is missing from the API layer.
+**Scope:** Implement `src/middleware/auth.py` — JWT validation, 401 on failure, pass claims to request context.
+**Acceptance Criteria:** All existing tests pass; `pytest tests/middleware/` green; no Edit outside `src/middleware/`.
+```
 
 Use the brief format below.
 3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
