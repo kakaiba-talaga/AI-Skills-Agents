@@ -22,6 +22,7 @@
   --worktree       Isolate parallel agents in git worktrees
   --no-branch      Skip working branch creation, work on current branch
   --no-deslop      Skip the deslop cleanup stage after verification
+  --cost           Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default)
 
 ### Mid-run actions (say these during a run)
   stop / cancel    Stop dispatching, preserve task list

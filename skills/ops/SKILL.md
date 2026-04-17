@@ -16,6 +16,7 @@ Parse arguments as follows:
 - `--worktree` — spawn parallel agents in isolated git worktrees to eliminate file conflicts.
 - `--no-branch` — skip automatic working branch creation; work directly on the current branch.
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
+- `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
 
 Default mode is **interactive** — check in after each pipeline stage completes.
@@ -45,7 +46,7 @@ Think of yourself as the person in front of a task board, moving tickets and bri
 
 The ops skill persists all task data in a JSON state file on disk. This is the source of truth for dependencies, timing, estimates, agent assignments, and adaptation notes.
 
-**CRITICAL — The state file on disk is MANDATORY.** Without the state file, `resume`, `status`, timing reports, and cost tracking all break. Every Phase 2 run MUST create the `.ops-state/` directory and write the JSON state file to disk before proceeding. If you skip the state file, the run is broken.
+The state file on disk is mandatory — see Non-negotiables #1.
 
 ### State File
 
@@ -68,6 +69,19 @@ All task board operations use the state file as the primary store. **Every mutat
 
 ---
 
+## Non-negotiables
+
+1. **State file on disk** — verify file exists (Phase 2 step 5) before dispatch. Without it, `resume`, `status`, and timing break.
+2. **Self-contained agent prompts** — every prompt fully self-contained; the agent has no conversation history. (Dispatch Procedure item e.)
+3. **Timing on every outcome** — record `completed_at` immediately when an agent returns (Phase 3 step 4, Phase 4 step 4). Do not defer.
+4. **Deliverables on disk** — real files must exist before reporting completion (Phase 4 step 2). Chat output is not a deliverable.
+5. **Lane boundaries** — each agent stays in its lane (Phase 2 table). Review-type agents never use Edit/Write.
+6. **Cost is opt-in** — skip cost computation unless `--cost` flag set or user asked. Do not compute by default.
+7. **Timing section mandatory** — always include Timing in every dashboard display (mid-run and completion).
+8. **Dashboard gating** — runs with ≤ 2 non-internal tasks: render full dashboard at completion only; stage transitions use one-liner `✓ [stage] complete (Xs)`. Always render full dashboard on `/ops status`.
+
+---
+
 ## Workflow
 
 ### Phase 1 — Intake
@@ -78,18 +92,16 @@ Determine the starting point from the parsed arguments:
 | :--- | :--- |
 | Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
-| `resume` | Read the state file from `.ops-state/`. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). For full recovery procedure, see Interruption Handling → Session Recovery. |
-| `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
+| `resume` | Read the state file. Treat all `in_progress` tasks as orphaned. Run dedup verification (`resume-dedup.md`), then Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |
+| `status` | Read the state file. Run orphan detection on `in_progress` tasks (`agent-health-monitoring.md` §3b). Display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
 
-**Spec clarity evaluation:** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says "just plan it", dispatch planner regardless.
+**Spec clarity evaluation:** If clear, dispatch planner directly. If vague/ambiguous, dispatch **interviewer** first. If user says "just plan it", dispatch planner regardless.
 
-**Architect dispatch (optional):** After assessing spec clarity — and before dispatching the planner — evaluate whether the spec involves significant architectural decisions that would benefit from design exploration. Dispatch an **architect** agent when the spec involves: new subsystems or components, significant technology choices, competing implementation strategies, changes to component boundaries, or API/data model design. The architect produces an Architecture Decision Document (ADD) that the planner then uses as structural input. Skip the architect for well-understood work where the implementation approach is clear.
+**Architect dispatch (optional):** Dispatch an **architect** agent before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.
 
-In **interactive mode**, when the spec is vague or ambiguous, the team manager can also just ask the user directly instead of dispatching the interviewer — a quick clarifying question is often faster than a full Socratic interview. Use the interviewer agent when the ambiguity is deep (multiple dimensions unclear, conflicting requirements, or the user has indicated they want structured requirements gathering).
-
-In **autonomous mode**, dispatch the interviewer when the spec scores as vague/ambiguous — the team manager cannot ask the user interactively.
+In **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.
 
 **Plan document persistence:** When the planner produces a plan, persist it to disk as the source of truth for the run:
 
@@ -99,30 +111,21 @@ In **autonomous mode**, dispatch the interviewer when the spec scores as vague/a
 4. **Filename**: generate from the work description — lowercase, hyphen-separated, with a `-plan.md` suffix (e.g., "Implement caching layer" → `docs/plan/caching-layer-plan.md`). If a plan doc already exists for this initiative, **update it** rather than creating a new file.
 5. **On `resume`**: read the plan doc path from the state file's `plan_file` field to reconstruct the work scope. The plan doc + state file + handoff files (see Handoff Documents) provide complete state recovery across session boundaries.
 
-The plan document is **not** a deliverable task — it is infrastructure created by the team manager during Phase 1. It is written before the task board is created and serves as input for Phase 2 task board creation.
+The plan document is infrastructure — not a deliverable task — written before the task board and used as input for Phase 2.
 
-**ClickUp context enrichment:** If the user's input references a ClickUp task ID (e.g., "work on ID-9952", "implement the task from ClickUp 10060", or a task ID appears in the conversation context), pull the task details before planning:
-
-1. Check if the `/clickup` skill is available (file exists at `~/.claude/skills/clickup/SKILL.md`). If available, invoke it: `/clickup Get task <id>`.
-2. If the `/clickup` skill is not available, fall back to manual API calls using `curl` against `https://api.clickup.com/api/v2/task/<id>` with the token from `~/.claude/config/clickup/config.json`.
-3. Extract from the ClickUp task: title, description, status, assignees, checklist items, due date, tags, and any comments that provide requirements context.
-4. Feed this information into the planner's brief as additional context — the ClickUp task details become part of the spec.
-
-This is intake-only — the team manager reads from ClickUp to inform planning but does not write back to ClickUp during the workflow.
+**ClickUp context enrichment:** If a ClickUp task ID is referenced, pull task details before planning. Invoke `/clickup Get task <id>` if the skill is available, or fall back to `curl https://api.clickup.com/api/v2/task/<id>` with the token from `~/.claude/config/clickup/config.json`. Extract title, description, status, checklist items, and comments as spec context. Intake-only — does not write back to ClickUp.
 
 ### Phase 1a — Plan Validation (adaptive)
 
-After the planner returns a plan (or when `execute` is used with an existing plan), the team manager evaluates whether the plan needs scoping, critique, or both before proceeding to Phase 2. This prevents the common failure mode of jumping straight to implementation with an unreviewed plan.
-
-**Skip Phase 1a when:** `resume`, `status`, or when the user explicitly says "just do it" / "skip validation" (or equivalent phrasing).
+**Skip when:** `resume`, `status`, or user says "just do it" / "skip validation".
 
 **Determine validation tier:**
 
 | Tier | Criteria | Action | Cost |
 | :--- | :--- | :--- | :--- |
 | **Tier 1 — Skip** | 1-2 tasks, no architectural decisions, mechanical/trivial changes | Proceed directly to Phase 1.5. | None |
-| **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates and gap analysis, OR medium signals present | Dispatch a **project-scoper** agent to produce a scoping document (gap analysis, effort estimates, risk flags, edge cases). The scoper's output enriches the plan — it does not replace it. Proceed to Phase 1.5 after scoping. | 1 opus agent |
-| **Tier 3 — Scope + Critique** | >5 tasks, OR any high-weight signal (architectural decisions, security/risk), OR multiple medium signals | Dispatch a **project-scoper** agent first, then dispatch a **critic** agent to review the combined plan + scoping document. Handle the critic's verdict as described below. | 2 opus agents |
+| **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates/gap analysis, OR medium signals | Dispatch **project-scoper** to produce a scoping doc. Proceed to Phase 1.5 after scoping. | 1 opus agent |
+| **Tier 3 — Scope + Critique** | >5 tasks, OR high-weight signal (architectural, security/risk), OR multiple medium signals | Dispatch **project-scoper** then **critic** to review combined plan + scoping doc. | 2 opus agents |
 
 **Display the tier decision:**
 
@@ -148,13 +151,6 @@ Branch isolation is the default — create a working branch before agents modify
 | On a feature/develop branch that matches the task | **Work on the current branch** — no new branch needed. | This is the most common adaptation. If prior phases of the same plan were committed directly to this branch, continue on it rather than creating a sub-branch. Log the decision. |
 | On an unrelated feature branch | **Warn the user.** Ask: work here, create a sub-branch, or switch to main first. | — |
 | Work is exploratory, low-risk, or a continuation of recent commits on the current branch | **Skip branch creation.** | Creating a branch for every small task adds friction. If the current branch is already the right home for this work, stay on it. |
-
-**Decision criteria for skipping branch creation:**
-
-- The current branch is an active development branch (not main/master)
-- Recent commits on the branch are related to the current task (same project phase, same initiative)
-- The task is a continuation of prior work, not a new unrelated initiative
-- The user has not explicitly requested branch isolation
 
 When skipping, **always log it as an adaptation**: "Adapted: skipped branch creation — current branch `develop` already contains related Phase 1 work."
 
@@ -272,17 +268,11 @@ Each agent must stay in its lane:
 | Implementation | `documentor` task to update docs if behavior changed |
 | Bug investigation | `documentor` task to write findings if no code fix is made |
 
-**Deliverable filenames** — Do not hardcode filenames like `ASSESSMENT.md` or `PLAN.md`. Generate a descriptive filename from the task subject: lowercase, words separated by hyphens, with a suffix indicating the document type. For example:
-- "Assess the auth migration" → `auth-migration-assessment.md`
-- "Plan the API refactor" → `api-refactor-plan.md`
-- "Investigate login timeout bug" → `login-timeout-findings.md`
-- "Document the new caching layer" → `caching-layer-docs.md`
-
-Extract the first 3-5 meaningful words from the task description, drop articles and filler, and join with hyphens. Write to the project's `docs/` directory if one exists, or the project root otherwise. If updating an existing document, use the existing filename.
+**Deliverable filenames** — Generate a descriptive filename from the task subject: lowercase, hyphen-separated, document-type suffix. Examples: "Assess the auth migration" → `auth-migration-assessment.md`; "Investigate login timeout bug" → `login-timeout-findings.md`. Write to `docs/` if it exists, otherwise project root. Update existing files rather than creating new ones.
 
 These deliverable tasks must be on the board **from the start**, blocked by the analysis/implementation tasks they depend on, and dispatched automatically when their blockers complete. The workflow is not complete until deliverable files exist on disk. Chat summaries are not deliverables.
 
-**Display the task board after creation.** After the state file is written and verified, render a full Status Dashboard — the same table format used for `status` and completion displays. This shows the user the complete board at a glance (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section with estimates) before any dispatch begins. This applies to every run, not just `--dry-run`.
+**Display the task board after creation.** After the state file is written and verified, render a Status Dashboard before any dispatch begins. For runs with ≥ 3 non-internal tasks, render the full dashboard table (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section). For runs with ≤ 2 non-internal tasks, render a one-line status per task instead — `[agent-type] task: subject — status` — and skip the full table. This applies to every run, not just `--dry-run`. (Non-negotiable — see #8.)
 
 If `--dry-run` is set, display the task board and stop. Do not dispatch.
 
@@ -296,19 +286,9 @@ After the task board is created and before the first dispatch, run a preflight c
 
 This is the core orchestration loop. Repeat until all tasks are completed or the user intervenes:
 
-**Step 1 — Scan for ready tasks.** Read the state file from `.ops-state/<run-id>-board.json`. If the state file does not exist, **stop** — the state file should have been created in Phase 2. Re-run Phase 2 step 1 to create it before continuing.
+**Step 1 — Scan for ready tasks.** Read the state file. If it doesn't exist, stop and re-create it (Phase 2 step 1). A task is ready when `status == "pending"` and all `blocked_by` entries are `"completed"`.
 
-A task is ready when:
-
-- `status` is `"pending"`
-- All entries in `blocked_by` refer to tasks whose `status` is `"completed"`
-
-**Step 2 — Batch parallel work.** Group ready tasks for concurrent dispatch:
-
-- Tasks touching **different files or modules** can run in parallel.
-- Respect the `--parallel N` ceiling.
-- **Never** parallelize tasks that modify the same files.
-- When in doubt, run sequentially.
+**Step 2 — Batch parallel work.** Dispatch tasks on different files/modules concurrently up to `--parallel N`. Never parallelize tasks that share files. When in doubt, run sequentially.
 
 **Step 3 — Dispatch agents.** For each task (or parallel batch):
 
@@ -317,9 +297,7 @@ A task is ready when:
 
 **Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
 
-The Agent tool's `subagent_type` parameter only accepts built-in types (`debugger-build`, `git-master`). It does **not** load custom agent definitions from `~/.claude/agents/`. You must read the agent file and include its instructions in the prompt. The task's `agent_type` field in the state file determines which agent definition to load.
-
-For each dispatch:
+The Agent tool only accepts built-in `subagent_type` values (`debugger-build`, `git-master`). For all other agents, read `~/.claude/agents/<agent_type>.md` and inject instructions into the prompt. For each dispatch:
 
    a. **Read** `~/.claude/agents/<agent_type>.md` where `<agent_type>` is the task's `agent_type` value from the state file. Extract the `model` from YAML frontmatter and the full instruction body (everything after the closing `---`).
    b. **`description`**: Set to `"<agent_type>(<task subject>)"` — e.g., `"executor(Implement auth middleware)"`. This is the label shown in the UI. Always include the agent type name so the user can identify which agent is working on which task.
@@ -336,7 +314,7 @@ Default is **foreground**. Use **background** (`run_in_background: true`) for ta
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.
 
-**Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (REMINDER: Do not skip timing. Every result must record an end time before any other processing.)
+**Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (Non-negotiable — see #3.)
 
 After updating timing, evaluate health status for all in-progress background agents (see `agent-health-monitoring.md` Sections 3 and 3a). Emit proactive warnings for any threshold crossings before proceeding to result processing.
 
@@ -356,7 +334,7 @@ After updating timing, evaluate health status for all in-progress background age
 
 | Mode | Behavior |
 | :--- | :--- |
-| Interactive (default) | Show stage summary + dashboard. Ask user to proceed, adjust, or stop. |
+| Interactive (default) | Show stage summary + dashboard (full if ≥ 3 tasks; one-liner per task if ≤ 2). Ask user to proceed, adjust, or stop. |
 | Autonomous | Proceed automatically. Stop only on escalation or scope issue. |
 | Supervised | Already checking in per-task — just note the stage boundary. |
 
@@ -366,10 +344,14 @@ After updating timing, evaluate health status for all in-progress background age
 
 When every task is `completed`:
 
+**If `tasks.length == 1` (single-task run):** collapse Phase 4 to steps 1, 2, 9, and 10 only. Skip steps 3 (final verification — redundant for 1 task), 4 (timing summary — trivially one line; include in step 10 summary instead), 5 (cost — opt-in per Non-negotiable #6), 6 (final task board — redundant with the step 10 summary), 7 (narrative summary — fold into step 10), 8 (file list — include in step 10). For single-task runs, step 10 should be one concise paragraph: what was done, the file(s) changed, the actual duration, and next steps.
+
+**Otherwise (multi-task run):** execute all 10 steps as specified below.
+
 1. **Confirm all agents have finished** — read the state file and verify no tasks are `"in_progress"`. If any agent is still running, wait for it to return before proceeding. Never report completion while agents are still active.
-2. **Verify deliverables exist on disk** — check that every deliverable task produced a real file. Read (or at minimum glob for) each expected artifact. If a deliverable file is missing or empty, the workflow is **not complete** — dispatch the appropriate agent to create it before proceeding. Never report completion based on chat output alone; the user should not have to ask "where is the document?"
+2. **Verify deliverables exist on disk** — check that every deliverable task produced a real file. Read (or at minimum glob for) each expected artifact. If a deliverable file is missing or empty, the workflow is **not complete** — dispatch the appropriate agent to create it before proceeding. Never report completion based on chat output alone; the user should not have to ask "where is the document?" (Non-negotiable — see #4.)
 3. **Run a final verification pass** — if the work involved code changes, dispatch a **verifier** agent to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
-4. **Compute timing summary** — (REMINDER: This is mandatory. Do not skip the timing report.) Read all task entries from the state file. Calculate:
+4. **Compute timing summary** — (Non-negotiable — see #3.) Read all task entries from the state file. Calculate:
    - **Total wall time** — from the first task's `started_at` to the last task's `completed_at`.
    - **Total estimated time** — sum of all `estimated_minutes`.
    - **Per-stage totals** — estimated vs actual durations grouped by `stage`.
@@ -382,14 +364,12 @@ When every task is `completed`:
 
    > **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, and calibration procedure. If the file is missing, proceed without estimation feedback.
 
-5. **Compute cost estimate** — (REMINDER: This is mandatory. Do not skip the cost estimate. It must be computed before the summary and displayed as part of it.) Estimate token usage and cost for the run based on each task's `model_used`, `attempts`, and agent type. This step runs immediately after timing and before the summary so cost information can be included in the completion output.
+5. **Compute cost estimate (opt-in)** — Skip this step unless the user invoked with `--cost` flag or explicitly asked for cost information. When enabled, estimate token usage and cost per task based on `model_used`, `attempts`, and agent type. Prefer per-task token estimation from observed tool-use patterns; fall back to agent-type baselines only when that signal isn't available.
 
-   **Prefer per-task token estimation from observed tool-use patterns** (tool-call count, file sizes read, output length) when you have that signal — it is more accurate than applying flat baselines. Fall back to the agent-type baselines in `cost-tracking.md` (section 2) only when per-task estimation isn't feasible. Ranges (e.g., `~$1.50–3.00`) are acceptable and often more honest than point estimates.
-
-   > **Reference:** You MUST Read `~/.claude/skills/ops/cost-tracking.md` for token estimation heuristics, model pricing, and cost dashboard format. If the file is missing, proceed without cost tracking.
+   > **Reference:** See `~/.claude/skills/ops/cost-tracking.md` for token estimation heuristics, model pricing, and cost dashboard format. If the file is missing, proceed without cost tracking.
 
 6. Display the final task board (with per-task durations).
-7. Summarize: what was accomplished, how many tasks, retries, escalations, total time, **and estimated cost** (from step 5).
+7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
 9. **Clean up temp files, handoffs, and state** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** other runs' handoff subdirectories or state files.
 10. Suggest natural next steps (e.g., "Ready for commit" or "Run the full test suite").
@@ -430,13 +410,13 @@ A vague brief produces vague work. If you can't write a specific brief, the task
 
 ### Bash rules
 
-**No compound Bash commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls instead — use parallel calls for independent commands. This applies to the team manager's own Bash calls AND all spawned agents.
+**No compound Bash commands** — never use `&&`, `;`, or `||`. Make separate Bash tool calls; use parallel calls for independent commands. Applies to team manager AND all agents.
 
-**No `cd` prefix** — the working directory is already the project root. Run commands directly (e.g., `git diff file.py`, `python -m pytest`) instead of `cd "/path/to/project" && command`. This is the most common violation — agents default to `cd && command` patterns unless explicitly told not to.
+**No `cd` prefix** — run commands directly from the project root (e.g., `git diff file.py`, `python -m pytest`). Most common violation — agents default to `cd && command` patterns.
 
-**Use relative paths from the project root** — never use absolute paths in Bash commands. Use relative paths like `src/`, `tests/`, etc. Only use absolute paths for resources genuinely outside the project (e.g., `~/.claude/`). Absolute paths break permission matching and trigger unwanted prompts.
+**Use relative paths** — only use absolute paths for resources outside the project (e.g., `~/.claude/`). Absolute paths break permission matching.
 
-**Temporary files go in the project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
+**Temporary files in project root** (e.g., `_tmp_test.py`) — never in `/tmp/` or `%TEMP%`. Use `_tmp_` prefix. Clean up in batch with `rm _tmp_*`.
 
 ### Team manager tool restrictions
 
@@ -483,13 +463,13 @@ Pre-planning chain (optional, for work requiring design exploration):
 interviewer → architect → planner → project-scoper → critic → executor → ...
 ```
 
-The architect dispatches when the spec involves significant architectural decisions. When not needed, the team manager goes directly to the planner.
+Architect dispatches for architectural decisions; otherwise team manager goes directly to planner.
 
 ```
 executor → verifier → [security-reviewer] → deslop → code-reviewer → documentor
 ```
 
-When a chain has multiple implementation tasks, parallelize then converge:
+Parallelize multiple implementation tasks then converge:
 
 ```
 executor(task1) ──┐
@@ -497,9 +477,9 @@ executor(task2) ──┤→ verifier(all) → [security-reviewer] → deslop(al
 executor(task3) ──┘
 ```
 
-The security-reviewer is optional. The ops skill dispatches it when task content involves security-sensitive patterns (auth, secrets, API keys, data handling, permissions, encryption, external inputs). Skip automatically for non-security-relevant changes.
+Security-reviewer is optional — dispatched for security-sensitive patterns (auth, secrets, API keys, encryption, external inputs).
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, handoff format, and SSH handoff chains. If the file is missing, proceed without SSH-specific guidance.
+> **Reference:** See `~/.claude/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, handoff format, and SSH handoff chains (read only for SSH tasks). If the file is missing, proceed without SSH-specific guidance.
 
 ---
 
@@ -561,13 +541,7 @@ When spawning parallel agents, always verify file independence first. If two tas
 
 ## Internal Tasks
 
-Not every task on the board is user-facing work. The team manager may create **internal bookkeeping tasks** for its own coordination:
-
-- Merge worktree branches
-- Run final integration verification
-- Compile the completion summary
-
-Mark these with `"_internal": true` in the state file. When displaying progress to the user, **filter internal tasks out** of the progress bar and task count. Show them in the dashboard only under a collapsed "Internal" section.
+The team manager may create **internal bookkeeping tasks** (merge branches, final verification, compile summary). Mark with `"_internal": true`. Filter from progress bar and task count — show only in a collapsed "Internal" dashboard section.
 
 ---
 
@@ -583,13 +557,13 @@ Mark these with `"_internal": true` in the state file. When displaying progress 
 
 When escalating, always include enough context for the user to make a decision without re-reading the entire history.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, guardrails, and model escalation details. If the file is missing, proceed without automatic rollback.
+> **Reference:** See `~/.claude/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, guardrails, and model escalation details (read only on failure escalation). If the file is missing, proceed without automatic rollback.
 
 ---
 
 ## Status Dashboard
 
-Show this on `status` command, at stage transitions, and at completion:
+Show the full dashboard on `status` command and at completion. For runs with ≥ 3 non-internal tasks, also show at stage transitions. For runs with ≤ 2 non-internal tasks, stage transitions collapse to a one-line status — see Non-negotiables #8.
 
 ```
 ## Team Manager — Status
@@ -597,7 +571,7 @@ Show this on `status` command, at stage transitions, and at completion:
 ### Active
 - <agent> → Task #N: "<subject>" (in_progress, Xs elapsed) [health indicator]
 
-Health indicators (✓ ON TRACK, ⚠️ SLOW, 🔴 OVERRUN, 👻 ORPHAN?) are defined in `agent-health-monitoring.md` Section 6. Show the appropriate indicator for each in-progress task based on elapsed time vs. estimate and agent-type timeout.
+Health indicators: ✓ ON TRACK, ⚠️ SLOW, 🔴 OVERRUN, 👻 ORPHAN? (defined in `agent-health-monitoring.md` §6)
 
 ### Task Board
 | # | Task | Agent | Status | Est. | Actual | Blocked By |
@@ -612,7 +586,7 @@ Health indicators (✓ ON TRACK, ⚠️ SLOW, 🔴 OVERRUN, 👻 ORPHAN?) are de
 | **Total** | | | | |
 
 ### Cost
-(Completion only. Read `cost-tracking.md` for dashboard format.)
+(Opt-in: rendered only when `--cost` was set or the user asked. Omit from mid-run dashboards. See `cost-tracking.md` for format.)
 
 ### Preflight
 - (show checklist if preflight was run this session)
@@ -624,9 +598,7 @@ Health indicators (✓ ON TRACK, ⚠️ SLOW, 🔴 OVERRUN, 👻 ORPHAN?) are de
 - (none)
 ```
 
-REMINDER: The timing section is **mandatory** in every dashboard display. Do not omit it. Show elapsed time for in-progress tasks and final duration for completed tasks. At completion, always include total wall time, per-stage totals, and the longest task.
-
-REMINDER: The Cost section is **mandatory** in the **completion** dashboard. Do not omit it. Do not fake figures — if pricing data is unavailable, output tokens only and state "pricing unavailable — $ cost omitted" explicitly. Omit the Cost section entirely from mid-run dashboards; it is meaningful only after all tasks finish.
+The Timing section is mandatory in every dashboard display — see Non-negotiables #7. Show elapsed time for in-progress tasks and final duration for completed tasks. At completion, always include total wall time, per-stage totals, and the longest task.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the dashboard template above.
 
@@ -648,8 +620,6 @@ The team manager adapts strategy based on runtime conditions. Every adaptation i
 
 ### Mid-run plan adjustment
 
-When an agent discovers the plan is wrong or incomplete, the team-manager decides how to respond rather than always escalating to the user:
-
 | Discovery | Response |
 | :--- | :--- |
 | **Missing task** — agent finds work the plan didn't account for | Create the task, wire dependencies, slot it into the board. Log it as an adaptation. In interactive mode, mention it at the next checkpoint. |
@@ -660,8 +630,6 @@ When an agent discovers the plan is wrong or incomplete, the team-manager decide
 **Guardrail:** The team-manager may add tasks or re-sequence, but must not silently remove tasks or reduce scope. Scope reduction always requires user approval.
 
 ### Model escalation
-
-When an agent fails, the team-manager can escalate to a more capable model before escalating to the user:
 
 ```
 1st attempt: assigned model (from frontmatter)
@@ -690,15 +658,15 @@ Uses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at
 
 ### Adaptation log
 
-Every adaptation is tracked and reported. The dashboard includes an **Adaptations** section listing each adaptation made during the run. At completion (Phase 4), the summary includes all adaptations so the user can review decisions and provide feedback. If the user disagrees with an adaptation, save that feedback as a memory for future runs.
+Every adaptation is tracked, reported in the dashboard's **Adaptations** section, and summarized at Phase 4 completion. User feedback on adaptations is saved as project memory for future runs.
 
 ---
 
 ## Ralph Loop Integration
 
-When invoked with `ralph`, the team manager wraps its entire workflow inside a `/ralph-loop` persistence loop. Each loop pass runs one full team-manager cycle (plan → implement → verify → review).
+With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → implement → verify → review per iteration).
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/ralph-integration.md` for the full Ralph Loop integration protocol, iteration behavior, and when to use/not use ralph mode. If the file is missing, proceed using the inline summary above.
+> **Reference:** See `~/.claude/skills/ops/ralph-integration.md` for the full integration protocol (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
 
 ---
 
@@ -708,7 +676,7 @@ When invoked with `ralph`, the team manager wraps its entire workflow inside a `
 
 **Single-stage work:** If all tasks are the same type (e.g., all documentation), skip the pipeline chain. Dispatch them directly, possibly in parallel.
 
-**Trivial/mechanical changes:** If all tasks are trivial, mechanical fixes (adding a line, removing duplicates, changing a string value, fixing a typo), skip the verify, deslop, and review stages — the risk of a bug is near zero and the pipeline cost exceeds the value. When skipping stages, **always log it as an adaptation** and mention it in the stage transition checkpoint: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages.
+**Trivial/mechanical changes:** For trivial fixes (adding a line, removing duplicates, typo), skip verify/deslop/review stages. **Always log it as an adaptation**: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/conditional-stage-skip.md` for per-stage skip conditions and evaluation procedure. If the file is missing, use only the trivial-skip logic above.
 
@@ -720,7 +688,7 @@ When invoked with `ralph`, the team manager wraps its entire workflow inside a `
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/interruption-recovery.md` for detailed procedures for cancel/abort, reprioritize, inject tasks, remove tasks, session recovery, and how foreground vs. background dispatch works. If the file is missing, proceed using the summary table below.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/resume-dedup.md` for the resume deduplication procedure and work verification checks. If the file is missing, re-dispatch in_progress tasks without dedup checks.
+> **Reference:** See `~/.claude/skills/ops/resume-dedup.md` for the resume deduplication procedure and work verification checks (read only on `resume`). If the file is missing, re-dispatch in_progress tasks without dedup checks.
 
 ### Summary of user commands during a run
 
@@ -746,12 +714,4 @@ When invoked with `ralph`, the team manager wraps its entire workflow inside a `
 
 ## Output Tagging
 
-**`Team Manager`** appears on the **opening line** of each assistant turn only. Do **not** prefix every bullet or heading in the same turn.
-
-The **first line** of each assistant turn for this command MUST begin with: **`Team Manager`**
-
-Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
-
-Apply the badge on the opening line of turns that contain: status dashboards, dispatch notifications, stage transitions, escalations, and completion summaries.
-
-**Format:** **`Team Manager`** (bold backtick-wrapped) as the **first element** on the **opening line** of the turn.
+The **first line** of each assistant turn MUST begin with **`Team Manager`** (bold backtick-wrapped). Apply on turns containing dashboards, dispatch notifications, stage transitions, escalations, and completion summaries. Do **not** repeat on continuation lines (bullets, sub-items, tables) within the same turn.

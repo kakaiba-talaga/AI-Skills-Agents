@@ -66,6 +66,7 @@ The team manager auto-detects which agent to assign based on task content:
 | `--worktree` | Spawn parallel agents in isolated git worktrees |
 | `--no-branch` | Skip working branch creation, work on current branch |
 | `--no-deslop` | Skip the deslop cleanup stage after verification |
+| `--cost` | Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default) |
 | `ralph` | Wrap workflow in a `/ralph-loop` for iterative metric-driven goals |
 
 ## Key Features
