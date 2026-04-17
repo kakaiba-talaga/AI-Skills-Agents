@@ -105,12 +105,29 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 6. **Cost is opt-in** — skip cost computation unless `--cost` flag set or user asked. Do not compute by default.
 7. **Timing section mandatory** — always include Timing in every dashboard display (mid-run and completion).
 8. **Dashboard gating** — runs with ≤ 2 non-internal tasks: render full dashboard at completion only; stage transitions use one-liner `✓ [stage] complete (Xs)`. Always render full dashboard on `/ops status`.
+9. **Trivial route still enforces LB1 and LB2** — even on the trivial path, a state file is created and verified on disk (LB1) and the agent brief is fully self-contained (LB2). The triage gate never bypasses these invariants.
 
 ---
 
 ## Workflow
 
 ### Phase 1 — Intake
+
+#### Triage Gate
+
+Classify the invocation before reading any further. Apply the first matching rule:
+
+| Route | Predicate | Behavior |
+| :--- | :--- | :--- |
+| **trivial** | Single-sentence scope AND no code changes across multiple modules AND user did not say `plan` AND not `resume` / `status` / `execute` AND no stage-crossing dependencies implied (no verify→review→document chain) | Skip to **Trivial Dispatch** below. Never reads Phase 1a, Phase 2.5, or full Phase 4. |
+| **status-only** | Argument is `status` | Read state file, render dashboard, stop. |
+| **pipeline** | Everything else — `plan`, `execute`, `resume`, any multi-stage or multi-module request | Full workflow: Phase 1a → Phase 2 → Phase 2.5 → Phase 3 → Phase 4. |
+
+**Trivial examples:** "commit the changes using git-master", "run the deploy script to all channels", "get the assessment doc updated", "fix this typo in README".
+
+**NOT trivial:** "add a new agent for X" (multiple files + stages), "refactor the foo module" (code across modules), "investigate this bug" (implies debugger→executor→verifier chain).
+
+If the predicate is ambiguous — when you cannot determine with confidence that ALL trivial conditions are met — route to `pipeline`.
 
 Determine the starting point from the parsed arguments:
 
@@ -122,6 +139,18 @@ Determine the starting point from the parsed arguments:
 | `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
+
+#### Trivial Dispatch
+
+When the triage gate routes to `trivial`, execute these steps and stop — do not proceed to Phase 1a, Phase 2.5, or the full Phase 4 ceremony:
+
+1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Shell(command="mkdir -p .ops-state")`. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with one task entry. Verify the file exists by reading it back with `Read`. Also call `TodoWrite(merge=false)` with the single task item.
+2. **Assign agent type:** Apply the Agent Assignment Rules table (Phase 2) — same lookup, same precedence rules. No manual override.
+3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. The agent has no conversation history — the prompt must be fully self-contained.
+4. **Dispatch:** Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<brief>)`. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<agent skill content + brief>)`.
+5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+
+No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
 
 **Spec clarity evaluation:** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says "just plan it", dispatch planner regardless.
 
@@ -143,7 +172,9 @@ The plan document is infrastructure — not a deliverable task — written befor
 
 ### Phase 1a — Plan Validation (adaptive)
 
-**Skip when:** `resume`, `status`, or user says "just do it" / "skip validation".
+**Skip entirely when:** the triage gate routed to `trivial`. Phase 1a runs only on the `pipeline` route.
+
+**Also skip when:** `resume`, `status`, or user says "just do it" / "skip validation".
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/plan-validation.md` for spec clarity evaluation criteria, plan complexity scoring signals, critic verdict handling, scoper/critic output descriptions, execute-skip detection, mode-specific behavior, and adaptation rules. If the file is missing, proceed using the tier table and display format above.
 
