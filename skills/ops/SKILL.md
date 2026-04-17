@@ -118,9 +118,9 @@ If no arguments are given, ask the user what they want to manage.
 
 When the triage gate routes to `trivial`, execute these steps and stop — do not proceed to Phase 1a, Phase 2.5, or the full Phase 4 ceremony:
 
-1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Bash(command="mkdir -p .ops-state")`. Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Verify the file exists by reading it back.
+1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Bash(command="mkdir -p .ops-state")`. Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back.
 2. **Assign agent type:** Apply the Agent Assignment Rules table (Phase 2) — same lookup, same precedence rules. No manual override.
-3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. The agent has no conversation history — the prompt must be fully self-contained.
+3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. Use `description_inline` directly to compose the Context, Scope, and Acceptance Criteria sections. The agent has no conversation history — the prompt must be fully self-contained.
 4. **Dispatch:** Spawn the agent via the Agent tool using the same Agent Dispatch Procedure (Phase 3 Step 3) — read the agent `.md`, set description/model/prompt.
 5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 
@@ -211,7 +211,9 @@ Read the plan hierarchy (milestones > stages > tasks). For each actionable task,
 
 - **id**: `"task-N"` (sequential, starting from 0)
 - **subject**: Imperative task title (e.g., "Implement authentication middleware")
-- **description**: Full task details including acceptance criteria copied from the plan
+- **description**: One-line summary ≤ 100 chars (e.g., "Auth middleware + tests in src/auth/")
+- **description_ref**: Markdown anchor into the plan doc — `"docs/plan/<name>-plan.md#task-N"` (e.g., `"docs/plan/auth-middleware-plan.md#task-implement-auth-middleware"`). Omit when `plan_file` is null; use `description_inline` instead.
+- **description_inline**: Full task prose (acceptance criteria, notes, file list) — used when there is no plan doc (trivial-path runs or runs without a persisted plan). Omit when `description_ref` is set.
 - **status**: `"pending"`
 - **agent_type**: Agent to assign (see Agent Assignment Rules)
 - **stage**: Pipeline stage — `plan`, `implement`, `verify`, `review`, `document`
@@ -219,6 +221,8 @@ Read the plan hierarchy (milestones > stages > tasks). For each actionable task,
 - **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
 - **estimate_source**: `"scoping-doc"` or `"ops"`
 - **blocked_by**: Array of task IDs this task depends on
+
+> **Reference:** See `~/.claude/skills/ops/state-schema.md` for the `description_ref` resolution algorithm and field definitions.
 
 **3. Wire dependencies:**
 
@@ -317,14 +321,25 @@ After the task board is created and before the first dispatch, run a preflight c
 
 This is the core orchestration loop. Repeat until all tasks are completed or the user intervenes:
 
-**Step 1 — Scan for ready tasks.** Read the state file. If it doesn't exist, stop and re-create it (Phase 2 step 1). A task is ready when `status == "pending"` and all `blocked_by` entries are `"completed"`.
+**Step 1 — Scan for ready tasks.** Use the cached state; read the state file from disk only on invalidation events (read-on-change). If the file doesn't exist, stop and re-create it (Phase 2 step 1). A task is ready when `status == "pending"` and all `blocked_by` entries are `"completed"`.
+
+**State cache** — maintain an in-memory snapshot of the last-known state. Invalidate the cache (re-read from disk) on these events only:
+- **Bootstrap**: before the first dispatch of each loop invocation (initial read).
+- **Task completed**: immediately after Step 4 writes task completion to disk (state file just mutated).
+- **Resume / status subcommand**: always re-read on `resume` or `status` — external changes may have occurred.
+- **User mid-run command** (`add`, `drop`, `reprioritize`, `do #N next`, `skip`) — re-read after processing the command.
+
+Between these events, operate on the cached snapshot. Do not re-read on routine Step 1 → Step 2 → Step 3 cycles within one dispatch iteration.
+
+> **Safety note:** If the user manually edits the state file JSON between invalidation events, those changes won't be visible until the next invalidation trigger. Manual out-of-band edits are not a supported workflow; the safety note in `state-schema.md` documents this caveat.
 
 **Step 2 — Batch parallel work.** Dispatch tasks on different files/modules concurrently up to `--parallel N`. Never parallelize tasks that share files. When in doubt, run sequentially.
 
 **Step 3 — Dispatch agents.** For each task (or parallel batch):
 
 1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk.
-2. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file. Follow the dispatch procedure below.
+2. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read("docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
+3. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file. Follow the dispatch procedure below.
 
 **Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
 
