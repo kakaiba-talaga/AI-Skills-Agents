@@ -1,0 +1,28 @@
+# Enforce LF line endings for all text files in this repo.
+# Overrides core.autocrlf on all platforms (including Windows).
+
+* text=auto eol=lf
+
+# Explicit shell and PowerShell rules (defensive — ensure tools never generate CRLF).
+*.sh  text eol=lf
+*.ps1 text eol=lf
+
+# Common text formats (explicit for clarity; the wildcard rule above covers them,
+# but this makes intent unambiguous for editors and git clients).
+*.md   text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.toml text eol=lf
+
+# Binary files — never normalize line endings.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.woff   binary
+*.woff2  binary
+*.zip    binary
+*.tar.gz binary

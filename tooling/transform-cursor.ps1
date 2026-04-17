@@ -10,7 +10,7 @@
     skills/ops/SKILL.cursor.additions.md serves as a human-readable catalogue
     of what changed and why, but is not consumed by this script.
 
-    Output uses CRLF line endings (matching repo convention for these files).
+    Output uses LF line endings.
 
 .PARAMETER InPath
     Source SKILL.md. Default: skills/ops/SKILL.md
@@ -39,7 +39,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ---------------------------------------------------------------------------
-# Read source (normalise to LF internally; CRLF applied on output)
+# Read source (normalise to LF internally)
 # ---------------------------------------------------------------------------
 
 if (-not (Test-Path $InPath)) {
@@ -898,16 +898,12 @@ These limitations are inherent to the Cursor platform and cannot be worked aroun
 $text = $text -replace [regex]::Escape("~/.claude/"), "~/.cursor/"
 
 # ---------------------------------------------------------------------------
-# Convert to CRLF
+# Output (LF — no CRLF conversion)
 # ---------------------------------------------------------------------------
-$result = $text -replace "`n", "`r`n"
-
-# ---------------------------------------------------------------------------
-# Output
-# ---------------------------------------------------------------------------
+$result = $text
 
 if ($WhatIf) {
-    $lineCount = ($result -split "`r`n").Count
+    $lineCount = ($result -split "`n").Count
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($result)
     $sha = [System.Security.Cryptography.SHA256]::Create()
     $hash = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") }) -join ""
@@ -927,7 +923,7 @@ if ($OutPath -eq "-") {
     [System.IO.File]::WriteAllBytes($OutPath, $bytes)
     $sha = [System.Security.Cryptography.SHA256]::Create()
     $hash = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") }) -join ""
-    $lineCount = ($result -split "`r`n").Count
+    $lineCount = ($result -split "`n").Count
     Write-Host "Written: $OutPath"
     Write-Host "SHA256:  $hash"
     Write-Host "Lines:   $lineCount"

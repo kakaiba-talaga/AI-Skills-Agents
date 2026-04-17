@@ -872,15 +872,12 @@ These limitations are inherent to the Cursor platform and cannot be worked aroun
 text = text.replace("~/.claude/", "~/.cursor/")
 
 # ---------------------------------------------------------------------------
-# Convert to CRLF
+# Output (LF — no CRLF conversion)
 # ---------------------------------------------------------------------------
-result = text.replace("\n", "\r\n")
+result = text
 result_bytes = result.encode("utf-8")
 
-# ---------------------------------------------------------------------------
-# Output
-# ---------------------------------------------------------------------------
-line_count = result.count("\r\n") + (1 if result and not result.endswith("\r\n") else 0)
+line_count = result.count("\n") + (1 if result and not result.endswith("\n") else 0)
 sha = hashlib.sha256(result_bytes).hexdigest()
 
 if what_if:
