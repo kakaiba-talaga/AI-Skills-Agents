@@ -303,28 +303,26 @@ TodoWrite items (one per task):
 | Commit, branch, merge, PR, tag, release, changelog | `git-master` |
 | Deploy, deploy to, ssh, scp, remote command, remote server, transfer files to, upload to, restart service on, check remote, verify endpoint on, tail logs on | `ssh-executor` |
 
-**Domain-specific agents take precedence.** If a task matches both a domain-specific agent (`ssh-executor`, `debugger-build`) and a general-purpose agent (`verifier`, `executor`), assign to the domain-specific agent. SSH operations cannot be performed by the verifier or executor — the domain-specific agent has the required capabilities.
-
-If a task doesn't clearly match, ask yourself: "Is this writing docs, running tests, reviewing code, or implementing code?" and assign accordingly. Only default to `executor` for tasks that are genuinely about writing or modifying source code. **Never assign documentation, scoping, or review tasks to the executor** — these have dedicated agents.
-
-**When genuinely in doubt** — if a task is ambiguous enough that you cannot confidently determine the right agent type — dispatch the **interviewer** via `Task(subagent_type="interviewer")` to clarify with the user before assigning. The interviewer's job is to resolve ambiguity. Do not guess and assign to the wrong agent; a quick clarification is cheaper than re-doing the work.
+**Domain-specific agents take precedence** (`ssh-executor`, `debugger-build` over `verifier`/`executor`). Never assign documentation, scoping, or review tasks to the executor — these have dedicated agents. **When genuinely in doubt**, dispatch the **interviewer** via `Task(subagent_type="interviewer")` to clarify — a quick clarification is cheaper than re-doing the work.
 
 Each agent must stay in its lane:
 
-- **interviewer** gathers requirements and resolves ambiguity only — does not implement or decide
-- **architect** explores design alternatives and produces Architecture Decision Documents — does not implement, test, review, plan task breakdowns, or document
-- **planner** produces plans and task breakdowns only — does not implement or review
-- **project-scoper** writes assessments, plans, scoping docs — not code
-- **critic** reviews plans for feasibility — does not implement, test, or modify
-- **executor** writes/modifies source code only — not docs, not tests, not reviews
-- **verifier** runs tests and checks — does not write code or docs
-- **security-reviewer** audits code for security vulnerabilities — does not fix issues, implement code, or review non-security concerns
-- **code-reviewer** reviews code — does not implement or document
-- **documentor** writes/updates documentation only — not code
-- **debugger** investigates bugs — does not write features or docs
-- **debugger-build** fixes build/compilation errors — does not investigate runtime bugs or write features
-- **git-master** handles git operations only — does not write code, docs, or tests
-- **ssh-executor** runs commands on remote servers only — does not modify local code, write documentation, or run local tests
+| Agent | Does not |
+| :--- | :--- |
+| **interviewer** | implement or decide (gathers requirements and resolves ambiguity only) |
+| **architect** | implement, test, review, plan task breakdowns, or document |
+| **planner** | implement or review (produces plans and task breakdowns only) |
+| **project-scoper** | write code (writes assessments, plans, scoping docs) |
+| **critic** | implement, test, or modify (reviews plans for feasibility) |
+| **executor** | write docs, tests, or reviews (writes/modifies source code only) |
+| **verifier** | write code or docs (runs tests and checks) |
+| **security-reviewer** | fix issues, implement code, or review non-security concerns |
+| **code-reviewer** | implement or document (reviews code) |
+| **documentor** | write code (writes/updates documentation only) |
+| **debugger** | write features or docs (investigates bugs) |
+| **debugger-build** | investigate runtime bugs or write features (fixes build/compilation errors) |
+| **git-master** | write code, docs, or tests (handles git operations only) |
+| **ssh-executor** | modify local code, write documentation, or run local tests (remote commands only) |
 
 **Debugger variant selection:**
 - If the task description contains a specific error type (ImportError, ModuleNotFoundError, TypeError, SyntaxError, dependency, build, compilation, config error), use `debugger-build`.
@@ -335,16 +333,14 @@ Each agent must stay in its lane:
 - Default: `code-reviewer` (pipeline reviews, targeted file reviews, focused modes).
 - Use `code-reviewer-diff` only when reviewing a git diff and the `/code-review` skill is unavailable.
 
-**Deliverable Tasks (mandatory)** — Every workflow must produce persistent artifacts, not just chat output. During task board creation, identify what the user will need as a tangible result and create tasks for it:
+**Deliverable Tasks (mandatory)** — Every workflow must produce persistent artifacts, not just chat output. Identify what the user needs as a tangible result and create tasks for it. Filenames: lowercase, hyphen-separated, document-type suffix; write to `docs/` if it exists, otherwise project root; update existing files rather than creating new ones.
 
-| Workflow type | Required deliverable tasks |
-| :--- | :--- |
-| Assessment / audit / scoping | `project-scoper` task to write an assessment or update a plan document |
-| Planning | `project-scoper` task to write or update the plan document |
-| Implementation | `documentor` task to update docs if behavior changed |
-| Bug investigation | `documentor` task to write findings if no code fix is made |
-
-**Deliverable filenames** — Generate a descriptive filename from the task subject: lowercase, hyphen-separated, document-type suffix. Examples: "Assess the auth migration" → `auth-migration-assessment.md`; "Investigate login timeout bug" → `login-timeout-findings.md`. Write to `docs/` if it exists, otherwise project root. Update existing files rather than creating new ones.
+| Workflow type | Required deliverable task | Filename pattern |
+| :--- | :--- | :--- |
+| Assessment / audit / scoping | `project-scoper` writes assessment or updates plan doc | `<subject>-assessment.md` |
+| Planning | `project-scoper` writes or updates the plan document | `<subject>-plan.md` |
+| Implementation | `documentor` updates docs if behavior changed | updated existing doc or `<subject>-findings.md` |
+| Bug investigation | `documentor` writes findings if no code fix is made | `<subject>-findings.md` |
 
 These deliverable tasks must be on the board **from the start**, blocked by the analysis/implementation tasks they depend on, and dispatched automatically when their blockers complete. The workflow is not complete until deliverable files exist on disk. Chat summaries are not deliverables.
 
@@ -470,14 +466,21 @@ Include specific file paths, function names, and line numbers — not vague refe
 [Copied verbatim from the task description.]
 
 ## Constraints
-- No compound Shell commands — never use `&&`, `;`, or `||`. Make separate Shell tool calls.
-- No `cd` prefix — the working directory is already the project root. Run commands directly.
-- [Scope boundaries — what NOT to do]
-- [Any codebase conventions the agent should follow]
-- [File conflicts to avoid if other agents are running in parallel]
+Include the Shared Brief Constraints block verbatim (see `#shared-brief-constraints` below). Add task-specific constraints: scope boundaries (what NOT to do), codebase conventions, file conflicts.
 ```
 
 A vague brief produces vague work. If you can't write a specific brief, the task isn't ready for dispatch.
+
+### Shared Brief Constraints {#shared-brief-constraints}
+
+Include this block verbatim in every agent brief's `## Constraints` section:
+
+- **No compound Shell commands** — never use `&&`, `;`, or `||`. Make separate Shell tool calls; use parallel calls for independent commands.
+- **No `cd` prefix** — the working directory is already the project root. Run commands directly (e.g., `git diff file.py`, `python -m pytest`).
+- **Relative paths only** — use absolute paths only for resources outside the project (e.g., `~/.cursor/`). Absolute paths break permission matching.
+- **Temporary files** — use `_tmp_` prefix (e.g., `_tmp_test.py`) in the project root. Never in `/tmp/` or `%TEMP%`. Clean up with `rm _tmp_*`.
+- **No sub-agent spawning** — do not use the Task tool. Only the team manager orchestrates.
+- **No scope expansion** — report discovered out-of-scope work; do not act on it.
 
 ---
 
@@ -485,33 +488,21 @@ A vague brief produces vague work. If you can't write a specific brief, the task
 
 ### Team manager tool restrictions
 
-The team manager orchestrates — it does not perform work directly. **Always dispatch an agent or invoke a skill first.** Only fall back to direct tool use when no agent or skill covers the task.
-
-**Delegate-first principle:** Before using any tool to perform work (as opposed to reading state or displaying information), check whether an agent or skill should handle it:
+**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
 
 ### Shell rules
 
-**No compound Shell commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Shell tool calls instead — use parallel calls for independent commands. This applies to the team manager's own Shell calls AND all spawned agents.
-
-**No `cd` prefix** — the working directory is already the project root. Run commands directly (e.g., `git diff file.py`, `python -m pytest`) instead of `cd "/path/to/project" && command`. This is the most common violation — agents default to `cd && command` patterns unless explicitly told not to.
-
-**Use relative paths from the project root** — never use absolute paths in Shell commands. Use relative paths like `src/`, `tests/`, etc. Only use absolute paths for resources genuinely outside the project (e.g., `~/.cursor/`). Absolute paths break permission matching and trigger unwanted prompts.
-
-**Temporary files go in the project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
+The Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical Shell rules — no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.
 
 ### Agent-specific rules
 
-Spawned agents are workers, not managers. Enforce these rules in every brief:
+Enforce in every brief (in addition to the Shared Brief Constraints block):
 
-- **No sub-agent spawning** — agents must not use the Task tool themselves. Only the team manager orchestrates.
-- **No scope decisions** — if an agent discovers work outside the task, it reports back. It does not decide to expand scope.
 - **No orchestration commands** — agents must not invoke `/ops`, `/ralph-loop`, or other orchestration skills.
 - **No cross-task work** — each agent works only on its assigned task. It does not "fix" things it notices in other files.
 - **Report, don't assume** — if an agent is unsure about something, it should report the uncertainty in its output rather than guessing.
-
-Include a constraints section in every agent brief that reinforces all of the above rules. The Shell rules (no compound commands, no `cd` prefix) MUST be included verbatim — agents will violate them otherwise.
 
 ---
 
