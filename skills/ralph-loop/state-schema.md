@@ -1,6 +1,20 @@
 <!-- Referenced by ~/.claude/skills/ralph-loop/SKILL.md. Keep in sync. -->
 # Required State Fields
 
+## Pruning policy
+
+Three state arrays are capped to bound state-file growth. Pruning runs at **state persist time** (before the JSON write to disk), after any stage has added new entries.
+
+| Field | Cap | On-overflow behavior |
+| :--- | :--- | :--- |
+| `context.modified_files` | 50 most-recent entries | Drop oldest beyond 50; prepend a single `"+N more (see JSONL)"` summary entry so the caller knows how many were elided. |
+| `progress.per_item_results` | 5 most-recent iterations (keyed by iter) | Drop oldest iter keys beyond 5. |
+| `iteration_snapshots` | 20 most-recent entries | Drop oldest beyond 20. |
+
+**JSONL is the full-history fallback.** The state JSON is a working-window optimization; the JSONL history log (`<task_id>.history.jsonl`) retains every entry ever written and is authoritative for audit and analytics.
+
+**`progress.iteration_history` is NOT capped.** Trend detection and auto-pause heuristics read this array in full; truncating it would break those calculations.
+
 ## State Cache Semantics
 
 The loop maintains an in-memory snapshot (cache) of the state file to avoid re-reading the full JSON before every stage message. The file on disk remains the authoritative source of truth — the cache is a read optimization only.
@@ -79,7 +93,7 @@ If a second process edits the state file between invalidation events (out-of-ban
   "resume_hint": "string",
   "context": {
     "summary": "2-5 sentence narrative of current task state, approach, and key findings",
-    "modified_files": ["paths of files created or modified during this task"],
+    "modified_files": ["paths of files created or modified during this task (capped at 50; oldest dropped when exceeded; a \"+N more (see JSONL)\" summary entry is prepended when the cap is hit)"],
     "comparisons": "structured comparison data if any; omit if none",
     "notes": "key decisions, known limitations, error patterns; omit if summary is sufficient",
     "learnings": [
