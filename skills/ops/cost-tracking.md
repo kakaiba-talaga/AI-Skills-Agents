@@ -1,6 +1,8 @@
 <!-- Referenced by ~/.claude/skills/ops/SKILL.md. Keep in sync. -->
 # Cost Tracking
 
+> **Opt-in reference** — this file is read only when `/ops` is invoked with `--cost` or the user explicitly asks for cost information. Do not read this file by default.
+
 This file defines token and cost estimation for `/ops` runs. Claude Code does not expose actual token counts to the conversation, so all estimates are heuristic-based.
 
 ---

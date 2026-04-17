@@ -43,7 +43,7 @@
 | Deslop | `skills/deslop/` | 2 | ~669 | AI slop cleanup (dead code, redundant comments, over-abstraction) |
 | Doc Sync | `skills/doc-sync/` | 2 | ~83 | Documentation audit and sync against codebase |
 | Linter | `skills/linter/` | 2 | ~141 | Source file linting with auto-fix and incremental cache |
-| Ops | `skills/ops/` | 24 | ~757 (Claude), ~812 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
+| Ops | `skills/ops/` | 22 | ~757 (Claude), ~812 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
 | Deploy | `skills/deploy/` | 9 | ~412 (Claude), ~408 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Ralph Loop | `skills/ralph-loop/` | 17 (incl. 5 YAML templates) | ~319 | Iterative execute-verify-reflect loop with state persistence |
 
@@ -98,7 +98,7 @@
 | **R1 — 4 new ops companion files** (commit `e1c3ca4`) | Extracted `dispatch-policy.md`, `plan-validation.md`, `state-schema.md`, `tool-restrictions.md` from `SKILL.md` for context-window optimization (186 inserted lines across the 4 companions). |
 | **R2 — `skills/ops/SKILL.md` reduction** (commit `97188a1`) | Reduced `SKILL.md` from 957 → 757 lines via 10 extractions. New/expanded companions: `branch-isolation.md`, `cost-tracking.md`, `estimation-feedback.md`, `interruption-recovery.md`, `rollback-strategy.md`, `ssh-integration.md`. `skills/ops/README.md` also updated. |
 | **R2 — `skills/ops/SKILL.cursor.md` reduction** (commit `68c4202`) | Reduced `SKILL.cursor.md` from 922 → 788 lines via R2 extractions (now 812 lines after a subsequent docs sync in `5c0ff0c`). |
-| **Net effect on inventory** | `skills/ops/` remains at 24 files. Largest single file shifts from `SKILL.md` (~872 at last audit) to `SKILL.cursor.md` (~812). |
+| **Net effect on inventory** | `skills/ops/` remains at 24 files (now 22 after P12 consolidation). Largest single file shifts from `SKILL.md` (~872 at last audit) to `SKILL.cursor.md` (~812). |
 
 ### Inventory corrections for previously-stale line counts
 
@@ -310,7 +310,7 @@ Skills invoked within pipeline stages:
 | Skills (deslop) | 2 | 2 |
 | Skills (doc-sync) | 2 | 2 |
 | Skills (linter) | 2 | 2 |
-| Skills (ops) | 24 (incl. SKILL.cursor.md) | 24 |
+| Skills (ops) | 22 (incl. SKILL.cursor.md) | 22 |
 | Skills (deploy) | 9 (incl. SKILL.cursor.md) | 9 |
 | Skills (ralph-loop) | 17 (incl. 5 templates + templates README) | 17 |
 | Documentation | 2 (ASSESSMENT.md, portability-guide.md) | 2 |
@@ -319,8 +319,8 @@ Skills invoked within pipeline stages:
 | Planning (gitignored) | 14 | 14 |
 | Config | 1 (.gitignore) | 1 |
 | Root | 1 (README.md) | 1 |
-| **Total** | | **99** |
+| **Total** | | **97** |
 
 ---
 
-*Assessment updated 2026-04-17 (project audit). Files assessed: 15 agents, 9 skills (62 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 1 cursor rule, 3 tooling, 14 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2.*
+*Assessment updated 2026-04-17 (project audit). Files assessed: 15 agents, 9 skills (60 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 1 cursor rule, 3 tooling, 14 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2.*
