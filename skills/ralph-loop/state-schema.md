@@ -1,6 +1,26 @@
 <!-- Referenced by ~/.claude/skills/ralph-loop/SKILL.md. Keep in sync. -->
 # Required State Fields
 
+## State Cache Semantics
+
+The loop maintains an in-memory snapshot (cache) of the state file to avoid re-reading the full JSON before every stage message. The file on disk remains the authoritative source of truth — the cache is a read optimization only.
+
+### Invalidation events
+
+The cache is invalidated (state file re-read from disk) on these events and no others:
+
+1. **Bootstrap** — when the task first resumes (`resume` subcommand or context recovery at the start of a new conversation turn).
+2. **Persist-before-proceed** — immediately after writing new fields to the state file; always read back after a write to confirm the persisted values.
+3. **User new input** — when the user sends a message that may have amended the state (mid-run commands, feedback, or corrections during an active loop).
+4. **Iteration increment** — at the boundary between iterations (when Reflect completes and the decision is to continue).
+5. **Rollback** — after a `rollback` sub-command completes. The rollback mutates both git state and the state file out-of-band relative to the running loop's snapshot; re-read to pick up the restored state.
+
+Between these events, operate on the last-read snapshot. Do not re-read on routine stage transitions within a single iteration.
+
+### Safety note
+
+If a second process edits the state file between invalidation events (out-of-band edit), those changes will not be visible until the next invalidation trigger. Concurrent-writer workflows are not supported — the state file is written exclusively by the running loop. If the user needs to intervene, pause the loop and resume; the bootstrap invalidation event on resume guarantees a fresh read.
+
 ```json
 {
   "task_id": "string",

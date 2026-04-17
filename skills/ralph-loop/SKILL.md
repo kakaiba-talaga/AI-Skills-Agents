@@ -1,5 +1,7 @@
 Run the Ralph Wiggum loop workflow. Arguments: $ARGUMENTS
 
+<!-- Preamble (this section, above the `# Part A` separator) — parsed once at start; neither Part A nor Part B. -->
+
 **This is a custom skill.** The authoritative file is `~/.claude/skills/ralph-loop/SKILL.md`. It is NOT from the marketplace. The marketplace stub at `~/.claude/plugins/.../ralph-loop/` is unrelated -- do not read or edit it.
 
 Parse arguments as follows:
@@ -34,6 +36,108 @@ If `--headless` is provided, set `headless_mode: true` in state. Implies `--loop
 If `--no-deslop` is provided, set `deslop_enabled: false` in state. Otherwise default to `deslop_enabled: true`.
 If `--full-deslop` is provided, set `full_deslop_enabled: true` in state. Incompatible with `--no-deslop` (error if combined).
 If `--lightweight` is provided, set `lightweight_mode: true` in state. Implies `deslop_enabled: false` and `loop_mode: strict`. Incompatible with `--template` and `--headless` (error if combined).
+
+# Part A — Always re-read before every response
+
+## Stage Execution Discipline
+
+0. **Re-read before every response.** Before generating any response during an active loop:
+   1. Re-read **Part A of this file** (Stage Execution Discipline, Headless Gate, Checklist Format, Workflow condensed, Cleanup Stage safety rails, Constraints, Output Tagging — everything above the `# Part B` separator). Part B and the preamble (argument-parsing block above the `# Part A` separator) are loaded once at the start of the conversation; do not re-read them unless you explicitly need argument-parsing details or a pointer block. Non-negotiable. Skipping this is the #1 cause of drift.
+   2. Re-read the task's state JSON file **only on these invalidation events**: (a) the task first resumes (`resume` subcommand or context recovery); (b) you have just written new fields to it (persist-before-proceed — always read back after a write); (c) the user sent new input that may have amended it; (d) on iteration increment (boundary between iterations); (e) after a `rollback` sub-command completes (the rollback mutates state out-of-band). Between these events, operate on the last-read snapshot. If a second process edits the state file mid-run, the change won't be picked up until a trigger fires — acceptable because concurrent-writer workflows are not supported.
+   3. If `template_id` is present, also re-read the template YAML.
+   4. Resume from `next_step` in the state file.
+1. **One stage per message.** Complete at most ONE stage per message. Every stage message MUST open with: (a) badge line, (b) progress checklist, (c) stage content. In the checklist, completed stages are marked with `✅`; remaining stages including the current one are marked with `🟦` (the current stage stays unchecked because it is not yet done). After completing a stage, persist state, then continue to the next stage in a new message automatically — do NOT stop and wait for user input unless the stage requires it (e.g., Verify needs user to check results).
+   **Auto-advance exception:** When resuming a paused task where `next_step` describes a concrete, actionable step AND the template (or state) has `auto_advance.frame_plan_combine: true`, Frame and Plan MAY be combined into a single message. This applies ONLY on resume, ONLY when `next_step` is unambiguous, and ONLY for Frame+Plan (never skip Execute, Verify, Cleanup, or Reflect). The combined message must still show the full checklist with both Frame and Plan marked as being addressed. After auto-advance, persist state with `current_stage: Execute`.
+2. **Badge per turn.** First line of each turn MUST begin with **`Ralph Loop`**. Continuation lines do not repeat it.
+3. **Stage output constraints.** Stage content must be **scannable** — never output dense paragraph blocks. Use bullets, numbered lists, tables, indentation, and blank lines to give the content breathing room. Bold key terms (file names, thresholds, metric values, work item IDs) so they pop out of surrounding text. When a stage mentions 3+ items of the same kind (sub-checks, files, criteria), use a list or table — never inline them in a run-on sentence. Per-stage rules:
+   - **Frame:** Lead with a 1-2 sentence summary of what this iteration targets. Then a bulleted breakdown: current state, what changed, what's next. On iteration 1, include the work item scaffold table. On iteration 2+, show current work item + status in a compact format. If carrying forward learnings, set them apart as an indented block or bullet list — not buried in a paragraph.
+   - **Plan:** 1-5 sentences max, ONE approach only. If the plan has multiple steps, number them. Name the target file(s) and function(s) explicitly.
+   - **Execute:** Implementation-focused. Summarize changes as a bulleted list of file:change pairs.
+   - **Verify:** Use a table for results whenever there are 2+ metrics. Include per-criterion pass/fail for the current work item. Bold the overall verdict.
+   - **Cleanup:** Bullet list: scope (N files), linter used, fixes applied, regression result.
+   - **Reflect:** Structured as: (1) assessment + `achieved_percent`, (2) work item status summary, (3) trend (1-2 lines), (4) new learnings as a bullet list, (5) next direction.
+4. **No exploratory reasoning in messages.** Deliberation happens internally, not in output.
+5. **Persist-before-proceed.** State JSON written BEFORE the next stage begins.
+6. **Post-summarization strict mode.** After context recovery, first full iteration uses strict discipline (one stage per message, full checklist, state persisted) regardless of `loop_mode`.
+7. **Headless stage execution.** In headless mode (`headless_mode: true` in state), do NOT prompt the user at any decision point. The loop does NOT wait for user input between stages or iterations — it proceeds automatically. Instead: (a) at Frame/Plan, use `context.summary` and `next_step` to auto-generate the framing and plan; (b) at Execute, proceed with the planned changes; (c) at Verify, run the template's verify command and auto-evaluate against acceptance criteria; (d) at Cleanup, auto-run the linter on changed files and regression re-verification without prompting (if `deslop_enabled` is true; skip silently if false); (e) at Reflect, auto-assess using iteration_history trends and auto-pause heuristics; (f) at target-reached, auto-select "mark done" if `headless.exit_on_target` is true; (g) at plateau, auto-pause if `headless.exit_on_plateau` is true. Headless mode respects `headless.max_iterations_per_run` as a hard stop. On exit, set status to `done` or `paused` as appropriate, and write a summary to the state file's `context.headless_report`. The next interactive resume picks up from the headless exit point.
+
+## Headless Gate (MANDATORY)
+
+Before EVERY user-facing prompt, structured choice, confirmation request, approval step, or question during an active loop:
+
+1. Check `headless_mode` in your in-memory state snapshot (per rule 0 sub-step 2 — do not re-read the state file unless an invalidation event has fired).
+2. Check `headless_mode`.
+3. If `true`: **DO NOT PROMPT.** Auto-decide per the template's headless config and proceed. Log the auto-decision in `context.notes`. This applies to ALL decision points with zero exceptions:
+   - Work item scaffold approval (Frame) -- auto-approve immediately
+   - Structured choice prompts (Reflect) -- auto-select per headless config
+   - Target-reached options -- auto-select "mark done" if `exit_on_target: true`
+   - Plateau/pause recommendations -- auto-pause if `exit_on_plateau: true`
+   - Any other confirmation or question -- auto-decide the default/safe option
+4. Only prompt if `headless_mode` is `false`.
+
+**Violation of this gate is a hard error** -- equivalent to writing to a read-only file. If you catch yourself composing a question or choice list, STOP, check headless_mode, and delete the prompt if true.
+
+## Checklist Format
+
+The progress checklist MUST appear at the **beginning** of every stage message, immediately after the badge line. No text may precede it. Use emoji markers: `✅` for completed stages, `🟦` for remaining stages (including the current one). The current stage stays `🟦` because it is not yet done.
+
+```text
+**`Ralph Loop`** Iteration N -- Stage name
+
+Ralph Wiggum Loop Progress (Iteration N)
+
+✅ 1) Frame the task.
+🟦 2) Plan the smallest useful step.
+🟦 3) Execute
+🟦 4) Verify
+🟦 5) Cleanup (deslop)
+🟦 6) Reflect and Adjust
+
+(stage content here)
+```
+
+If `deslop_enabled` is `false` in state, replace step 5 with `⏭️ 5) Cleanup (skipped: --no-deslop)` and do not execute it.
+
+## Workflow (condensed stage-list)
+
+1. Initialize or resume task state. **State directory is `.ralph-state/`** (project mode) or `~/.ralph-state/` (global mode). Do NOT use `.claude/state/ralph-wiggum-loop/` for writes.
+2. Run loop based on `loop_mode`: Frame → Plan → Execute → Verify → Cleanup → Reflect. Persist state after every completed stage. Increment `iteration` only when Reflect completes and the decision is to continue. See **Workflow** in Part B for the full per-stage sub-steps.
+3. Check pause criteria (target reached, hard blocker, recurring failure escalation, or auto-pause heuristic) and persist JSON state with storage provenance after every stage. Keep `context` block current.
+4. Continue loop or exit safely.
+
+## Cleanup Stage (Deslop Pass)
+
+- **When it runs:** Every iteration where `deslop_enabled` is `true`. Skip entirely if `false` — show `⏭️ 5) Cleanup (skipped: --no-deslop)`. Runs after Verify and before Reflect.
+- **Scope boundary:** ONLY files in `context.modified_files`. Never broaden to unrelated files.
+- **Regression re-verification:** After fixes, re-run verification checks. If regression detected, revert ALL cleanup changes and proceed to Reflect with pre-cleanup code. A cleanup regression does NOT block the loop.
+
+## Constraints
+
+- No compound Bash commands — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls instead — use parallel calls for independent commands.
+- No `cd` prefix — the working directory is already the project root. Run commands directly (e.g., `.venv/3.11/Scripts/python.exe -m pytest ...`) instead of `cd "/path/to/project" && command`. If a command genuinely requires a different working directory, use a separate Bash call for `cd` first.
+- Use relative paths from the project root — never use absolute paths in Bash commands. Use `.venv/3.11/Scripts/python.exe`, `data/output/`, etc. Only use absolute paths for resources genuinely outside the project (e.g., `~/.claude/`). Absolute paths break permission matching and trigger unwanted prompts.
+- Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
+
+## Output tagging
+
+The **first line** of each assistant turn during an active loop MUST begin with the skill badge: **`Ralph Loop`**
+
+Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
+
+Apply the badge on the opening line of turns that contain:
+
+- status/progress updates
+- warnings and blockers
+- pause/complete confirmations
+- final result summaries
+- regression alerts
+- recurring failure escalations
+- auto-pause recommendations
+- headless mode exit reports
+
+Format: Use **`Ralph Loop`** (bold backtick-wrapped) as the first element on the opening line of each assistant turn.
+
+# Part B — Loaded once at start
 
 ## Template System
 
@@ -98,13 +202,8 @@ When the template's `hooks.verify.for_each` is defined, Verify fans out across m
 
 > **Reference:** You MUST Read `~/.claude/skills/ralph-loop/subagent-parallelism.md` for fan-out execution rules, aggregation strategies, per-item result storage, and error handling. If the file is missing, the loop runs the single verify command without fan-out.
 
-## Cleanup Stage (Deslop Pass)
+## Cleanup Stage — Additional Detail
 
-Runs after Verify and before Reflect. Applies safe linter auto-fixes to files in `context.modified_files`, then re-verifies.
-
-- **When it runs:** Every iteration where `deslop_enabled` is `true`. Skip entirely if `false` — show `⏭️ 5) Cleanup (skipped: --no-deslop)`.
-- **Scope boundary:** ONLY files in `context.modified_files`. Never broaden to unrelated files.
-- **Regression re-verification:** After fixes, re-run verification checks. If regression detected, revert ALL cleanup changes and proceed to Reflect with pre-cleanup code. A cleanup regression does NOT block the loop.
 - **Deslop escalation:** After linter pass, evaluate triggers for full `/deslop` skill. If triggered and available, invoke `/deslop --conservative` on scoped files.
 - **On success:** Log results in `context.notes`, append modified files to `context.modified_files`.
 
@@ -166,77 +265,7 @@ The JSON state file is the **authoritative source of truth**. Persist after ever
 
 When a template with `acceptance_criteria` is active, `achieved_percent` is computed as the weighted average of per-category measured values relative to their thresholds (all-pass percentage). If all categories meet their thresholds, `achieved_percent` = 100 (or the actual overall metric if higher). Per-category results are stored in `progress.category_results` and displayed in Verify and Reflect outputs.
 
-## Headless Gate (MANDATORY)
-
-Before EVERY user-facing prompt, structured choice, confirmation request, approval step, or question during an active loop:
-
-1. Re-read the state JSON.
-2. Check `headless_mode`.
-3. If `true`: **DO NOT PROMPT.** Auto-decide per the template's headless config and proceed. Log the auto-decision in `context.notes`. This applies to ALL decision points with zero exceptions:
-   - Work item scaffold approval (Frame) -- auto-approve immediately
-   - Structured choice prompts (Reflect) -- auto-select per headless config
-   - Target-reached options -- auto-select "mark done" if `exit_on_target: true`
-   - Plateau/pause recommendations -- auto-pause if `exit_on_plateau: true`
-   - Any other confirmation or question -- auto-decide the default/safe option
-4. Only prompt if `headless_mode` is `false`.
-
-**Violation of this gate is a hard error** -- equivalent to writing to a read-only file. If you catch yourself composing a question or choice list, STOP, check headless_mode, and delete the prompt if true.
-
-## Stage Execution Discipline
-
-0. **Re-read before every response.** Before generating any response during an active loop: 1. Re-read this file (at minimum the Stage Execution Discipline section). 2. Re-read the task's state JSON file. 3. If `template_id` is present, also re-read the template YAML. 4. Resume from `next_step` in the state file. Non-negotiable. Skipping this is the #1 cause of drift.
-1. **One stage per message.** Complete at most ONE stage per message. Every stage message MUST open with: (a) badge line, (b) progress checklist, (c) stage content. In the checklist, completed stages are marked with `✅`; remaining stages including the current one are marked with `🟦` (the current stage stays unchecked because it is not yet done). After completing a stage, persist state, then continue to the next stage in a new message automatically — do NOT stop and wait for user input unless the stage requires it (e.g., Verify needs user to check results).
-   **Auto-advance exception:** When resuming a paused task where `next_step` describes a concrete, actionable step AND the template (or state) has `auto_advance.frame_plan_combine: true`, Frame and Plan MAY be combined into a single message. This applies ONLY on resume, ONLY when `next_step` is unambiguous, and ONLY for Frame+Plan (never skip Execute, Verify, Cleanup, or Reflect). The combined message must still show the full checklist with both Frame and Plan marked as being addressed. After auto-advance, persist state with `current_stage: Execute`.
-2. **Badge per turn.** First line of each turn MUST begin with **`Ralph Loop`**. Continuation lines do not repeat it.
-3. **Stage output constraints.** Stage content must be **scannable** — never output dense paragraph blocks. Use bullets, numbered lists, tables, indentation, and blank lines to give the content breathing room. Bold key terms (file names, thresholds, metric values, work item IDs) so they pop out of surrounding text. When a stage mentions 3+ items of the same kind (sub-checks, files, criteria), use a list or table — never inline them in a run-on sentence. Per-stage rules:
-   - **Frame:** Lead with a 1-2 sentence summary of what this iteration targets. Then a bulleted breakdown: current state, what changed, what's next. On iteration 1, include the work item scaffold table. On iteration 2+, show current work item + status in a compact format. If carrying forward learnings, set them apart as an indented block or bullet list — not buried in a paragraph.
-   - **Plan:** 1-5 sentences max, ONE approach only. If the plan has multiple steps, number them. Name the target file(s) and function(s) explicitly.
-   - **Execute:** Implementation-focused. Summarize changes as a bulleted list of file:change pairs.
-   - **Verify:** Use a table for results whenever there are 2+ metrics. Include per-criterion pass/fail for the current work item. Bold the overall verdict.
-   - **Cleanup:** Bullet list: scope (N files), linter used, fixes applied, regression result.
-   - **Reflect:** Structured as: (1) assessment + `achieved_percent`, (2) work item status summary, (3) trend (1-2 lines), (4) new learnings as a bullet list, (5) next direction.
-4. **No exploratory reasoning in messages.** Deliberation happens internally, not in output.
-5. **Persist-before-proceed.** State JSON written BEFORE the next stage begins.
-6. **Post-summarization strict mode.** After context recovery, first full iteration uses strict discipline (one stage per message, full checklist, state persisted) regardless of `loop_mode`.
-7. **Headless stage execution.** In headless mode (`headless_mode: true` in state), do NOT prompt the user at any decision point. The loop does NOT wait for user input between stages or iterations — it proceeds automatically. Instead: (a) at Frame/Plan, use `context.summary` and `next_step` to auto-generate the framing and plan; (b) at Execute, proceed with the planned changes; (c) at Verify, run the template's verify command and auto-evaluate against acceptance criteria; (d) at Cleanup, auto-run the linter on changed files and regression re-verification without prompting (if `deslop_enabled` is true; skip silently if false); (e) at Reflect, auto-assess using iteration_history trends and auto-pause heuristics; (f) at target-reached, auto-select "mark done" if `headless.exit_on_target` is true; (g) at plateau, auto-pause if `headless.exit_on_plateau` is true. Headless mode respects `headless.max_iterations_per_run` as a hard stop. On exit, set status to `done` or `paused` as appropriate, and write a summary to the state file's `context.headless_report`. The next interactive resume picks up from the headless exit point.
-
-## History and Analytics
-
-Iteration history is tracked in the state file (`progress.iteration_history`) and a JSONL log file (`<task_id>.history.jsonl`).
-
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/history-analytics.md` for the JSONL log format, event examples, and the mandatory write procedure (temp file + cat append). If the file is missing, use the Write tool to create a temp file with the JSON line and append with `cat`.
-
-**Trend detection (during Reflect):**
-
-1. Read the last N entries from iteration_history (N = `auto_pause.diminishing_returns.window` or 5).
-2. Compute: moving average of delta, best iteration, worst iteration, per-category trend direction (improving/flat/regressing).
-3. **Regression alert:** If any category's metric dropped compared to the previous iteration, flag it prominently in the Reflect output: "REGRESSION: [category] dropped from X% to Y% (-Z pp)."
-4. Include a compact trend summary in the Reflect output (1-2 lines).
-
-**Analytics are advisory.** They inform the Reflect assessment and auto-pause heuristics but do not override user decisions in interactive mode.
-
-## Checklist Format
-
-The progress checklist MUST appear at the **beginning** of every stage message, immediately after the badge line. No text may precede it. Use emoji markers: `✅` for completed stages, `🟦` for remaining stages (including the current one). The current stage stays `🟦` because it is not yet done.
-
-```text
-**`Ralph Loop`** Iteration N -- Stage name
-
-Ralph Wiggum Loop Progress (Iteration N)
-
-✅ 1) Frame the task.
-🟦 2) Plan the smallest useful step.
-🟦 3) Execute
-🟦 4) Verify
-🟦 5) Cleanup (deslop)
-🟦 6) Reflect and Adjust
-
-(stage content here)
-```
-
-If `deslop_enabled` is `false` in state, replace step 5 with `⏭️ 5) Cleanup (skipped: --no-deslop)` and do not execute it.
-
-## Workflow
+## Workflow (full detail)
 
 1. Initialize or resume task state. **State directory is `.ralph-state/`** (at the workspace root for project mode, or `~/.ralph-state/` for global mode). Do NOT use `.claude/state/ralph-wiggum-loop/` for writes — that is the legacy location, read-only fallback.
    - If `list` is requested, enumerate task JSON files in selected scope and return summary rows sorted by `updated_at` descending.
@@ -282,6 +311,21 @@ If `deslop_enabled` is `false` in state, replace step 5 with `⏭️ 5) Cleanup 
    - **Read fallback:** When reading state (resume, status, list), check `.ralph-state/` first, then `.claude/state/ralph-wiggum-loop/` as fallback (legacy location), then `.cursor/state/ralph-wiggum-loop/` as second fallback (Cursor). Applies to `global` and `project` modes only. If found in a fallback location, load it but write updates to the primary `.ralph-state/` path (effectively migrating on first write). For `list`, merge all locations, deduplicating by `task_id` (primary wins).
 5. Continue loop or exit safely.
 
+## History and Analytics
+
+Iteration history is tracked in the state file (`progress.iteration_history`) and a JSONL log file (`<task_id>.history.jsonl`).
+
+> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/history-analytics.md` for the JSONL log format, event examples, and the mandatory write procedure (temp file + cat append). If the file is missing, use the Write tool to create a temp file with the JSON line and append with `cat`.
+
+**Trend detection (during Reflect):**
+
+1. Read the last N entries from iteration_history (N = `auto_pause.diminishing_returns.window` or 5).
+2. Compute: moving average of delta, best iteration, worst iteration, per-category trend direction (improving/flat/regressing).
+3. **Regression alert:** If any category's metric dropped compared to the previous iteration, flag it prominently in the Reflect output: "REGRESSION: [category] dropped from X% to Y% (-Z pp)."
+4. Include a compact trend summary in the Reflect output (1-2 lines).
+
+**Analytics are advisory.** They inform the Reflect assessment and auto-pause heuristics but do not override user decisions in interactive mode.
+
 ## Required state fields
 
 Top-level fields: `task_id`, `title`, `status` (active|paused|blocked|done), `loop_mode`, `template_id`, `headless_mode`, `lightweight_mode`, `deslop_enabled`, `full_deslop_enabled`, `target` {percent, goal}, `iteration`, `progress` {achieved_percent, current_stage, completed_items, remaining_items, category_results, per_item_results, work_items}, `iteration_snapshots`, `auto_pause_state`, `blockers`, `next_step`, `resume_hint`, `context` {summary, modified_files, comparisons, notes, learnings, headless_report}, `storage` {mode, root, resolved_path}, `updated_at`.
@@ -291,29 +335,3 @@ Top-level fields: `task_id`, `title`, `status` (active|paused|blocked|done), `lo
 ## Usage examples
 
 > **Reference:** You MUST Read `~/.claude/skills/ralph-loop/usage-examples.md` for the full list of usage examples. If the file is missing, refer to the argument parsing section above for available commands and flags.
-
-## Constraints
-
-- No compound Bash commands — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls instead — use parallel calls for independent commands.
-- No `cd` prefix — the working directory is already the project root. Run commands directly (e.g., `.venv/3.11/Scripts/python.exe -m pytest ...`) instead of `cd "/path/to/project" && command`. If a command genuinely requires a different working directory, use a separate Bash call for `cd` first.
-- Use relative paths from the project root — never use absolute paths in Bash commands. Use `.venv/3.11/Scripts/python.exe`, `data/output/`, etc. Only use absolute paths for resources genuinely outside the project (e.g., `~/.claude/`). Absolute paths break permission matching and trigger unwanted prompts.
-- Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
-
-## Output tagging
-
-The **first line** of each assistant turn during an active loop MUST begin with the skill badge: **`Ralph Loop`**
-
-Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
-
-Apply the badge on the opening line of turns that contain:
-
-- status/progress updates
-- warnings and blockers
-- pause/complete confirmations
-- final result summaries
-- regression alerts
-- recurring failure escalations
-- auto-pause recommendations
-- headless mode exit reports
-
-Format: Use **`Ralph Loop`** (bold backtick-wrapped) as the first element on the opening line of each assistant turn.
