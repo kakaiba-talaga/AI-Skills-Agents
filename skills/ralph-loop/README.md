@@ -32,6 +32,7 @@ All files live in `~/.claude/skills/ralph-loop/`. The main file orchestrates; co
 | File | Lines | Purpose | Loaded when |
 | :--- | ---: | :--- | :--- |
 | `SKILL.md` | 333 | Argument parsing, workflow, stage discipline, all cross-references | Every invocation |
+| `SKILL.cursor.md` | 337 | Cursor variant (drift baseline) | Cursor-side invocation |
 | `template-system.md` | 157 | Template resolution, YAML schema, template fields, read cadence | `--template` is used |
 | `state-schema.md` | 112 | Complete JSON schema, field types, pruning policy | State init or troubleshooting |
 | `execution-extras.md` | 87 | Rollback/undo, fan-out Verify, acceptance-criteria auto-evaluation | `rollback` command, or template defines `acceptance_criteria` / `hooks.verify.for_each` |

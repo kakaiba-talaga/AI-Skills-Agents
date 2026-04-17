@@ -95,7 +95,9 @@ The deploy script detects `SKILL.cursor.md` and uses it instead of transforming 
 - **Needs one** — skill uses `Agent` tool with custom model/tools, `TaskCreate`/`TaskUpdate`/`TaskList`, `Skill` tool, `EnterWorktree`/`ExitWorktree`, or relies on model enforcement
 - **Does NOT need one** — skill only uses standard tools (Bash, Edit, Write, Read, Glob, Grep) and file paths. The mechanical transform handles these.
 
-Currently, two skills have Cursor-native versions: `skills/ops/SKILL.cursor.md` and `skills/deploy/SKILL.cursor.md`.
+Currently, three skills have Cursor-native versions: `skills/ops/SKILL.cursor.md`, `skills/deploy/SKILL.cursor.md`, and `skills/ralph-loop/SKILL.cursor.md`.
+
+- **ralph-loop** — 4-patch transform (YAML frontmatter + Bash→Shell + `~/.claude/`→`~/.cursor/` + `/deslop` flag note). No Agent/TodoWrite/Skill dependencies. Transform: `tooling/transform-cursor-ralph-loop.{sh,ps1}`.
 
 ### Agent Tool-Restriction Hardening
 
