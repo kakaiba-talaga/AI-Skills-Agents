@@ -1,0 +1,702 @@
+<!-- SKILL.cursor.additions.md — Side-car for transform-cursor scripts.
+     This file provides Cursor-specific content blocks injected into SKILL.md
+     during the transform. Each block is keyed by an ANCHOR (unique line from
+     SKILL.md) and an ACTION that describes what to do at that point.
+
+     Format:
+       @@PATCH
+       ACTION: <action>
+       ANCHOR: <exact line content from SKILL.md>
+       @@CONTENT
+       <replacement / insertion content>
+       @@END
+
+     Actions:
+       prepend           — insert CONTENT before the first line of SKILL.md
+       replace_line      — replace the matched ANCHOR line with CONTENT
+       insert_after      — insert CONTENT immediately after the ANCHOR line
+       delete_line       — delete the ANCHOR line (no CONTENT section needed)
+       replace_through   — replace from ANCHOR line through STOP_ANCHOR (inclusive) with CONTENT
+       insert_before     — insert CONTENT immediately before the ANCHOR line
+
+     STOP_ANCHOR (used with replace_through):
+       @@STOP
+       <exact line content marking end of replacement range>
+-->
+
+@@PATCH
+ACTION: prepend
+ANCHOR: (file-start)
+@@CONTENT
+---
+name: ops
+description: Coordinate a team of agents working on a shared task list.
+---
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: - `--worktree` — spawn parallel agents in isolated git worktrees to eliminate file conflicts.
+@@CONTENT
+- `--worktree` — spawn parallel agents in isolated git worktrees using `best-of-n-runner` subagents to eliminate file conflicts.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: > **Reference:** You MUST Read `~/.claude/skills/ops/help-card.md` for the full help card text. If the file is missing, display a brief usage summary instead.
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/help-card.md` for the full help card text. If the file is missing, display a brief usage summary instead.
+@@CONTENT
+> **Reference:** You MUST Read `~/.cursor/skills/ops/help-card.md` for the full help card text. If the file is missing, display the quick-reference below instead.
+
+**Inline help fallback:**
+
+```text
+Commands: /ops <spec> | plan | execute | status | resume | ralph "<goal>" | help
+Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop
+Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
+Pipeline: executor → verifier → deslop → code-reviewer → documentor
+Retry: 3 attempts with narrowed scope and debugger diagnosis, then escalate to user
+```
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: The ops skill persists all task data in a JSON state file on disk. This is the source of truth for dependencies, timing, estimates, agent assignments, and adaptation notes.
+@@STOP
+The state file on disk is mandatory — see Non-negotiables #1.
+@@CONTENT
+The ops skill uses a **dual-layer task board**: a JSON state file on disk for full metadata, and TodoWrite for IDE-visible status display. Both are updated on every state change.
+
+The state file on disk is mandatory — TodoWrite alone is not sufficient (it cannot store dependencies, timing, or agent metadata). See Non-negotiables #1.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: The state file is stored at `.ops-state/<run-id>-board.json`.
+@@CONTENT
+The state file is stored at `.ops-state/<run-id>-board.json`. This is the source of truth for all task data — dependencies, timing, estimates, agent assignments, and adaptation notes.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: All task board operations use the state file as the primary store. **Every mutation must write the state file to disk** — do not rely on in-memory state alone.
+@@STOP
+| **Report** | Read file from disk, compute timing/estimates/variance |
+@@CONTENT
+All task board operations use the state file as the primary store and TodoWrite as the display layer. **Every mutation must write the state file to disk using the `Write` tool** — do not rely on in-memory state alone.
+
+| Operation | State file action (via `Write` tool) | TodoWrite action |
+| :--- | :--- | :--- |
+| **Create task** | Append to `tasks` array, `Write` file to disk | `TodoWrite(merge=false)` with full task list |
+| **Update status** | Update task's `status`, `started_at`, etc., `Write` file to disk | `TodoWrite(merge=true)` with `[{id, content, status}]` |
+| **Scan for ready** | `Read` file from disk, filter tasks where `status=="pending"` and all `blocked_by` entries are `"completed"` | — (read-only) |
+| **Complete task** | Update `status`, `completed_at`, `duration_seconds`, `Write` file to disk | `TodoWrite(merge=true)` with `[{id, status: "completed"}]` |
+| **Resume** | `Read` file from disk — full state recovered | `TodoWrite(merge=false)` to recreate display from state file |
+| **Report** | `Read` file from disk, compute timing/estimates/variance | — (read-only) |
+
+### TodoWrite Display Format
+
+TodoWrite items encode key metadata in the content string for at-a-glance visibility:
+
+```text
+id: "task-1"
+content: "[executor][implement] Implement auth middleware"
+status: "pending"
+```
+
+The format is `[agent_type][stage] subject`. The ops skill updates both the state file and TodoWrite on every status change.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
+@@CONTENT
+| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | `resume` | Read the state file. Treat all `in_progress` tasks as orphaned. Run dedup verification (`resume-dedup.md`), then Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |
+@@CONTENT
+| `resume` | Read the state file from `.ops-state/`. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | `status` | Read the state file. Run orphan detection on `in_progress` tasks (`agent-health-monitoring.md` §3b). Display the dashboard (see Status Dashboard), stop. |
+@@CONTENT
+| `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Bash(command="mkdir -p .ops-state")`. Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back.
+@@CONTENT
+1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Shell(command="mkdir -p .ops-state")`. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with `Read`. Also call `TodoWrite(merge=false)` with the single task item.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 4. **Dispatch:** Spawn the agent via the Agent tool using the same Agent Dispatch Procedure (Phase 3 Step 3) — read frontmatter for `model`, set description/model/prompt (agent reads its own body as first action).
+@@CONTENT
+4. **Dispatch:** Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`. The prompt instructs the agent to read its own definition as its first action (see Agent Dispatch Procedure for the self-read prompt template).
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+@@CONTENT
+5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: **Spec clarity evaluation:** If clear, dispatch planner directly. If vague/ambiguous, dispatch **interviewer** first. If user says "just plan it", dispatch planner regardless.
+@@STOP
+**Architect dispatch (optional):** Dispatch an **architect** agent before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.
+@@CONTENT
+**Spec clarity evaluation:** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says "just plan it", dispatch planner regardless.
+
+In **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.
+
+**Architect dispatch (optional):** Dispatch an **architect** agent via `Task(subagent_type="architect")` before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.
+@@END
+
+@@PATCH
+ACTION: delete_line
+ANCHOR: In **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 5. **On `resume`**: read the plan doc path from the state file's `plan_file` field to reconstruct the work scope. The plan doc + state file + handoff files (see Handoff Documents) provide complete state recovery across session boundaries.
+@@CONTENT
+5. **On `resume`**: read the plan doc path from the state file's `plan_file` field to reconstruct the work scope. The plan doc + state file + handoff files provide complete state recovery across session boundaries.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: **ClickUp context enrichment:** If a ClickUp task ID is referenced, pull task details before planning. Invoke `/clickup Get task <id>` if the skill is available, or fall back to `curl https://api.clickup.com/api/v2/task/<id>` with the token from `~/.claude/config/clickup/config.json`. Extract title, description, status, checklist items, and comments as spec context. Intake-only — does not write back to ClickUp.
+@@CONTENT
+**ClickUp context enrichment:** If a ClickUp task ID is referenced, pull task details before planning. Read `~/.cursor/skills/clickup/SKILL.md` and dispatch via `Task(subagent_type="generalPurpose")` if available; otherwise fall back to `curl https://api.clickup.com/api/v2/task/<id>` with token from `~/.cursor/config/clickup/config.json`. Extract title, description, status, checklist items, and comments as spec context. Intake-only — does not write back to ClickUp.
+@@END
+
+@@PATCH
+ACTION: insert_after
+ANCHOR: **Also skip when:** `resume`, `status`, or user says "just do it" / "skip validation".
+@@CONTENT
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/plan-validation.md` for spec clarity evaluation criteria, plan complexity scoring signals, critic verdict handling, scoper/critic output descriptions, execute-skip detection, mode-specific behavior, and adaptation rules. If the file is missing, proceed using the tier table and display format above.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates/gap analysis, OR medium signals | Dispatch **project-scoper** to produce a scoping doc. Proceed to Phase 1.5 after scoping. | 1 opus agent |
+@@CONTENT
+| **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates/gap analysis, OR medium signals | Dispatch **project-scoper** via `Task(subagent_type="project-scoper")`. Proceed to Phase 1.5 after scoping. | 1 agent |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | **Tier 3 — Scope + Critique** | >5 tasks, OR high-weight signal (architectural, security/risk), OR multiple medium signals | Dispatch **project-scoper** then **critic** to review combined plan + scoping doc. | 2 opus agents |
+@@CONTENT
+| **Tier 3 — Scope + Critique** | >5 tasks, OR high-weight signal (architectural, security/risk), OR multiple medium signals | Dispatch **project-scoper** then **critic** via `Task(subagent_type="critic")`. | 2 agents |
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: **Display the tier decision:**
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/plan-validation.md` for spec clarity evaluation criteria, plan complexity scoring signals, critic verdict handling, scoper/critic output descriptions, execute-skip detection, mode-specific behavior, and adaptation rules. If the file is missing, proceed using the tier table and display format above.
+@@CONTENT
+**Display the tier decision:** Always show the tier decision to the user, regardless of autonomy mode:
+
+```text
+Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]
+Signals: [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
+Action: [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
+```
+
+In **interactive mode**, show the tier decision and wait for the user to confirm, override, or skip. The user can say:
+- "proceed" — accept the tier decision
+- "skip validation" — override to Tier 1 regardless of score
+- "scope it" — override to Tier 2
+- "scope and critique" — override to Tier 3
+
+In **autonomous mode**, display the tier decision and proceed automatically. The decision is always visible so the user knows what validation level was applied — the team manager never silently skips validation without reporting it.
+
+In **supervised mode**, show the tier decision and wait for approval before each agent dispatch (same as other tasks in supervised mode).
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: Parse the plan into discrete, assignable tasks. Create the state file.
+@@CONTENT
+Parse the plan into discrete, assignable tasks. Create the state file and TodoWrite display.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: ```
+ANCHOR_CONTEXT: Run ID: <plan-slug>-<ISO-date>
+@@CONTENT
+```text
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 1. Run `Bash(command="mkdir -p .ops-state")`.
+@@CONTENT
+1. Run `Shell(command="mkdir -p .ops-state")` (or `mkdir .ops-state` on Windows if it doesn't exist — check first with `ls .ops-state` or `dir .ops-state`).
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 2. Use the Write tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.
+@@CONTENT
+2. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 3. Verify the file exists by reading it back. If the read fails, the state file was not created — stop and fix before proceeding.
+@@CONTENT
+3. Verify the file exists by reading it back with `Read(path=".ops-state/<run-id>-board.json")`. If the read fails, the state file was not created — stop and fix before proceeding.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: **4. Write state file to disk:**
+@@STOP
+**5. Verify state file on disk (MANDATORY):**
+@@CONTENT
+**4. Write state file and create TodoWrite display:**
+
+Use the `Write` tool to overwrite `.ops-state/<run-id>-board.json` with the complete JSON (all tasks populated from steps 2-3). Then call `TodoWrite(merge=false)` with all tasks. **Both writes are mandatory** — the state file is the source of truth, TodoWrite is the display layer.
+
+```text
+TodoWrite items (one per task):
+  id: "task-0"
+  content: "[executor][implement] Implement auth middleware"
+  status: "pending"
+
+  id: "task-1"
+  content: "[verifier][verify] Verify auth middleware"
+  status: "pending"
+
+  ...
+```
+
+**Agent Assignment Rules** — auto-detect from task content when `--agents` is not specified:
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: **5. Verify state file on disk (MANDATORY):**
+@@STOP
+**Agent Assignment Rules** — auto-detect from task content when `--agents` is not specified:
+@@CONTENT
+**5. Verify state file on disk (MANDATORY):**
+
+Before displaying the task board, confirm the state file exists and is valid:
+
+1. `Read(path=".ops-state/<run-id>-board.json")` — verify the file contains valid JSON with a non-empty `tasks` array.
+2. If the file is missing or empty, **stop and re-create it** from the in-memory task data. Do not proceed to dispatch without a valid state file on disk.
+3. Check whether `.ops-state/` is in `.gitignore`. If not, add it (append `.ops-state/` to `.gitignore`).
+
+**Agent Assignment Rules** — auto-detect from task content when `--agents` is not specified:
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: **Domain-specific agents take precedence** (`ssh-executor`, `debugger-build` over `verifier`/`executor`). Never assign documentation, scoping, or review tasks to the executor — these have dedicated agents. **When genuinely in doubt**, dispatch an **interviewer** to clarify — a quick clarification is cheaper than re-doing the work.
+@@CONTENT
+**Domain-specific agents take precedence** (`ssh-executor`, `debugger-build` over `verifier`/`executor`). Never assign documentation, scoping, or review tasks to the executor — these have dedicated agents. **When genuinely in doubt**, dispatch the **interviewer** via `Task(subagent_type="interviewer")` to clarify — a quick clarification is cheaper than re-doing the work.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: **Display the task board after creation.** After the state file is written and verified, render a Status Dashboard before any dispatch begins. For runs with ≥ 3 non-internal tasks, render the full dashboard table (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section). For runs with ≤ 2 non-internal tasks, render a one-line status per task instead — `[agent-type] task: subject — status` — and skip the full table. This applies to every run, not just `--dry-run`. (Non-negotiable — see #8.)
+@@STOP
+**Display the task board after creation.** After the state file is written and verified, render a Status Dashboard before any dispatch begins. For runs with ≥ 3 non-internal tasks, render the full dashboard table (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section). For runs with ≤ 2 non-internal tasks, render a one-line status per task instead — `[agent-type] task: subject — status` — and skip the full table. This applies to every run, not just `--dry-run`. (Non-negotiable — see #8.)
+@@CONTENT
+**Display the task board after creation.** After the state file is verified and TodoWrite is populated, render a Status Dashboard before any dispatch begins. For runs with ≥ 3 non-internal tasks, render the full dashboard table (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section). For runs with ≤ 2 non-internal tasks, render a one-line status per task instead — `[agent-type] task: subject — status` — and skip the full table. This applies to every run, not just `--dry-run`. (Non-negotiable — see #8.)
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
+@@CONTENT
+After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent via `Task(subagent_type="verifier")` with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: 2. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read("docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.
+@@CONTENT
+2. Update TodoWrite: `TodoWrite(merge=true, todos=[{id: "task-N", content: "...", status: "in_progress"}])`.
+3. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read(path="docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
+4. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: **Your first action:** Read your full agent definition from `~/.claude/agents/<agent_type>.md`. This file contains your workflow, responsibilities, lane boundaries, and constraints. Do not proceed with the task until you have read this file in full.
+@@CONTENT
+**Your first action:** Read your full agent definition from `~/.cursor/agents/<agent_type>.md`. This file contains your workflow, responsibilities, lane boundaries, and constraints. Do not proceed with the task until you have read this file in full.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: Use the brief format below.
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.
+@@CONTENT
+5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
+6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: After updating timing, evaluate health status for all in-progress background agents (see `agent-health-monitoring.md` Sections 3 and 3a). Emit proactive warnings for any threshold crossings before proceeding to result processing.
+@@STOP
+After updating timing, evaluate health status for all in-progress background agents (see `agent-health-monitoring.md` Sections 3 and 3a). Emit proactive warnings for any threshold crossings before proceeding to result processing.
+@@CONTENT
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
+@@CONTENT
+| **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Update TodoWrite. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | **Failed — 2nd attempt** | Dispatch a **debugger** agent (or **debugger-build** if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
+@@CONTENT
+| **Failed — 2nd attempt** | Dispatch the **debugger** via `Task(subagent_type="debugger")` (or `Task(subagent_type="debugger-build")` if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: | **Failed — 3rd attempt** | Escalate model (e.g., sonnet → opus) and re-dispatch with full error history. Skip if already on opus. See Model Escalation in Adaptability. |
+@@STOP
+| **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
+@@CONTENT
+| **Failed — 3rd attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task describing the issue. Pause dependent chain. Flag to user. |
+@@CONTENT
+| **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task in the state file and TodoWrite. Pause dependent chain. Flag to user. |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: > **Reference:** You MUST Read `~/.claude/skills/ops/agent-health-monitoring.md` for timeout budgets, stall detection rules, health escalation procedures, proactive health warnings, and orphan detection. If the file is missing, proceed without health monitoring.
+@@CONTENT
+> **Reference:** You MUST Read `~/.cursor/skills/ops/agent-health-monitoring.md` for timeout budgets, stall detection rules, and health escalation procedures. If the file is missing, proceed without health monitoring.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: When every task is `completed`:
+@@CONTENT
+When every task is `completed` (check state file):
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 3. **Run a final verification pass** — if the work involved code changes, dispatch a **verifier** agent to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
+@@CONTENT
+3. **Run a final verification pass** — if the work involved code changes, dispatch a verifier agent via `Task(subagent_type="verifier")` to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR:    - **Estimation accuracy** — overall ratio of actual to estimated. Feed significant variances into cross-run learning (e.g., "verification tasks in this project consistently take 2x the estimate").
+@@CONTENT
+   - **Estimation accuracy** — overall ratio of actual to estimated. Note significant variances for future runs.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR:    > **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the bullet points above.
+@@CONTENT
+   > **Reference:** You MUST Read `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, calibration, idle time). If the file is missing, proceed using the bullet points above.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR:    > **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, and calibration procedure. If the file is missing, proceed without estimation feedback.
+@@CONTENT
+   > **Reference:** You MUST Read `~/.cursor/skills/ops/estimation-feedback.md` for the estimation feedback loop and calibration procedure. If the file is missing, proceed without estimation feedback.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: When spawning an agent via the Agent tool, always provide a **complete, self-contained brief**. The agent has no conversation history — it only sees what you give it.
+@@CONTENT
+When spawning an agent via the Task tool, always provide a **complete, self-contained brief**. The agent has no conversation history — it only sees what you give it.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: - **No compound Bash commands** — never use `&&`, `;`, or `||`. Make separate Bash tool calls; use parallel calls for independent commands.
+@@CONTENT
+- **No compound Shell commands** — never use `&&`, `;`, or `||`. Make separate Shell tool calls; use parallel calls for independent commands.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: - **No sub-agent spawning** — do not use the Agent tool. Only the team manager orchestrates.
+@@CONTENT
+- **No sub-agent spawning** — do not use the Task tool. Only the team manager orchestrates.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: ### Bash rules
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+@@CONTENT
+### Team manager tool restrictions
+
+**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+
+### Shell rules
+
+The Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical Shell rules — no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: ### Team manager tool restrictions
+
+**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+@@CONTENT
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: Parallelize multiple implementation tasks then converge:
+@@CONTENT
+When a chain has multiple implementation tasks, parallelize then converge:
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: Security-reviewer is optional — dispatched for security-sensitive patterns (auth, secrets, API keys, encryption, external inputs).
+@@STOP
+> **Reference:** See `~/.claude/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, handoff format, and SSH handoff chains (read only for SSH tasks). If the file is missing, proceed without SSH-specific guidance.
+@@CONTENT
+> **Reference:** See `~/.cursor/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, and handoff format (read only for SSH tasks). If the file is missing, proceed without SSH-specific guidance.
+@@END
+
+@@PATCH
+ACTION: insert_before
+ANCHOR: Security-reviewer is optional — dispatched for security-sensitive patterns (auth, secrets, API keys, encryption, external inputs).
+@@CONTENT
+Security-reviewer is optional — dispatched for security-sensitive patterns (auth, secrets, API keys, encryption, external inputs).
+
+When a chain has multiple implementation tasks, parallelize then converge:
+
+```text
+executor(task1) ──┐
+executor(task2) ──┤→ verifier(all) → [security-reviewer] → deslop(all) → code-reviewer(all) → documentor(all)
+executor(task3) ──┘
+```
+
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: 1. After the verifier reports failures, create a **fix task** assigned to the executor. Include the verifier's specific findings (not just "it failed").
+@@CONTENT
+1. After the verifier reports failures, create a **fix task** in the state file and TodoWrite assigned to the executor. Include the verifier's specific findings (not just "it failed").
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: After all verify tasks pass and before code review, run `/deslop --conservative` on files modified during the run. This is enabled by default; use `--no-deslop` to skip.
+@@CONTENT
+After all verify tasks pass and before code review, run deslop with `--conservative` on files modified during the run. This is enabled by default; use `--no-deslop` to skip.
+@@END
+
+@@PATCH
+ACTION: insert_after
+ANCHOR: After all verify tasks pass and before code review, run deslop with `--conservative` on files modified during the run. This is enabled by default; use `--no-deslop` to skip.
+@@CONTENT
+
+**How to invoke deslop (read-and-dispatch):** Read `~/.cursor/skills/deslop/SKILL.md`. Dispatch via `Task(subagent_type="generalPurpose", prompt=<deslop skill content + "--conservative" + file list>)`.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: **Skip when:** `--no-deslop` set, `/deslop` skill unavailable, run produced no code changes, or all changes are trivial/mechanical.
+@@CONTENT
+**Skip when:** `--no-deslop` set, deslop skill file unavailable, run produced no code changes, or all changes are trivial/mechanical.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | Environment/dependency blocker | Create blocker task, pause chain, alert user |
+@@CONTENT
+| Environment/dependency blocker | Create blocker task in state file and TodoWrite, pause chain, alert user |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on opus or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |
+@@CONTENT
+| 3 consecutive failures on same task | Escalate to user with: task, all attempts, errors, debugger findings, your diagnosis |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: > **Reference:** See `~/.claude/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, guardrails, and model escalation details (read only on failure escalation). If the file is missing, proceed without automatic rollback.
+@@CONTENT
+> **Reference:** See `~/.cursor/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, and guardrails (read only on failure escalation). If the file is missing, proceed without automatic rollback.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: - <agent> → Task #N: "<subject>" (in_progress, Xs elapsed) [health indicator]
+@@STOP
+Health indicators: ✓ ON TRACK, ⚠️ SLOW, 🔴 OVERRUN, 👻 ORPHAN? (defined in `agent-health-monitoring.md` §6)
+@@CONTENT
+- <agent> → Task #N: "<subject>" (in_progress, Xs elapsed)
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: The team manager adapts strategy based on runtime conditions. Every adaptation is logged in the task board metadata and reported in the dashboard.
+@@CONTENT
+The team manager adapts strategy based on runtime conditions. Every adaptation is logged in the state file and reported in the dashboard.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | **Missing task** — agent finds work the plan didn't account for | Create the task, wire dependencies, slot it into the board. Log it as an adaptation. In interactive mode, mention it at the next checkpoint. |
+@@CONTENT
+| **Missing task** — agent finds work the plan didn't account for | Create the task in the state file and TodoWrite, wire dependencies, slot it into the board. Log it as an adaptation. In interactive mode, mention it at the next checkpoint. |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | **Wrong sequencing** — a task's dependency was incorrect | Update the dependency graph. Re-order the dispatch queue. Log the change. |
+@@CONTENT
+| **Wrong sequencing** — a task's dependency was incorrect | Update the dependency graph in the state file. Re-order the dispatch queue. Log the change. |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | **Task too large** — agent reports the task needs splitting | Pause the task. Dispatch a **planner** agent to break it into subtasks. Replace the original task with the subtasks. Resume. |
+@@CONTENT
+| **Task too large** — agent reports the task needs splitting | Pause the task. Dispatch the **planner** via `Task(subagent_type="planner")` to break it into subtasks. Replace the original task with the subtasks in the state file and TodoWrite. Resume. |
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: ### Model escalation
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/rollback-strategy.md` for model escalation metadata format, skip conditions, and the complete rollback procedure. If the file is missing, proceed using the escalation ladder above.
+@@CONTENT
+### Retry strategy
+
+When an agent fails, the team-manager retries with increasing context before escalating:
+
+```text
+1st attempt: assigned agent with original brief
+2nd attempt: same agent, with error context and narrowed scope
+3rd attempt: dispatch debugger/debugger-build for diagnosis, then re-brief with findings
+4th attempt: escalate to user
+```
+
+Note: Cursor does not support model escalation (changing the model between attempts). All subagents run on the session model or `model="fast"`. The retry strategy focuses on improving the brief quality and using diagnostic agents instead.
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: ### Learning across runs
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, calibration procedure, and cross-run learning patterns. If the file is missing, proceed without estimation feedback.
+@@CONTENT
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → implement → verify → review per iteration).
+@@STOP
+> **Reference:** See `~/.claude/skills/ops/ralph-integration.md` for the full integration protocol (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
+@@CONTENT
+When invoked with `ralph`, the team manager wraps its entire workflow inside a `/ralph-loop` persistence loop. Each loop pass runs one full team-manager cycle (plan → implement → verify → review).
+
+> **Reference:** See `~/.cursor/skills/ops/ralph-integration.md` for the full Ralph Loop integration protocol, iteration behavior, and when to use/not use ralph mode (read only when `ralph` flag is set). If the file is missing, proceed using the inline summary above.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | "add [task]" | Add task to state file, wire dependencies, slot into dispatch loop |
+@@CONTENT
+| "add [task]" | Add task to state file and TodoWrite, wire dependencies, slot into dispatch loop |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | "drop #N" | Remove task from state file, clear downstream blockers, resume |
+@@CONTENT
+| "drop #N" | Remove task from state file, update TodoWrite, clear downstream blockers, resume |
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: | "resume" | Read state file from disk, verify in-progress tasks, continue |
+@@CONTENT
+| "resume" | Read state file from disk, recreate TodoWrite, verify in-progress tasks, continue |
+@@END
+
+@@PATCH
+ACTION: replace_through
+ANCHOR: ## Permission Notes
+@@STOP
+> **Reference:** You MUST Read `~/.claude/skills/ops/permissions.md` for the complete permissions reference, always-prompt table, and opt-in instructions. If the file is missing, proceed without permission-specific guidance.
+@@CONTENT
+## Permission Notes
+
+Cursor does not have a permission enforcement system like Claude Code's `settings.json` allowlists. All spawned agents have full access to all tools available in the session.
+
+**Implications:**
+- Tool restriction constraints in agent briefs are advisory, not enforced. Agents are instructed not to use certain tools but could still invoke them.
+- There is no equivalent of Claude Code's `RemoteTrigger` permission prompt.
+- The team manager should still include tool constraint instructions in briefs (see Agent-specific rules under Constraints) to guide agent behavior, even though enforcement is not guaranteed.
+@@END
+
+@@PATCH
+ACTION: insert_after
+ANCHOR: The **first line** of each assistant turn MUST begin with **`Team Manager`** (bold backtick-wrapped). Apply on turns containing dashboards, dispatch notifications, stage transitions, escalations, and completion summaries. Do **not** repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+@@CONTENT
+
+---
+
+## Cursor-Specific Limitations
+
+These limitations are inherent to the Cursor platform and cannot be worked around:
+
+- **No model escalation** — All subagents run on the session model (or `model="fast"`). The retry-escalate pattern (sonnet → opus) is not available. The retry strategy compensates by using diagnostic agents (debugger/debugger-build) to improve brief quality instead.
+- **No tool enforcement** — Agent tool restrictions in briefs are advisory only. A critic *could* still call StrReplace; it's just instructed not to. The deploy script's agent hardening adds explicit constraint sections to mitigate this.
+- **No custom agent definitions** — Cursor's `Task(subagent_type=...)` uses a fixed enum of built-in agent types. Custom agent `.md` definitions are not loadable as subagent prompts.
+- **TodoWrite limitations** — TodoWrite items only have `id`, `content`, and `status` fields. All rich metadata (dependencies, timing, estimates) lives in the state file on disk.
+@@END
