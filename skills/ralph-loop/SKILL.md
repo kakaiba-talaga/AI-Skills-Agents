@@ -147,14 +147,11 @@ Format: Use **`Ralph Loop`** (bold backtick-wrapped) as the first element on the
 | File | Read when |
 | :--- | :--- |
 | `template-system.md` | `--template` present, or resume with `template_id` |
-| `acceptance-criteria.md` | Template has `acceptance_criteria`; during Verify auto-evaluation |
-| `rollback.md` | `rollback` sub-command, or when creating the iteration git snapshot in Reflect |
-| `subagent-parallelism.md` | Template defines `hooks.verify.for_each` (fan-out Verify) |
+| `execution-extras.md` | Reflect stage (git snapshot creation), OR `rollback` sub-command, OR template defines `acceptance_criteria`, OR template defines `hooks.verify.for_each` (fan-out Verify) |
 | `cleanup-deslop.md` | Cleanup Stage runs (`deslop_enabled: true`), especially for escalation/regression detail |
-| `lightweight-mode.md` | `--lightweight` present |
+| `lightweight-and-examples.md` | `--lightweight` present, or user asks for example invocations of `/ralph-loop` |
 | `history-analytics.md` | Appending to the JSONL history log, or computing trend/regression summaries during Reflect |
 | `state-schema.md` | Writing or validating the state JSON schema, or applying pruning caps |
-| `usage-examples.md` | User asks for example invocations of `/ralph-loop` |
 | `work-item-scaffolding.md` | Template interaction, work-item discovery, or completion-signal sub-cases (Frame / Reflect) |
 
 When a trigger in column 2 fires, Read the file in column 1. If any referenced file is missing, fall back to the inline summary in SKILL.md for that section.
@@ -214,7 +211,7 @@ Evaluated during Reflect, after `achieved_percent` is updated. Uses template `au
 
 When the template's `hooks.verify.for_each` is defined, Verify fans out across multiple inputs using subagents.
 
-> If `subagent-parallelism.md` is missing, run the single verify command without fan-out.
+> If `execution-extras.md` is missing, run the single verify command without fan-out.
 
 ## Cleanup Stage — Additional Detail
 

@@ -31,16 +31,13 @@ All files live in `~/.claude/skills/ralph-loop/`. The main file orchestrates; co
 
 | File | Lines | Purpose | Loaded when |
 | :--- | ---: | :--- | :--- |
-| `SKILL.md` | 345 | Argument parsing, workflow, stage discipline, all cross-references | Every invocation |
+| `SKILL.md` | 333 | Argument parsing, workflow, stage discipline, all cross-references | Every invocation |
 | `template-system.md` | 157 | Template resolution, YAML schema, template fields, read cadence | `--template` is used |
 | `state-schema.md` | 112 | Complete JSON schema, field types, pruning policy | State init or troubleshooting |
+| `execution-extras.md` | 87 | Rollback/undo, fan-out Verify, acceptance-criteria auto-evaluation | `rollback` command, or template defines `acceptance_criteria` / `hooks.verify.for_each` |
+| `lightweight-and-examples.md` | 79 | Lightweight-mode single-pass workflow + full command/flag examples | `--lightweight` is used, or help/reference |
 | `cleanup-deslop.md` | 76 | Linter rules, deslop escalation, regression procedure | Cleanup stage execution |
-| `lightweight-mode.md` | 43 | Single-pass Execute + Verify workflow, badge format, upgrade path | `--lightweight` is used |
 | `history-analytics.md` | 38 | JSONL log format, write procedure, event types | Writing history events |
-| `rollback.md` | 32 | Git snapshot procedure, rollback command sequence, safety rules | `rollback` command or Reflect snapshot |
-| `usage-examples.md` | 32 | Full command and flag examples | Help / reference |
-| `acceptance-criteria.md` | 29 | Auto-evaluation modes, per-category thresholds | Template defines `acceptance_criteria` |
-| `subagent-parallelism.md` | 22 | Fan-out verification, aggregation strategies | Template defines `for_each` |
 | `templates/README.md` | — | YAML schema, parameter reference, template authoring guide | Writing or debugging templates |
 
 ## When to use / When not to use
@@ -115,10 +112,7 @@ Every turn during an active loop opens with the **`Ralph Loop`** badge and a 6-s
 | Template YAML schema, resolution order, parameter reference | `template-system.md` |
 | Cleanup stage: linter rules, deslop escalation, regression procedure | `cleanup-deslop.md` |
 | State JSON schema, field types, pruning policy | `state-schema.md` |
-| Lightweight mode workflow, badge format, upgrade path | `lightweight-mode.md` |
 | JSONL history log format, event types, write procedure | `history-analytics.md` |
-| Rollback procedure, git snapshot sequence, safety rules | `rollback.md` |
-| Full command and flag examples | `usage-examples.md` |
-| Acceptance criteria auto-evaluation, per-category thresholds | `acceptance-criteria.md` |
-| Subagent parallelism, fan-out verification, aggregation | `subagent-parallelism.md` |
+| Rollback procedure, subagent parallelism (fan-out Verify), acceptance-criteria auto-evaluation | `execution-extras.md` |
+| Lightweight-mode workflow (badge format, upgrade path) + full command and flag examples | `lightweight-and-examples.md` |
 | Template YAML schema, authoring guide, built-in templates | `templates/README.md` |
