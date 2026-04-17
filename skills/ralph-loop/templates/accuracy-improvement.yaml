@@ -28,17 +28,7 @@ acceptance_criteria:
   # The loop parses this into the categories array at init.
 
 hooks:
-  frame:
-    pre: null
-    post: null
-  plan:
-    pre: null
-    post: null
-  execute:
-    pre: null
-    post: null
   verify:
-    pre: null
     command: "{{verify_command}}"
     metric_extraction:
       format: json
@@ -51,10 +41,6 @@ hooks:
       max_concurrency: 4
       per_item_command: "{{verify_command}} --file {{item}}"
       aggregation: average
-    post: null
-  reflect:
-    pre: null
-    post: null
 
 auto_pause:
   plateau_iterations: 3
@@ -68,15 +54,9 @@ auto_pause:
   regression_threshold: 5.0
 
 auto_advance:
-  frame_plan_combine: true
-  skip_frame_on_resume: false
   conditions:
     - when: "resume and next_step is actionable"
       advance_to: Execute
 
 headless:
-  auto_decide: true
-  max_iterations_per_run: 5
-  exit_on_target: true
-  exit_on_plateau: true
   report_format: json

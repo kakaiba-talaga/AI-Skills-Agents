@@ -13,6 +13,51 @@ Templates define reusable loop recipes: verify commands, metric extraction, acce
 
 **On `resume`:** Read the resolved `<task_id>.template.yaml` from the state directory. Never re-resolve from the original template. This ensures the task is self-contained and immune to later edits of the source template.
 
+## Read cadence
+
+The resolved `<task_id>.template.yaml` is **immutable after task creation** — it is written once at `start` and never overwritten. Because the YAML cannot change mid-loop, the loop skill reads it **once per iteration** rather than before every stage message:
+
+- Read point: the **Frame stage** (or first Reflect-side evaluation if Frame is skipped on auto-advance).
+- Between read points: operate on the **cached template snapshot** held in context.
+- **Cache invalidation event:** iteration increment — the boundary between iterations, the same event that invalidates the state JSON cache (SKILL.md rule 0 sub-step 2, event (d)).
+
+This is governed by SKILL.md rule 0 sub-step 3. The "Never re-resolve" guarantee above (this file, paragraph 2) is the immutability invariant that makes the cache safe.
+
+## Default-fill semantics
+
+Source templates under `skills/ralph-loop/templates/` use **minimal form**: fields whose value matches the default are omitted. At resolution time (when `--template <id>` is provided at `start`), the loop reads the minimal source, fills in all defaults, and writes the fully-expanded form to `<task_id>.template.yaml`.
+
+**Invariant:** The frozen resolved `<task_id>.template.yaml` is always self-contained — no implicit defaults need to be looked up at read time. Resume reads the frozen copy directly.
+
+**Rationale:** Source templates stay lean for authors (no repetitive boilerplate); the frozen per-task copy stays unambiguous for debugging and replay.
+
+**Default values table:**
+
+| Field | Default | Omit from source if… |
+| :--- | :--- | :--- |
+| `hooks.frame.pre` | `null` | value is `null` |
+| `hooks.frame.post` | `null` | value is `null` |
+| `hooks.plan.pre` | `null` | value is `null` |
+| `hooks.plan.post` | `null` | value is `null` |
+| `hooks.execute.pre` | `null` | value is `null` |
+| `hooks.execute.post` | `null` | value is `null` |
+| `hooks.verify.pre` | `null` | value is `null` |
+| `hooks.verify.post` | `null` | value is `null` |
+| `hooks.verify.for_each` | `null` | value is `null` (keep if a fan-out block is defined) |
+| `hooks.reflect.pre` | `null` | value is `null` |
+| `hooks.reflect.post` | `null` | value is `null` |
+| `auto_advance.frame_plan_combine` | `true` | value is `true` |
+| `auto_advance.skip_frame_on_resume` | `false` | value is `false` |
+| `headless.auto_decide` | `true` | value is `true` |
+| `headless.max_iterations_per_run` | `5` | value is `5` |
+| `headless.exit_on_target` | `true` | value is `true` |
+| `headless.exit_on_plateau` | `true` | value is `true` |
+| `auto_pause.recurring_failure.enabled` | `true` | value is `true` |
+| `auto_pause.recurring_failure.threshold` | `3` | value is `3` |
+| `auto_pause.recurring_failure.action` | `block` | value is `block` |
+
+Entire hook stage blocks (`hooks.frame`, `hooks.plan`, `hooks.execute`, `hooks.reflect`, `hooks.cleanup`) may be omitted from the source when all sub-fields are null. The resolution step reconstructs the full schema before writing the frozen copy. Note that `hooks.verify` is never omitted as a block (it carries `command`), but its `pre`, `post`, and `for_each` null sub-fields are filled in during resolution per the table above.
+
 **Task file layout:**
 
 ```text
