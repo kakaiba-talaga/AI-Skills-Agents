@@ -142,6 +142,23 @@ Format: Use **`Ralph Loop`** (bold backtick-wrapped) as the first element on the
 
 # Part B — Loaded once at start
 
+## Companion file reference
+
+| File | Read when |
+| :--- | :--- |
+| `template-system.md` | `--template` present, or resume with `template_id` |
+| `acceptance-criteria.md` | Template has `acceptance_criteria`; during Verify auto-evaluation |
+| `rollback.md` | `rollback` sub-command, or when creating the iteration git snapshot in Reflect |
+| `subagent-parallelism.md` | Template defines `hooks.verify.for_each` (fan-out Verify) |
+| `cleanup-deslop.md` | Cleanup Stage runs (`deslop_enabled: true`), especially for escalation/regression detail |
+| `lightweight-mode.md` | `--lightweight` present |
+| `history-analytics.md` | Appending to the JSONL history log, or computing trend/regression summaries during Reflect |
+| `state-schema.md` | Writing or validating the state JSON schema, or applying pruning caps |
+| `usage-examples.md` | User asks for example invocations of `/ralph-loop` |
+| `work-item-scaffolding.md` | Template interaction, work-item discovery, or completion-signal sub-cases (Frame / Reflect) |
+
+When a trigger in column 2 fires, Read the file in column 1. If any referenced file is missing, fall back to the inline summary in SKILL.md for that section.
+
 ## Template System
 
 Templates define reusable loop recipes stored as YAML at `~/.claude/skills/ralph-loop/templates/`. They configure: verify commands, metric extraction, acceptance criteria, stage hooks, auto-pause rules, and auto-advance behavior.
@@ -157,19 +174,13 @@ Templates define reusable loop recipes stored as YAML at `~/.claude/skills/ralph
 
 **Without a template:** The loop behaves exactly as before. All template features are opt-in.
 
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/template-system.md` for resolution order, YAML schema, template fields used by stages, and resume behavior. If the file is missing, use the inline summary above.
-
 ## Acceptance Criteria
 
 When the state file has a `template_id` pointing to a template with `acceptance_criteria`, Verify auto-evaluates results against structured thresholds and updates `achieved_percent` as a weighted average of per-category results.
 
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/acceptance-criteria.md` for mode descriptions (overall, per_category, all_pass), auto-evaluation procedure, and per-category table format. If the file is missing, use the inline summary above.
-
 ## Rollback/Undo Support
 
 During Reflect, create a git snapshot (WIP commit + lightweight tag `ralph/<task_id>/iter-<N>`). On `rollback --to-iter N --task <id>`, restore file contents from the tagged state. Rollback does NOT delete git history — it restores files only.
-
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/rollback.md` for the full snapshot creation procedure, fallback steps, rollback command sequence, and safety rules. If the file is missing, use the inline summary above.
 
 ## Auto-pause Heuristics
 
@@ -203,20 +214,16 @@ Evaluated during Reflect, after `achieved_percent` is updated. Uses template `au
 
 When the template's `hooks.verify.for_each` is defined, Verify fans out across multiple inputs using subagents.
 
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/subagent-parallelism.md` for fan-out execution rules, aggregation strategies, per-item result storage, and error handling. If the file is missing, the loop runs the single verify command without fan-out.
+> If `subagent-parallelism.md` is missing, run the single verify command without fan-out.
 
 ## Cleanup Stage — Additional Detail
 
-- **Deslop escalation:** After linter pass, evaluate triggers for full `/deslop` skill. If triggered and available, invoke `/deslop --conservative` on scoped files.
+- **Deslop escalation:** Deslop escalation trigger evaluation: see `cleanup-deslop.md`.
 - **On success:** Log results in `context.notes`, append modified files to `context.modified_files`.
-
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/cleanup-deslop.md` for the full cleanup procedure: linter safe/unsafe fix rules, escalation triggers, regression procedure, template hooks, and output format. If the file is missing, use the inline summary above.
 
 ## Lightweight Mode
 
 Lightweight mode (`--lightweight`) is a single-pass Execute + Verify cycle for trivial fixes. No Frame, Plan, Reflect, or Cleanup. Implies `deslop_enabled: false` and `loop_mode: strict`. Incompatible with `--template` and `--headless`. Max 2 retries; can upgrade to full loop on failure.
-
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/lightweight-mode.md` for the full lightweight workflow, badge format, checklist, JSONL logging, and upgrade path. If the file is missing, use the inline summary above.
 
 ## Work Item Scaffolding
 
@@ -240,27 +247,19 @@ Work items are discrete, ordered deliverables that Frame generates on iteration 
 - **Interactive mode:** Frame presents the scaffold as a table. User may refine, reorder, add, or remove items. Once confirmed, the loop does not re-ask on subsequent iterations.
 - **Headless mode:** Auto-scaffold and proceed immediately. No approval step.
 
-**Interaction with templates:** When a template with `acceptance_criteria.per_category` is active, categories (quantitative metrics) and work items (qualitative deliverables) are complementary. Both are evaluated during Verify and Reflect. A work item can be `done` even if its category metric hasn't reached threshold, and vice versa.
+See `work-item-scaffolding.md` for template interaction, discovery, and completion-signal sub-cases.
 
-**Discovery:** During Execute or Verify, if a sub-task or prerequisite is discovered, Reflect adds it as a new work item at the appropriate priority position. The work item list is the single source of truth for "what remains."
-
-**Completion signal:** During Reflect's target-reached check:
-- All items `done` AND `achieved_percent` >= target: trigger target-reached prompt.
-- All items `done` but percent below target: ask whether to add more items or adjust the target.
-- Percent reached but items remain: ask whether to continue or mark done.
+> *If the companion is missing: template category-metrics and work-item completion are independent signals; discovery adds items via Reflect; use the completion-signal cases table in the companion (or prompt the user) to route target-reached behavior.*
 
 ## Continuation and Persistence Across Turns
 
 - **Active task detection:** If previous message had **`Ralph Loop`** badge, user references a task, or state file has `status: active|blocked`, treat message as loop continuation.
 - **Re-read on continuation:** Follow Stage Execution Discipline rule 0 before every response. Non-negotiable.
 - **User feedback is loop input:** Any user message during `active` or `blocked` status is input to the current iteration.
-- **Never silently exit:** Valid exits: user selects "Mark as done"/"Pause", user explicitly says stop, or hard blocker with `status: blocked`.
-- **Exit requires explicit user confirmation.** Completing a sub-step or finishing verification does NOT exit the loop — continue to next iteration. When in doubt, use the structured choice prompt.
+- **Never silently exit:** Valid exits: user selects "Mark as done"/"Pause", user explicitly says stop, or hard blocker with `status: blocked`. **Exit requires explicit user confirmation** — completing a sub-step or finishing verification does NOT exit the loop; continue to next iteration. When in doubt, use the structured choice prompt.
+- **State file is authoritative:** The JSON state file is the single source of truth. Persist after every stage.
+- **Context recovery:** Follow Stage Execution Discipline rule 0; recover position from state (`task_id`, `iteration`, `current_stage`, `next_step`, `achieved_percent`), restate to user with badge, continue. Never guess loop state from summarized context.
 - **Headless mode exception:** See Headless Gate and Stage Execution Discipline rule 7 for all headless behavior.
-
-## Context Resilience
-
-The JSON state file is the **authoritative source of truth**. Persist after every stage. On context recovery: follow Stage Execution Discipline rule 0, recover position from state (`task_id`, `iteration`, `current_stage`, `next_step`, `achieved_percent`), restate to user with badge, continue. Never guess loop state from summarized context.
 
 ## Progress Estimation
 
@@ -270,14 +269,14 @@ When a template with `acceptance_criteria` is active, `achieved_percent` is comp
 
 ## Workflow (full detail)
 
-1. Initialize or resume task state. **State directory is `.ralph-state/`** (at the workspace root for project mode, or `~/.ralph-state/` for global mode). Do NOT use `.claude/state/ralph-wiggum-loop/` for writes — that is the legacy location, read-only fallback.
+1. Initialize or resume task state. **State directory is `.ralph-state/`** (at the workspace root for project mode, or `~/.ralph-state/` for global mode). Do NOT use `.claude/state/ralph-wiggum-loop/` or `.cursor/state/ralph-wiggum-loop/` for writes — see the **Read-order fallback** below.
    - If `list` is requested, enumerate task JSON files in selected scope and return summary rows sorted by `updated_at` descending.
    - If `--template <id>` is provided, load the template and execute the following resolution steps in order:
      1. Resolve all `{{param}}` placeholders using `--param` values and template defaults. Fail if any `required: true` parameter is missing.
      2. Fill in all schema defaults per the Default-fill semantics table in `template-system.md`. Every field covered by that table must be present with an explicit value (either the author-provided override or the default) before the next step.
      3. Write the fully-expanded resolved copy to `<task_id>.template.yaml` in the state directory. The frozen copy must be self-contained — no implicit defaults to look up at read time.
      4. Store `template_id` in state.
-   - If resuming: look for `<task_id>.json` in `.ralph-state/` first. If not found, check `.claude/state/ralph-wiggum-loop/` (legacy). If found in legacy, load it but all writes go to `.ralph-state/`. If state has `template_id`, read the resolved `<task_id>.template.yaml` from the same directory as the state file (no re-resolution needed).
+   - If resuming: locate `<task_id>.json` via the **Read-order fallback** (see below). If state has `template_id`, read the resolved `<task_id>.template.yaml` from the same directory as the state file (no re-resolution needed).
    - If `--headless`, validate that a template is provided (headless requires structured verify commands). Set `headless_mode: true` in state.
 2. Run loop based on `loop_mode`. Persist state after every completed stage. One iteration = one complete pass through all 6 stages (or 5 if `deslop_enabled` is false). Increment `iteration` only when Reflect completes and the decision is to continue. Stage transitions and turns within a stage do NOT increment the counter. Include iteration number in status updates.
    - Before/after each stage, check `hooks.<stage>.pre` / `.post`; if defined, execute it.
@@ -316,14 +315,12 @@ When a template with `acceptance_criteria` is active, `achieved_percent` is comp
    - `folder`: `<user_path>/ralph-state/<task_id>.json`
    - **JSONL history log:** Same directory as the state file, named `<task_id>.history.jsonl`.
    - **P5 pruning (before every state write):** Prune `context.modified_files` (cap 50), `progress.per_item_results` (cap 5 iter keys), and `iteration_snapshots` (cap 20) per the Pruning policy in `state-schema.md`. JSONL retains the full history; the state JSON is a working window only.
-   - **Read fallback:** When reading state (resume, status, list), check `.ralph-state/` first, then `.claude/state/ralph-wiggum-loop/` as fallback (legacy location), then `.cursor/state/ralph-wiggum-loop/` as second fallback (Cursor). Applies to `global` and `project` modes only. If found in a fallback location, load it but write updates to the primary `.ralph-state/` path (effectively migrating on first write). For `list`, merge all locations, deduplicating by `task_id` (primary wins).
+   - **Read-order fallback:** When reading state (resume / status / list), check `.ralph-state/` first, then `.claude/state/ralph-wiggum-loop/`, then `.cursor/state/ralph-wiggum-loop/`. If found in a fallback, load it but write updates to `.ralph-state/` (effectively migrating on first write). For `list`, merge all locations, deduplicating by `task_id` (primary wins). Applies to global and project modes only; folder mode has no legacy fallback.
 5. Continue loop or exit safely.
 
 ## History and Analytics
 
 Iteration history is tracked in the state file (`progress.iteration_history`) and a JSONL log file (`<task_id>.history.jsonl`).
-
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/history-analytics.md` for the JSONL log format, event examples, and the mandatory write procedure (temp file + cat append). If the file is missing, use the Write tool to create a temp file with the JSON line and append with `cat`.
 
 **Trend detection (during Reflect):**
 
@@ -337,9 +334,3 @@ Iteration history is tracked in the state file (`progress.iteration_history`) an
 ## Required state fields
 
 Top-level fields: `task_id`, `title`, `status` (active|paused|blocked|done), `loop_mode`, `template_id`, `headless_mode`, `lightweight_mode`, `deslop_enabled`, `full_deslop_enabled`, `target` {percent, goal}, `iteration`, `progress` {achieved_percent, current_stage, completed_items, remaining_items, category_results, per_item_results, work_items}, `iteration_snapshots`, `auto_pause_state`, `blockers`, `next_step`, `resume_hint`, `context` {summary, modified_files, comparisons, notes, learnings, headless_report}, `storage` {mode, root, resolved_path}, `updated_at`.
-
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/state-schema.md` for the complete JSON schema with all nested field types. If the file is missing, use the field list above.
-
-## Usage examples
-
-> **Reference:** You MUST Read `~/.claude/skills/ralph-loop/usage-examples.md` for the full list of usage examples. If the file is missing, refer to the argument parsing section above for available commands and flags.
