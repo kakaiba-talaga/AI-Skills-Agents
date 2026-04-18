@@ -245,7 +245,7 @@ sys.exit(3)
 $whatIfArg = if ($WhatIf) { "true" } else { "false" }
 $forceArg  = if ($Force)  { "true" } else { "false" }
 
-$tmpPy = "_tmp_transform-cursor-ralph-loop.py"
+$tmpPy = Join-Path $PWD.Path "_tmp_transform-cursor-ralph-loop.py"
 $code = 1
 try {
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
