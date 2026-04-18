@@ -39,7 +39,7 @@ For example, to run the executor on opus for a particularly complex implementati
 
 ### Programmatic dispatch (ops skill)
 
-When the ops skill dispatches agents programmatically via the `Agent` tool, the `subagent_type` parameter only accepts a limited built-in enum (`general-purpose`, `Explore`, `Plan`, `debugger-build`, `git-master`, `claude-code-guide`, `statusline-setup`). Only `debugger-build` and `git-master` from this taxonomy have matching entries; all other agents dispatch as `general-purpose`.
+When the ops skill dispatches agents programmatically via the `Agent` tool, the `subagent_type` parameter only accepts a limited built-in enum (`general-purpose`, `Explore`, `Plan`, `debugger-build`, `git-master`, `claude-code-guide`, `statusline-setup`). `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from this taxonomy have matching entries (Claude Code built-ins; the enum may expand); all other agents dispatch as `general-purpose`.
 
 Custom agent files at `~/.claude/agents/` are loaded when a user invokes an agent by name in conversation, but they do **not** extend the `subagent_type` enum for programmatic dispatch. The ops skill works around this by reading the agent definition file, injecting its instructions into the prompt, and labeling the dispatch via the `description` field (e.g., `"executor(Implement auth middleware)"`). See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure.
 

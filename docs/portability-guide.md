@@ -62,7 +62,7 @@ These Claude Code features have no direct counterpart in Cursor. The mechanical 
 | `TaskCreate`/`TaskUpdate`/`TaskList` | No shared task board for multi-agent coordination. | **Mitigated** | Both Claude Code and Cursor versions of ops now use a JSON state file (`.ops-state/<run-id>-board.json`) as the task board. Cursor adds `TodoWrite` as a display layer on top. Full metadata, dependencies, and timing preserved. |
 | `Agent` tool with custom `model`/`tools` | Cannot spawn agents with a specific model or restrict their tool access. | **Mitigated** | Ops and deploy use `Task(subagent_type=...)` for dispatch. Deploy script injects `## Tool Constraints` markdown into agent bodies for tool-restricted agents. Model selection is not possible — documented as accepted limitation. |
 | `Skill` tool | Cannot programmatically invoke another skill from within a skill. | **Mitigated** | Read-and-dispatch pattern: read the target skill's `SKILL.md` from `~/.cursor/skills/<name>/SKILL.md`, then follow inline or pass to `Task(subagent_type="generalPurpose")`. |
-| Agent `subagent_type` coverage | Cursor's `Task` tool `subagent_type` enum includes all 15 agent types natively (executor, verifier, planner, architect, security-reviewer, etc.) plus utility types (generalPurpose, explore, shell, etc.). Claude Code's `Agent` tool `subagent_type` only includes `debugger-build` and `git-master` from the ops taxonomy — all others dispatch as `general-purpose` and display as "Agent." | **Mitigated** | See Agent Dispatch Mechanism section below. |
+| Agent `subagent_type` coverage | Cursor's `Task` tool `subagent_type` enum includes all 15 agent types natively (executor, verifier, planner, architect, security-reviewer, etc.) plus utility types (generalPurpose, explore, shell, etc.). Claude Code's `Agent` tool `subagent_type` only includes `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from the ops taxonomy (Claude Code built-ins; the enum may expand) — all others dispatch as `general-purpose` and display as "Agent." | **Mitigated** | See Agent Dispatch Mechanism section below. |
 | `EnterWorktree`/`ExitWorktree` | No git worktree isolation for parallel agents. | **Mitigated** | `Task(subagent_type="best-of-n-runner")` provides isolated worktrees per agent. |
 | Model enforcement per agent | Cursor runs all agents on the session model. The `model` field is stripped during transform. | **Accepted** | No workaround. All subagents run on session model or `model="fast"`. Cost implications only. |
 | Tool surface restriction per agent | All tools are available to all agents in Cursor. | **Partially mitigated** | Deploy script injects `## Tool Constraints` section into agents whose Claude Code frontmatter restricted tools (critic, ssh-executor, interviewer, verifier). Advisory only — not enforced. |
@@ -139,7 +139,7 @@ The ops skill dispatches directly: `Task(subagent_type="executor", prompt=<brief
 
 ### Claude Code — limited `subagent_type` enum with read-and-inject workaround
 
-Claude Code's `Agent` tool `subagent_type` enum only includes: `general-purpose`, `Explore`, `Plan`, `debugger-build`, `git-master`, `claude-code-guide`, `statusline-setup`. Only `debugger-build` and `git-master` from the ops agent taxonomy have matching entries. All other agent types (executor, verifier, planner, critic, etc.) dispatch as `general-purpose` and display as "Agent" in the UI.
+Claude Code's `Agent` tool `subagent_type` enum only includes: `general-purpose`, `Explore`, `Plan`, `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`, `claude-code-guide`, `statusline-setup`. Only `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from the ops agent taxonomy have matching entries (Claude Code built-ins; the enum may expand). All other agent types (executor, verifier, planner, critic, etc.) dispatch as `general-purpose` and display as "Agent" in the UI.
 
 **Custom agent files at `~/.claude/agents/` do NOT extend the `subagent_type` enum.** Those files are loaded when the user directly invokes an agent by name in conversation, but they are not available for programmatic dispatch via the Agent tool's `subagent_type` parameter.
 
@@ -148,7 +148,7 @@ Claude Code's `Agent` tool `subagent_type` enum only includes: `general-purpose`
 1. **Read** the agent definition from `~/.claude/agents/<agent_type>.md`. Extract the `model` from YAML frontmatter and the full instruction body.
 2. **Set `description`** to `"<agent_type>(<task subject>)"` so the role is visible in dispatch notifications (e.g., `"executor(Implement auth middleware)"`).
 3. **Set `model`** from the agent's frontmatter (e.g., `"sonnet"`, `"opus"`).
-4. **Set `subagent_type`** only when the agent type matches a built-in value (`debugger-build`, `git-master`). Omit for all others.
+4. **Set `subagent_type`** only when the agent type matches a built-in value (Claude Code: `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`). Omit for all others.
 5. **Concatenate** the agent definition body + task brief into the `prompt` parameter.
 
 This preserves the agent's specialized behavior and model assignment while making the role visible in the UI, despite the platform's limited enum.

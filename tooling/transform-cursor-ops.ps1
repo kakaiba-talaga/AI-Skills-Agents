@@ -447,18 +447,21 @@ rep(
 # ---------------------------------------------------------------------------
 # PATCH 21 — Phase 3 Step 3: entire dispatch procedure rewrite
 # ---------------------------------------------------------------------------
+# MAINTENANCE: this patch's `old_string` is a verbatim copy of the Agent Dispatch
+# Procedure block in skills/ops/SKILL.md. If that block changes, update `old_string`
+# here AND in the sibling .ps1/.sh script so both wrappers stay in lockstep.
 rep(
     """2. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read("docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
 3. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file. Follow the dispatch procedure below.
 
 **Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
 
-The Agent tool only accepts built-in `subagent_type` values (`debugger-build`, `git-master`). For all other agents, read `~/.claude/agents/<agent_type>.md` frontmatter and construct a self-read prompt. For each dispatch:
+The Agent tool's `subagent_type` enum is environment-dependent (Claude Code typically includes at least `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`; Cursor's Task tool may expose more). In Claude Code, the known built-ins are listed in rule (d) below; treat that list as the reference — there is no runtime introspection. For each dispatch:
 
    a. **Read** `~/.claude/agents/<agent_type>.md` where `<agent_type>` is the task's `agent_type` value from the state file. Extract the `model` from YAML frontmatter **only** — do NOT read or store the agent body in the team manager's context.
-   b. **`description`**: Set to `"<agent_type>(<task subject>)"` — e.g., `"executor(Implement auth middleware)"`. This is the label shown in the UI. Always include the agent type name so the user can identify which agent is working on which task.
+   b. **`description`**: If this agent's `agent_type` matches a built-in `subagent_type` (see rule d for the list), set description to just `"<task subject>"`. Otherwise, set it to `"<agent_type>(<task subject>)"`. Rationale: when `subagent_type` is set, the UI shows the built-in name as a prefix — adding the same name again would double-label (e.g., `code-reviewer(code-reviewer(Re-review iter 1))`).
    c. **`model`**: Set from the agent's frontmatter `model` field (e.g., `"sonnet"`, `"opus"`).
-   d. **`subagent_type`**: Set **only** when `agent_type` is `debugger-build` or `git-master` (these are the only custom agents that match a built-in type). For all other agents (executor, verifier, planner, critic, etc.), **omit** this parameter.
+   d. **`subagent_type`**: Set when `agent_type` matches a built-in `subagent_type` available in the current environment (Claude Code typically: `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`). Omit for all other agents — they fall back to `general-purpose` and the agent's definition materializes via the self-read prompt (rule e).
    e. **`prompt`**: Compose using the self-read template below, followed by the task brief (see Agent Briefing Format). The agent reads its full definition as its first action — self-containment is preserved because the agent body materializes in the agent's own context, not the team manager's.
 
 **Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):""",
