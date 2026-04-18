@@ -339,12 +339,12 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 
 **Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
 
-The Agent tool's `subagent_type` enum is environment-dependent (Claude Code typically includes at least `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`; Cursor's Task tool may expose more). In Claude Code, the known built-ins are listed in rule (d) below; treat that list as the reference — there is no runtime introspection. For each dispatch:
+The Agent tool's `subagent_type` enum is environment-dependent (Claude Code typically includes at least `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`; Cursor's Task tool may expose more). In Claude Code, the known built-ins are: `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff` — treat that list as the reference, there is no runtime introspection. For each dispatch:
 
    a. **Read** `~/.claude/agents/<agent_type>.md` where `<agent_type>` is the task's `agent_type` value from the state file. Extract the `model` from YAML frontmatter **only** — do NOT read or store the agent body in the team manager's context.
-   b. **`description`**: If this agent's `agent_type` matches a built-in `subagent_type` (see rule d for the list), set description to just `"<task subject>"`. Otherwise, set it to `"<agent_type>(<task subject>)"`. Rationale: when `subagent_type` is set, the UI shows the built-in name as a prefix — adding the same name again would double-label (e.g., `code-reviewer(code-reviewer(Re-review iter 1))`).
-   c. **`model`**: Set from the agent's frontmatter `model` field (e.g., `"sonnet"`, `"opus"`).
-   d. **`subagent_type`**: Set when `agent_type` matches a built-in `subagent_type` available in the current environment (Claude Code typically: `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`). Omit for all other agents — they fall back to `general-purpose` and the agent's definition materializes via the self-read prompt (rule e).
+   b. **`model`**: Set from the agent's frontmatter `model` field (e.g., `"sonnet"`, `"opus"`).
+   c. **`subagent_type`**: Set when `agent_type` matches a built-in `subagent_type` available in the current environment (Claude Code built-ins: `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`). Omit for all other agents — they fall back to `general-purpose` and the agent's definition materializes via the self-read prompt (rule e).
+   d. **`description`**: If you set `subagent_type` in rule c (the `agent_type` matched a built-in), set description to just `"<task subject>"` — the UI already prefixes the subagent_type name, so wrapping would double-label. If you omitted `subagent_type` (the agent falls back to general-purpose), set description to `"<agent_type>(<task subject>)"` so the custom agent remains identifiable in the UI.
    e. **`prompt`**: Compose using the self-read template below, followed by the task brief (see Agent Briefing Format). The agent reads its full definition as its first action — self-containment is preserved because the agent body materializes in the agent's own context, not the team manager's.
 
 **Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):
@@ -361,22 +361,32 @@ Once you have read the agent definition, execute the task below following the ag
 <task brief here>
 ```
 
-**Example** (executor agent):
+**Dispatch examples — description field:**
 
+Built-in agent (`git-master` — matches `subagent_type`, so `subagent_type` is set):
 ```
-You are running as agent type: executor.
-
-**Your first action:** Read your full agent definition from `~/.claude/agents/executor.md`. This file contains your workflow, responsibilities, lane boundaries, and constraints. Do not proceed with the task until you have read this file in full.
-
-Once you have read the agent definition, execute the task below following the agent's instructions verbatim.
-
----
-
-## Task Brief
-**Context:** Auth middleware is missing from the API layer.
-**Scope:** Implement `src/middleware/auth.py` — JWT validation, 401 on failure, pass claims to request context.
-**Acceptance Criteria:** All existing tests pass; `pytest tests/middleware/` green; no Edit outside `src/middleware/`.
+Agent(
+  description: "commit the approved diff with a conventional message",
+  model: "sonnet",
+  subagent_type: "git-master",
+  prompt: <self-read template + task brief>
+)
+UI renders: git-master(commit the approved diff with a conventional message)
 ```
+
+Custom agent (`executor` — not a built-in, so `subagent_type` is omitted):
+```
+Agent(
+  description: "executor(Implement auth middleware)",
+  model: "sonnet",
+  subagent_type: <omitted — falls back to general-purpose>,
+  prompt: <self-read template + task brief>
+)
+UI renders: Agent(executor(Implement auth middleware))   [custom agent stays identifiable]
+```
+
+DO NOT: set `subagent_type="git-master"` AND `description="git-master(...)"`.
+This produces `git-master(git-master(...))` in the UI — the exact regression rule d prevents.
 
 Use the brief format below.
 3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
