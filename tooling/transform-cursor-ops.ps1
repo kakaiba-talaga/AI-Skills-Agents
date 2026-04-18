@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Transform skills/ops/SKILL.md into the Cursor-compatible SKILL.cursor.md.
 

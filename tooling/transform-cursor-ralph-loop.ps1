@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Transform skills/ralph-loop/SKILL.md into the Cursor-compatible SKILL.cursor.md.
 
