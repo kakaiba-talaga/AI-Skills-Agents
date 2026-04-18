@@ -25,11 +25,22 @@
 .PARAMETER Force
     Skip the confirmation prompt.
 
+.PARAMETER Prune
+    After the upsert pass, enumerate orphan files at each target and delete them
+    after confirmation. Orphans are files present at the target that are not in
+    the manifest's expected set for that (target, category) tuple.
+
+.PARAMETER PruneOnly
+    Skip the upsert pass entirely; perform the prune pass only. Implies -Prune.
+
 .EXAMPLE
     .\deploy.ps1 -Target claude
     .\deploy.ps1 -Target cursor -DryRun
     .\deploy.ps1 -Target all -Category skills -Force
     .\deploy.ps1 -Diff
+    .\deploy.ps1 -Prune -DryRun
+    .\deploy.ps1 -PruneOnly -Force
+    .\deploy.ps1 -PruneOnly -Target cursor -Category skills -DryRun
 #>
 
 [CmdletBinding()]
@@ -42,7 +53,9 @@ param(
 
     [switch]$DryRun,
     [switch]$Diff,
-    [switch]$Force
+    [switch]$Force,
+    [switch]$Prune,
+    [switch]$PruneOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -247,6 +260,163 @@ function Get-SourceFiles {
     return $files | Sort-Object FullName -Unique
 }
 
+function Get-ExpectedRelativePaths {
+    param(
+        [string]$SourceDir,
+        [string[]]$Include,
+        [string[]]$Exclude,
+        [string]$CategoryType
+    )
+    $fullSource = Join-Path $RepoRoot $SourceDir
+    $files = Get-SourceFiles -SourceDir $SourceDir -Include $Include -Exclude $Exclude -CategoryType $CategoryType
+    $relPaths = @()
+    foreach ($file in $files) {
+        $rel = $file.FullName.Substring($fullSource.Length).TrimStart('\', '/')
+        $relPaths += $rel
+    }
+    return $relPaths
+}
+
+# --- Prune logic ---
+
+function Invoke-PruneSection {
+    param(
+        [string]$ToolName,
+        [string]$CategoryName,
+        [PSCustomObject]$Config
+    )
+
+    $source  = $Config.source
+    $target  = Resolve-TargetPath $Config.target
+    $include = @($Config.include)
+    $exclude = if ($Config.PSObject.Properties['exclude']) { @($Config.exclude) } else { @() }
+
+    # Guardrail: target must exist, be a directory, and live under $HOME
+    if (-not (Test-Path $target -PathType Container)) {
+        Write-Warning "  [prune] Target directory not found: $target — skipping $ToolName/$CategoryName"
+        return @{ Pruned = 0; WouldPrune = 0 }
+    }
+    $normalTarget = (Resolve-Path $target).ProviderPath.Replace('/', '\')
+    $normalHome   = (Resolve-Path $HOME).ProviderPath.Replace('/', '\')
+    $wslPrefix    = '\\wsl.localhost\'
+    if (-not ($normalTarget.StartsWith($normalHome, [System.StringComparison]::OrdinalIgnoreCase) -or
+              $normalTarget.StartsWith($wslPrefix,  [System.StringComparison]::OrdinalIgnoreCase))) {
+        Write-Warning "  [prune] Target '$normalTarget' is outside HOME — skipping $ToolName/$CategoryName"
+        return @{ Pruned = 0; WouldPrune = 0 }
+    }
+
+    # Build expected set
+    $expectedPaths = Get-ExpectedRelativePaths -SourceDir $source -Include $include -Exclude $exclude -CategoryType $CategoryName
+    $expectedSet   = @{}
+    foreach ($p in $expectedPaths) {
+        # Normalize to forward slashes and lower-case for comparison on Windows
+        $key = $p.Replace('\', '/').ToLowerInvariant()
+        $expectedSet[$key] = $true
+    }
+
+    # Build actual set — enumerate target directory, skip hidden-dir paths and symlinks
+    $actualFiles = Get-ChildItem -Path $normalTarget -Recurse -File -Force -ErrorAction SilentlyContinue |
+        Where-Object {
+            # Exclude files inside any hidden directory (path segment starts with '.').
+            # Scope the check to the suffix after the target root so that hidden-dir
+            # components in the target path itself (e.g. C:\Users\user\.claude) are
+            # not erroneously matched.
+            $suffix = $_.FullName.Substring($normalTarget.Length)
+            $suffix -notmatch '[\\/]\.'
+        }
+
+    $orphans = @()
+    foreach ($f in $actualFiles) {
+        # Skip symlinks (reparse points)
+        if ($f.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            continue
+        }
+        $rel = $f.FullName.Substring($normalTarget.Length).TrimStart('\', '/')
+        $key = $rel.Replace('\', '/').ToLowerInvariant()
+        if (-not $expectedSet.ContainsKey($key)) {
+            $orphans += $rel
+        }
+    }
+
+    $stats = @{ Pruned = 0; WouldPrune = 0 }
+
+    if ($orphans.Count -eq 0) {
+        Write-Host "  [prune] No orphans found." -ForegroundColor DarkGray
+        return $stats
+    }
+
+    # Dry-run / Diff: report only, never delete
+    if ($DryRun -or $Diff) {
+        foreach ($rel in $orphans) {
+            Write-Host "  WOULD PRUNE: $rel" -ForegroundColor Yellow
+            $stats.WouldPrune++
+        }
+        return $stats
+    }
+
+    # Real prune: print list, confirm, delete
+    Write-Host "  [prune] Orphan files to delete:" -ForegroundColor Yellow
+    foreach ($rel in $orphans) {
+        Write-Host "    $rel" -ForegroundColor Yellow
+    }
+
+    if (-not $Force) {
+        $confirm = Read-Host "  Delete $($orphans.Count) orphan file(s)? [y/N]"
+        if ($confirm -notin @('y', 'Y', 'yes')) {
+            Write-Host "  [prune] Skipped." -ForegroundColor DarkGray
+            return $stats
+        }
+    }
+
+    $dirsToCheck = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+    foreach ($rel in $orphans) {
+        $absPath = Join-Path $normalTarget $rel
+        # Re-assert prefix check (belt-and-suspenders)
+        $normAbs = [System.IO.Path]::GetFullPath($absPath)
+        if (-not $normAbs.StartsWith($normalTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
+            Write-Warning "  [prune] Path escapes target root — skipping: $normAbs"
+            continue
+        }
+        # Skip symlinks (defensive double-check)
+        if (Test-Path $normAbs) {
+            $item = Get-Item $normAbs -Force -ErrorAction SilentlyContinue
+            if ($item -and ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+                Write-Warning "  [prune] Skipping symlink: $rel"
+                continue
+            }
+        }
+        Remove-Item -Path $normAbs -Force -ErrorAction SilentlyContinue
+        Write-Host "  PRUNED: $rel" -ForegroundColor Red
+        $stats.Pruned++
+        $parentDir = Split-Path $normAbs -Parent
+        $dirsToCheck.Add($parentDir) | Out-Null
+    }
+
+    # Remove newly-empty directories, walking up to (but not including) the target root
+    $sortedDirs = $dirsToCheck | Sort-Object { $_.Length } -Descending
+    foreach ($dir in $sortedDirs) {
+        $current = $dir
+        while ($true) {
+            # Stop at the target root
+            $normCurrent = [System.IO.Path]::GetFullPath($current)
+            if ($normCurrent -eq $normalTarget -or
+                -not $normCurrent.StartsWith($normalTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
+                break
+            }
+            if (-not (Test-Path $normCurrent -PathType Container)) { break }
+            $children = Get-ChildItem -Path $normCurrent -Force -ErrorAction SilentlyContinue
+            if ($children.Count -gt 0) { break }
+            $relDir = $normCurrent.Substring($normalTarget.Length).TrimStart('\', '/')
+            Remove-Item -Path $normCurrent -Force -ErrorAction SilentlyContinue
+            Write-Host "  PRUNED DIR: $relDir" -ForegroundColor Red
+            $current = Split-Path $normCurrent -Parent
+        }
+    }
+
+    return $stats
+}
+
 # --- Deploy logic ---
 
 function Deploy-Section {
@@ -366,6 +536,9 @@ function Deploy-Section {
 
 # --- Main ---
 
+# -PruneOnly implies -Prune
+if ($PruneOnly) { $Prune = $true }
+
 $targets = @()
 if ($Target -eq "all" -or $Target -eq "claude") { $targets += "claude-code" }
 if ($Target -eq "all" -or $Target -eq "cursor")  { $targets += "cursor" }
@@ -375,13 +548,19 @@ $categories = @()
 if ($Category -eq "" -or $Category -eq "agents") { $categories += "agents" }
 if ($Category -eq "" -or $Category -eq "skills") { $categories += "skills" }
 
-$mode = if ($DryRun) { "DRY RUN" } elseif ($Diff) { "DIFF" } else { "DEPLOY" }
-Write-Host "`n=== $mode ===" -ForegroundColor Cyan
+$modeLabel = if ($DryRun) { "DRY RUN" } elseif ($Diff) { "DIFF" } else { "DEPLOY" }
+if ($Prune -and $PruneOnly) {
+    $modeLabel = if ($DryRun) { "DRY RUN (PRUNE ONLY)" } elseif ($Diff) { "DIFF (PRUNE ONLY)" } else { "PRUNE ONLY" }
+} elseif ($Prune) {
+    $modeLabel = if ($DryRun) { "DRY RUN (WITH PRUNE)" } elseif ($Diff) { "DIFF (WITH PRUNE)" } else { "DEPLOY + PRUNE" }
+}
+Write-Host "`n=== $modeLabel ===" -ForegroundColor Cyan
 Write-Host "Targets:    $($targets -join ', ')"
 Write-Host "Categories: $($categories -join ', ')"
 Write-Host ""
 
-if (-not $DryRun -and -not $Diff -and -not $Force) {
+# Upsert confirmation (skip if PruneOnly, DryRun, Diff, or Force)
+if (-not $PruneOnly -and -not $DryRun -and -not $Diff -and -not $Force) {
     $confirm = Read-Host "Proceed? [y/N]"
     if ($confirm -notin @('y', 'Y', 'yes')) {
         Write-Host "Aborted." -ForegroundColor DarkGray
@@ -389,7 +568,7 @@ if (-not $DryRun -and -not $Diff -and -not $Force) {
     }
 }
 
-$totalStats = @{ Copied = 0; Skipped = 0; Updated = 0 }
+$totalStats = @{ Copied = 0; Skipped = 0; Updated = 0; Pruned = 0; WouldPrune = 0 }
 
 foreach ($t in $targets) {
     $displayName = switch ($t) {
@@ -417,19 +596,34 @@ foreach ($t in $targets) {
             continue
         }
 
-        Write-Host "  $cat`:" -ForegroundColor White
-        $stats = Deploy-Section -ToolName $t -CategoryName $cat -Config $catConfig
+        if (-not $PruneOnly) {
+            Write-Host "  $cat`:" -ForegroundColor White
+            $stats = Deploy-Section -ToolName $t -CategoryName $cat -Config $catConfig
+            $totalStats.Copied  += $stats.Copied
+            $totalStats.Skipped += $stats.Skipped
+            $totalStats.Updated += $stats.Updated
+        }
 
-        $totalStats.Copied  += $stats.Copied
-        $totalStats.Skipped += $stats.Skipped
-        $totalStats.Updated += $stats.Updated
+        if ($Prune) {
+            Write-Host "  $cat (prune):" -ForegroundColor White
+            $pruneStats = Invoke-PruneSection -ToolName $t -CategoryName $cat -Config $catConfig
+            $totalStats.Pruned     += $pruneStats.Pruned
+            $totalStats.WouldPrune += $pruneStats.WouldPrune
+        }
     }
 }
 
 Write-Host "`n--- Summary ---" -ForegroundColor Cyan
-$action = if ($DryRun) { "Would create" } elseif ($Diff) { "New" } else { "Created" }
-$updateAction = if ($DryRun) { "Would update" } elseif ($Diff) { "Changed" } else { "Updated" }
-Write-Host "$action`:    $($totalStats.Copied)"
-Write-Host "$updateAction`: $($totalStats.Updated)"
-Write-Host "Up to date: $($totalStats.Skipped)"
+if (-not $PruneOnly) {
+    $action       = if ($DryRun) { "Would create" } elseif ($Diff) { "New" } else { "Created" }
+    $updateAction = if ($DryRun) { "Would update" } elseif ($Diff) { "Changed" } else { "Updated" }
+    Write-Host "$action`:    $($totalStats.Copied)"
+    Write-Host "$updateAction`: $($totalStats.Updated)"
+    Write-Host "Up to date: $($totalStats.Skipped)"
+}
+if ($DryRun -or $Diff) {
+    Write-Host "Would prune: $($totalStats.WouldPrune)"
+} else {
+    Write-Host "Pruned:      $($totalStats.Pruned)"
+}
 Write-Host ""

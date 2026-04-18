@@ -11,12 +11,17 @@
 #   -n, --dry-run                       Show what would change without copying
 #   -d, --diff                          Show diffs between repo and deployed files
 #   -f, --force                         Skip confirmation prompt
+#       --prune                         Delete orphan files after upsert (with confirmation)
+#       --prune-only                    Skip upsert; prune orphans only (implies --prune)
 #   -h, --help                          Show this help
 #
 # Examples:
 #   ./deploy.sh -t claude
 #   ./deploy.sh -t cursor --dry-run
 #   ./deploy.sh -t all -c skills --force
+#   ./deploy.sh --prune --dry-run
+#   ./deploy.sh --prune-only --force
+#   ./deploy.sh --prune-only -t cursor -c skills --dry-run
 
 set -euo pipefail
 
@@ -29,17 +34,21 @@ CATEGORY=""
 DRY_RUN=false
 DIFF_MODE=false
 FORCE=false
+PRUNE=false
+PRUNE_ONLY=false
 
 # --- Argument parsing ---
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -t|--target)   TARGET="$2"; shift 2 ;;
-        -c|--category) CATEGORY="$2"; shift 2 ;;
-        -n|--dry-run)  DRY_RUN=true; shift ;;
-        -d|--diff)     DIFF_MODE=true; shift ;;
-        -f|--force)    FORCE=true; shift ;;
-        -h|--help)     head -20 "$0" | tail -18; exit 0 ;;
+        -t|--target)    TARGET="$2"; shift 2 ;;
+        -c|--category)  CATEGORY="$2"; shift 2 ;;
+        -n|--dry-run)   DRY_RUN=true; shift ;;
+        -d|--diff)      DIFF_MODE=true; shift ;;
+        -f|--force)     FORCE=true; shift ;;
+        --prune)        PRUNE=true; shift ;;
+        --prune-only)   PRUNE_ONLY=true; PRUNE=true; shift ;;
+        -h|--help)      head -26 "$0" | tail -24; exit 0 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
@@ -195,11 +204,188 @@ convert_skill_file() {
     printf "%s\n%s" "$header" "$body"
 }
 
+# --- Expected set helper ---
+
+get_expected_relative_paths() {
+    local tool_key="$1"
+    local cat_key="$2"
+
+    local source excludes
+    source=$(jq -r ".\"$tool_key\".\"$cat_key\".source" "$MANIFEST")
+    excludes=$(jq -r ".\"$tool_key\".\"$cat_key\".exclude // [] | .[]" "$MANIFEST")
+
+    local source_dir="$REPO_ROOT/$source"
+    [[ ! -d "$source_dir" ]] && return
+
+    local files
+    files=$(find "$source_dir" -type f | sort)
+
+    while IFS= read -r file; do
+        [[ -z "$file" ]] && continue
+
+        local filename
+        filename=$(basename "$file")
+
+        # Apply the same exclude filters as deploy_section
+        local skip=false
+        while IFS= read -r ex; do
+            [[ -z "$ex" ]] && continue
+            [[ "$filename" == "$ex" ]] && skip=true
+        done <<< "$excludes"
+        $skip && continue
+        [[ "$filename" == "SKILL.cursor.md" ]] && continue
+
+        local rel_path="${file#$source_dir}"
+        rel_path="${rel_path#/}"
+        echo "$rel_path"
+    done <<< "$files"
+}
+
+# --- Prune logic ---
+
+prune_section() {
+    local tool_key="$1"
+    local cat_key="$2"
+
+    local source target
+    source=$(jq -r ".\"$tool_key\".\"$cat_key\".source" "$MANIFEST")
+    target=$(jq -r ".\"$tool_key\".\"$cat_key\".target" "$MANIFEST")
+    target=$(resolve_target_path "$target")
+
+    # Guardrail: target must exist and be a directory under HOME
+    if [[ ! -d "$target" ]]; then
+        echo -e "  ${YELLOW}[prune] Target directory not found: $target — skipping $tool_key/$cat_key${NC}"
+        return
+    fi
+    local normal_target normal_home
+    normal_target=$(cd "$target" && pwd -P)
+    normal_home=$(cd "$HOME" && pwd -P)
+    local wsl_prefix="//wsl.localhost"
+    local _in_home=false
+    case "$normal_target" in
+        "$normal_home"/*|"$normal_home") _in_home=true ;;
+        "$wsl_prefix"*)                  _in_home=true ;;
+    esac
+    if ! $_in_home; then
+        echo -e "  ${YELLOW}[prune] Target '$normal_target' is outside HOME — skipping $tool_key/$cat_key${NC}"
+        return
+    fi
+
+    # Build expected set from helper
+    local expected_paths
+    expected_paths=$(get_expected_relative_paths "$tool_key" "$cat_key")
+
+    # Build actual set: regular files only, no hidden dirs, no symlinks
+    local actual_files
+    actual_files=$(find "$normal_target" -mindepth 1 -type f -not -type l -not -path "$normal_target/.*" 2>/dev/null | sort)
+
+    # Compute orphans = actual - expected
+    local orphans=()
+    while IFS= read -r abs_file; do
+        [[ -z "$abs_file" ]] && continue
+        local rel_file="${abs_file#$normal_target}"
+        rel_file="${rel_file#/}"
+        # Check whether rel_file is in the expected set
+        local found=false
+        while IFS= read -r exp; do
+            [[ -z "$exp" ]] && continue
+            if [[ "$rel_file" == "$exp" ]]; then
+                found=true
+                break
+            fi
+        done <<< "$expected_paths"
+        if ! $found; then
+            orphans+=("$rel_file")
+        fi
+    done <<< "$actual_files"
+
+    if [[ ${#orphans[@]} -eq 0 ]]; then
+        echo -e "  ${DIM}[prune] No orphans found.${NC}"
+        return
+    fi
+
+    # Dry-run / diff: report only, never delete
+    if $DRY_RUN || $DIFF_MODE; then
+        for rel in "${orphans[@]}"; do
+            echo -e "  ${YELLOW}WOULD PRUNE: $rel${NC}"
+            ((TOTAL_WOULD_PRUNE++)) || true
+        done
+        return
+    fi
+
+    # Real prune: print list, confirm, delete
+    echo -e "  ${YELLOW}[prune] Orphan files to delete:${NC}"
+    for rel in "${orphans[@]}"; do
+        echo -e "    ${YELLOW}$rel${NC}"
+    done
+
+    if ! $FORCE; then
+        read -rp "  Delete ${#orphans[@]} orphan file(s)? [y/N] " confirm
+        if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+            echo -e "  ${DIM}[prune] Skipped.${NC}"
+            return
+        fi
+    fi
+
+    local dirs_to_check=()
+
+    for rel in "${orphans[@]}"; do
+        local abs_path="$normal_target/$rel"
+        # Re-assert prefix check
+        local norm_abs
+        norm_abs=$(cd "$(dirname "$abs_path")" 2>/dev/null && pwd -P)/$(basename "$abs_path") || true
+        case "$norm_abs" in
+            "$normal_target"/*) : ;;
+            *) echo -e "  ${RED}[prune] Path escapes target root — skipping: $norm_abs${NC}"; continue ;;
+        esac
+        # Skip symlinks (defensive double-check)
+        if [[ -L "$abs_path" ]]; then
+            echo -e "  ${YELLOW}[prune] Skipping symlink: $rel${NC}"
+            continue
+        fi
+        rm -f "$abs_path"
+        echo -e "  ${RED}PRUNED: $rel${NC}"
+        ((TOTAL_PRUNED++)) || true
+        dirs_to_check+=("$(dirname "$abs_path")")
+    done
+
+    # Remove newly-empty directories, walking up to (but not including) the target root
+    # Deduplicate and sort longest-first so deepest dirs are tried first
+    local unique_dirs
+    unique_dirs=$(printf '%s\n' "${dirs_to_check[@]}" | sort -u -r)
+    while IFS= read -r dir; do
+        [[ -z "$dir" ]] && continue
+        local current="$dir"
+        while true; do
+            local norm_current
+            norm_current=$(cd "$current" 2>/dev/null && pwd -P) || break
+            # Stop at target root
+            if [[ "$norm_current" == "$normal_target" ]]; then break; fi
+            case "$norm_current" in
+                "$normal_target"/*) : ;;
+                *) break ;;
+            esac
+            if [[ ! -d "$norm_current" ]]; then break; fi
+            # Check if empty
+            local children
+            children=$(ls -A "$norm_current" 2>/dev/null)
+            if [[ -n "$children" ]]; then break; fi
+            local rel_dir="${norm_current#$normal_target}"
+            rel_dir="${rel_dir#/}"
+            rmdir "$norm_current"
+            echo -e "  ${RED}PRUNED DIR: $rel_dir${NC}"
+            current="$(dirname "$norm_current")"
+        done
+    done <<< "$unique_dirs"
+}
+
 # --- Deploy logic ---
 
 TOTAL_CREATED=0
 TOTAL_UPDATED=0
 TOTAL_SKIPPED=0
+TOTAL_PRUNED=0
+TOTAL_WOULD_PRUNE=0
 
 deploy_section() {
     local tool_key="$1"
@@ -341,9 +527,25 @@ categories=()
 [[ -z "$CATEGORY" || "$CATEGORY" == "skills" ]] && categories+=("skills")
 
 if $DRY_RUN; then
-    mode="DRY RUN"
+    if $PRUNE_ONLY; then
+        mode="DRY RUN (PRUNE ONLY)"
+    elif $PRUNE; then
+        mode="DRY RUN (WITH PRUNE)"
+    else
+        mode="DRY RUN"
+    fi
 elif $DIFF_MODE; then
-    mode="DIFF"
+    if $PRUNE_ONLY; then
+        mode="DIFF (PRUNE ONLY)"
+    elif $PRUNE; then
+        mode="DIFF (WITH PRUNE)"
+    else
+        mode="DIFF"
+    fi
+elif $PRUNE_ONLY; then
+    mode="PRUNE ONLY"
+elif $PRUNE; then
+    mode="DEPLOY + PRUNE"
 else
     mode="DEPLOY"
 fi
@@ -354,7 +556,8 @@ echo "Targets:    ${targets[*]}"
 echo "Categories: ${categories[*]}"
 echo ""
 
-if ! $DRY_RUN && ! $DIFF_MODE && ! $FORCE; then
+# Upsert confirmation (skip if prune-only, dry-run, diff, or force)
+if ! $PRUNE_ONLY && ! $DRY_RUN && ! $DIFF_MODE && ! $FORCE; then
     read -rp "Proceed? [y/N] " confirm
     if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
         echo "Aborted."
@@ -379,22 +582,36 @@ for t in "${targets[@]}"; do
     echo -e "\n${MAGENTA}[$display_name]${NC}"
 
     for cat in "${categories[@]}"; do
-        echo -e "  ${WHITE}$cat:${NC}"
-        deploy_section "$t" "$cat"
+        if ! $PRUNE_ONLY; then
+            echo -e "  ${WHITE}$cat:${NC}"
+            deploy_section "$t" "$cat"
+        fi
+
+        if $PRUNE; then
+            echo -e "  ${WHITE}$cat (prune):${NC}"
+            prune_section "$t" "$cat"
+        fi
     done
 done
 
 echo ""
 echo -e "${CYAN}--- Summary ---${NC}"
-if $DRY_RUN; then
-    echo "Would create: $TOTAL_CREATED"
-    echo "Would update: $TOTAL_UPDATED"
-elif $DIFF_MODE; then
-    echo "New:     $TOTAL_CREATED"
-    echo "Changed: $TOTAL_UPDATED"
-else
-    echo "Created: $TOTAL_CREATED"
-    echo "Updated: $TOTAL_UPDATED"
+if ! $PRUNE_ONLY; then
+    if $DRY_RUN; then
+        echo "Would create: $TOTAL_CREATED"
+        echo "Would update: $TOTAL_UPDATED"
+    elif $DIFF_MODE; then
+        echo "New:     $TOTAL_CREATED"
+        echo "Changed: $TOTAL_UPDATED"
+    else
+        echo "Created: $TOTAL_CREATED"
+        echo "Updated: $TOTAL_UPDATED"
+    fi
+    echo "Up to date: $TOTAL_SKIPPED"
 fi
-echo "Up to date: $TOTAL_SKIPPED"
+if $DRY_RUN || $DIFF_MODE; then
+    echo "Would prune: $TOTAL_WOULD_PRUNE"
+else
+    echo "Pruned:      $TOTAL_PRUNED"
+fi
 echo ""

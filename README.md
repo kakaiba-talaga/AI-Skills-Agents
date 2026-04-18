@@ -73,6 +73,32 @@ For Cursor targets, the script automatically transforms files:
 
 See `docs/portability-guide.md` for the full format differences and tool gap analysis.
 
+### Pruning orphans
+
+The deploy scripts are additive by default: they create and update files at the target, but never remove anything. Over time this accumulates stale agents and skills — files that were renamed or deleted from the repo but remain in `~/.claude/` or `~/.cursor/`. The `--prune` / `-Prune` flag adds an opt-in delete pass that enumerates those orphans and removes them after confirmation.
+
+```powershell
+# Preview orphans across all targets — delete nothing
+.\tooling\deploy.ps1 -Prune -DryRun
+
+# Deploy + prune in one pass (prompts for confirmation twice: once for upsert, once for prune)
+.\tooling\deploy.ps1 -Prune
+
+# Prune only, skip upsert, no confirmation prompt — useful after renaming or deleting agents/skills in the repo
+.\tooling\deploy.ps1 -PruneOnly -Force
+```
+
+```bash
+# Linux/macOS equivalents
+./tooling/deploy.sh --prune --dry-run
+./tooling/deploy.sh --prune
+./tooling/deploy.sh --prune-only -f
+```
+
+Before deleting, the script prints the full orphan list and prompts: `Delete N orphan file(s)? [y/N]`. Pass `-Force` / `-f` to skip the prompt, or `-DryRun` / `-n` to preview without deleting anything. When both flags are present, dry-run wins — no deletion occurs regardless of `-Force`.
+
+`-PruneOnly` / `--prune-only` skips the upsert pass entirely, making it the right choice after renaming or deleting agents/skills in the repo when you only want to clean up the targets, not re-deploy.
+
 ## Compatibility
 
 | Component | Claude Code | Cursor | Notes |

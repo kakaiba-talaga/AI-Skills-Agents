@@ -40,6 +40,8 @@ The deploy script (`tooling/deploy.ps1` / `tooling/deploy.sh`) automates all tra
 
 `$ARGUMENTS` references are left in place. Cursor invokes skills by intent matching, not slash commands, so the variable simply won't be populated. The surrounding workflow instructions still function.
 
+**Prune mode and `SKILL.cursor.md`:** The `--prune` / `-Prune` flag's orphan calculation is filename-based, so the `SKILL.cursor.md` override does not affect it. The deploy script always writes the file as `SKILL.md` at the target — whether its content came from a straight transform of `SKILL.md` or from a `SKILL.cursor.md` override. Prune therefore computes the expected set using the deployed filename (`SKILL.md`) and correctly identifies it as a tracked file, not an orphan. Conversely, a file literally named `SKILL.cursor.md` found at a Cursor target is always an orphan — it is never in the expected set, because the deploy script never writes a file by that name to any target. Prune will flag and remove it.
+
 ## Tool Name Mapping
 
 | Claude Code | Cursor | Notes |
