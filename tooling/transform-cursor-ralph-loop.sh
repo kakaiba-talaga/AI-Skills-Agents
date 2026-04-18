@@ -2,28 +2,46 @@
 #
 # Transform skills/ralph-loop/SKILL.md into the Cursor-compatible SKILL.cursor.md.
 #
+# Default behavior: drift-check. If the target SKILL.cursor.md already exists
+# and matches what this transform would produce, print "in sync" and exit 0.
+# If the target differs, print a drift summary and prompt for regeneration
+# (when stdin is a tty) or exit 3 (when stdin is not a tty — CI-friendly).
+#
 # Usage:
 #   ./tooling/transform-cursor-ralph-loop.sh [options]
 #
 # Options:
 #   -i, --in  <path>    Source SKILL.md (default: skills/ralph-loop/SKILL.md)
-#   -o, --out <path>    Output path, or "-" for stdout (default: -)
-#   -f, --force         Overwrite output if it already exists
-#   -w, --what-if       Preview only — print line count and SHA256
+#   -o, --out <path>    Output path, or "-" for stdout
+#                       (default: sibling SKILL.cursor.md of -i, or "-" if
+#                       -i doesn't match a skills/<name>/SKILL.md pattern)
+#   -f, --force         Skip drift-check; always regenerate and write
+#   -w, --what-if       Preview only — print line count and SHA256, no write
+#                       (takes precedence over --force if both are set)
 #   -h, --help          Show this help
 #
-# Examples:
-#   ./tooling/transform-cursor-ralph-loop.sh -i skills/ralph-loop/SKILL.md -o _tmp_cursor-from-sh.md -f
+# Exit codes:
+#   0  Success (in sync, wrote file, what-if printed, or stdout printed)
+#   1  Input error (missing file, bad args)
+#   3  Drift detected and no prompt was available (non-tty stdin)
+#   4  User declined regeneration at the prompt
 #
-# The checked-in SKILL.cursor.md is the drift baseline. Re-run this script and
-# commit the output whenever SKILL.md is edited.
+# Examples:
+#   ./tooling/transform-cursor-ralph-loop.sh              # drift-check, prompt on drift
+#   ./tooling/transform-cursor-ralph-loop.sh -f           # force regenerate
+#   ./tooling/transform-cursor-ralph-loop.sh -w           # preview SHA + line count
+#   ./tooling/transform-cursor-ralph-loop.sh -o -         # emit to stdout
 
-set -euo pipefail
+set -uo pipefail
 
 IN_PATH="skills/ralph-loop/SKILL.md"
-OUT_PATH="-"
+OUT_PATH=""
 FORCE=false
 WHAT_IF=false
+
+print_help() {
+    sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
+}
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -31,7 +49,7 @@ while [[ $# -gt 0 ]]; do
         -o|--out)      OUT_PATH="$2"; shift 2 ;;
         -f|--force)    FORCE=true; shift ;;
         -w|--what-if)  WHAT_IF=true; shift ;;
-        -h|--help)     head -20 "$0" | tail -18; exit 0 ;;
+        -h|--help)     print_help; exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
@@ -41,9 +59,17 @@ if [[ ! -f "$IN_PATH" ]]; then
     exit 1
 fi
 
-if [[ "$OUT_PATH" != "-" && -f "$OUT_PATH" && "$FORCE" != "true" ]]; then
-    echo "Error: Output file already exists: $OUT_PATH. Use -f/--force to overwrite." >&2
-    exit 1
+# ---------------------------------------------------------------------------
+# Derive default OUT_PATH: sibling SKILL.cursor.md of IN_PATH when IN_PATH
+# ends in /SKILL.md; otherwise default to stdout ("-").
+# ---------------------------------------------------------------------------
+if [[ -z "$OUT_PATH" ]]; then
+    IN_PATH_NORM="${IN_PATH//\\//}"
+    if [[ "$IN_PATH_NORM" == */SKILL.md ]]; then
+        OUT_PATH="${IN_PATH_NORM%/SKILL.md}/SKILL.cursor.md"
+    else
+        OUT_PATH="-"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -67,11 +93,18 @@ if [[ -z "$PYTHON" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Run transform via embedded Python script
+# Run transform via embedded Python script.
+# Args: in_path out_path what_if force
+# Python exit codes: 0 (success/sync), 3 (drift). Wrapper adds 1 (bad args/no Python) and 4 (user declined).
+# The wrapper below converts exit 3 into a prompt (tty) or propagates it (non-tty).
 # ---------------------------------------------------------------------------
-"$PYTHON" - "$IN_PATH" "$OUT_PATH" "$WHAT_IF" "$FORCE" <<'PYEOF'
+run_python() {
+    local force_arg="$1"
+    "$PYTHON" - "$IN_PATH" "$OUT_PATH" "$WHAT_IF" "$force_arg" <<'PYEOF'
 import sys
 import hashlib
+import os
+import difflib
 
 in_path   = sys.argv[1]
 out_path  = sys.argv[2]
@@ -141,29 +174,78 @@ rep(
 text = text.replace("~/.claude/", "~/.cursor/")
 
 # ---------------------------------------------------------------------------
-# Output (LF — no CRLF conversion)
+# Output / drift-check decision
 # ---------------------------------------------------------------------------
-result = text
-result_bytes = result.encode("utf-8")
-
-line_count = result.count("\n") + (1 if result and not result.endswith("\n") else 0)
-sha = hashlib.sha256(result_bytes).hexdigest()
+result_bytes = text.encode("utf-8")
+new_sha = hashlib.sha256(result_bytes).hexdigest()
+new_lines = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
 
 if what_if:
-    print(f"[WhatIf] Lines: {line_count} | SHA256: {sha}")
+    print(f"[WhatIf] Lines: {new_lines} | SHA256: {new_sha}")
     sys.exit(0)
-
-import os
 
 if out_path == "-":
     sys.stdout.buffer.write(result_bytes)
-else:
-    if os.path.exists(out_path) and not force:
-        print(f"Error: Output file already exists: {out_path}. Use -f/--force to overwrite.", file=sys.stderr)
-        sys.exit(1)
+    sys.exit(0)
+
+target_exists = os.path.exists(out_path)
+
+if force or not target_exists:
     with open(out_path, "wb") as f:
         f.write(result_bytes)
     print(f"Written: {out_path}")
-    print(f"SHA256:  {sha}")
-    print(f"Lines:   {line_count}")
+    print(f"SHA256:  {new_sha}")
+    print(f"Lines:   {new_lines}")
+    sys.exit(0)
+
+# drift-check path: target exists, not forced
+with open(out_path, "rb") as f:
+    existing_bytes = f.read()
+existing_sha = hashlib.sha256(existing_bytes).hexdigest()
+existing_lines = existing_bytes.decode("utf-8", errors="replace").count("\n") + (1 if existing_bytes and not existing_bytes.endswith(b"\n") else 0)
+
+if existing_sha == new_sha:
+    print(f"No drift — {out_path} is in sync.")
+    sys.exit(0)
+
+# drift detected
+print(f"Drift detected: {out_path}", file=sys.stderr)
+print(f"  Old SHA: {existing_sha} ({existing_lines} lines)", file=sys.stderr)
+print(f"  New SHA: {new_sha} ({new_lines} lines)", file=sys.stderr)
+existing_text = existing_bytes.decode("utf-8", errors="replace").splitlines(keepends=True)
+new_text = text.splitlines(keepends=True)
+diff_lines = list(difflib.unified_diff(existing_text, new_text, fromfile="existing", tofile="new", n=2))
+if diff_lines:
+    print("  First differences:", file=sys.stderr)
+    for line in diff_lines[:20]:
+        print(f"    {line.rstrip()}", file=sys.stderr)
+
+sys.exit(3)
 PYEOF
+}
+
+run_python "$FORCE"
+code=$?
+
+# ---------------------------------------------------------------------------
+# Wrapper drift-check prompt: on exit 3 with stdin tty, offer regeneration.
+# Non-tty stdin → propagate 3 (CI-friendly).
+# ---------------------------------------------------------------------------
+if [ "$code" -eq 3 ] && [ "$FORCE" != "true" ]; then
+    if [ -t 0 ]; then
+        printf "Regenerate %s? [y/N]: " "$OUT_PATH" >&2
+        read -r response
+        case "$response" in
+            [yY]|[yY][eE][sS])
+                run_python "true"
+                code=$?
+                ;;
+            *)
+                echo "Aborted — no changes written." >&2
+                code=4
+                ;;
+        esac
+    fi
+fi
+
+exit $code

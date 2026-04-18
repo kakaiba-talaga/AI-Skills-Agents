@@ -3,38 +3,56 @@
     Transform skills/ralph-loop/SKILL.md into the Cursor-compatible SKILL.cursor.md.
 
 .DESCRIPTION
-    Reads SKILL.md (or a specified input path) and applies all Claude→Cursor
-    transforms deterministically, producing output byte-identical to the
-    checked-in SKILL.cursor.md. Both this script and the .sh wrapper invoke
-    the same embedded Python logic, so sh↔ps1 parity is guaranteed by
-    construction.
+    Default behavior: drift-check. If the target SKILL.cursor.md already
+    exists and matches what this transform would produce, print "in sync"
+    and exit 0. If the target differs, print a drift summary and prompt
+    for regeneration (when stdin is a tty) or exit 3 (when stdin is not a
+    tty — CI-friendly).
 
-    Output uses LF line endings.
+    Both this script and the .sh wrapper invoke the same embedded Python
+    logic (byte-identical body), so sh↔ps1 parity is guaranteed by
+    construction. Output uses LF line endings.
 
 .PARAMETER In
     Source SKILL.md. Default: skills/ralph-loop/SKILL.md
 
 .PARAMETER Out
-    Destination path, or "-" for stdout. Default: "-"
+    Destination path, or "-" for stdout.
+    Default: sibling SKILL.cursor.md of -In when -In ends in /SKILL.md;
+    otherwise "-".
 
 .PARAMETER Force
-    Overwrite Out if it already exists.
+    Skip drift-check; always regenerate and write.
 
 .PARAMETER WhatIf
     Preview only — print line count and SHA256 of what would be written.
+    Takes precedence over -Force if both are set.
 
 .EXAMPLE
-    .\tooling\transform-cursor-ralph-loop.ps1 -In skills/ralph-loop/SKILL.md -Out _tmp_cursor-from-ps1.md -Force
+    .\tooling\transform-cursor-ralph-loop.ps1
+    Default: drift-check. Prompts for regeneration on drift, exits 3 on
+    non-tty drift (CI-friendly).
+
+.EXAMPLE
+    .\tooling\transform-cursor-ralph-loop.ps1 -Force
+    Force regenerate, no drift-check.
+
+.EXAMPLE
+    .\tooling\transform-cursor-ralph-loop.ps1 -WhatIf
+    Preview SHA256 + line count.
 
 .NOTES
-    The checked-in SKILL.cursor.md is the drift baseline. Re-run this script
-    and commit the output whenever SKILL.md is edited.
+    Exit codes:
+      0  Success (in-sync, wrote, what-if preview, stdout)
+      1  Input error (bad args, source not found)
+      3  Drift detected; non-tty stdin (CI-friendly: no prompt shown)
+      4  User declined regeneration at interactive prompt
 #>
 
 [CmdletBinding()]
 param(
     [string]$In   = "skills/ralph-loop/SKILL.md",
-    [string]$Out  = "-",
+    [string]$Out  = "",
     [switch]$Force,
     [switch]$WhatIf,
     [switch]$Help
@@ -52,9 +70,17 @@ if (-not (Test-Path $In)) {
     exit 1
 }
 
-if ($Out -ne "-" -and (Test-Path $Out) -and -not $Force) {
-    Write-Error "Output file already exists: $Out. Use -Force to overwrite."
-    exit 1
+# ---------------------------------------------------------------------------
+# Derive default Out: sibling SKILL.cursor.md of In when In ends in
+# /SKILL.md; otherwise default to stdout ("-").
+# ---------------------------------------------------------------------------
+if ([string]::IsNullOrEmpty($Out)) {
+    $normIn = $In -replace '\\', '/'
+    if ($normIn.EndsWith("/SKILL.md")) {
+        $Out = $normIn.Substring(0, $normIn.Length - "/SKILL.md".Length) + "/SKILL.cursor.md"
+    } else {
+        $Out = "-"
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -87,12 +113,13 @@ if (-not $python) {
 }
 
 # ---------------------------------------------------------------------------
-# Embedded Python script — logically identical to the body in transform-cursor-ralph-loop.sh
-# (trailing newline may differ due to heredoc vs here-string syntax — output is byte-identical).
+# Embedded Python script — byte-identical to the body in transform-cursor-ralph-loop.sh.
 # ---------------------------------------------------------------------------
 $pyScript = @'
 import sys
 import hashlib
+import os
+import difflib
 
 in_path   = sys.argv[1]
 out_path  = sys.argv[2]
@@ -162,39 +189,58 @@ rep(
 text = text.replace("~/.claude/", "~/.cursor/")
 
 # ---------------------------------------------------------------------------
-# Output (LF — no CRLF conversion)
+# Output / drift-check decision
 # ---------------------------------------------------------------------------
-result = text
-result_bytes = result.encode("utf-8")
-
-line_count = result.count("\n") + (1 if result and not result.endswith("\n") else 0)
-sha = hashlib.sha256(result_bytes).hexdigest()
+result_bytes = text.encode("utf-8")
+new_sha = hashlib.sha256(result_bytes).hexdigest()
+new_lines = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
 
 if what_if:
-    print(f"[WhatIf] Lines: {line_count} | SHA256: {sha}")
+    print(f"[WhatIf] Lines: {new_lines} | SHA256: {new_sha}")
     sys.exit(0)
-
-import os
 
 if out_path == "-":
     sys.stdout.buffer.write(result_bytes)
-else:
-    if os.path.exists(out_path) and not force:
-        print(f"Error: Output file already exists: {out_path}. Use -f/--force to overwrite.", file=sys.stderr)
-        sys.exit(1)
+    sys.exit(0)
+
+target_exists = os.path.exists(out_path)
+
+if force or not target_exists:
     with open(out_path, "wb") as f:
         f.write(result_bytes)
     print(f"Written: {out_path}")
-    print(f"SHA256:  {sha}")
-    print(f"Lines:   {line_count}")
+    print(f"SHA256:  {new_sha}")
+    print(f"Lines:   {new_lines}")
+    sys.exit(0)
+
+# drift-check path: target exists, not forced
+with open(out_path, "rb") as f:
+    existing_bytes = f.read()
+existing_sha = hashlib.sha256(existing_bytes).hexdigest()
+existing_lines = existing_bytes.decode("utf-8", errors="replace").count("\n") + (1 if existing_bytes and not existing_bytes.endswith(b"\n") else 0)
+
+if existing_sha == new_sha:
+    print(f"No drift — {out_path} is in sync.")
+    sys.exit(0)
+
+# drift detected
+print(f"Drift detected: {out_path}", file=sys.stderr)
+print(f"  Old SHA: {existing_sha} ({existing_lines} lines)", file=sys.stderr)
+print(f"  New SHA: {new_sha} ({new_lines} lines)", file=sys.stderr)
+existing_text = existing_bytes.decode("utf-8", errors="replace").splitlines(keepends=True)
+new_text = text.splitlines(keepends=True)
+diff_lines = list(difflib.unified_diff(existing_text, new_text, fromfile="existing", tofile="new", n=2))
+if diff_lines:
+    print("  First differences:", file=sys.stderr)
+    for line in diff_lines[:20]:
+        print(f"    {line.rstrip()}", file=sys.stderr)
+
+sys.exit(3)
 '@
 
 # ---------------------------------------------------------------------------
-# Invoke Python with the embedded script. PowerShell's stdin pipeline
-# re-encodes characters, which corrupts non-ASCII bytes (em-dash, etc.) before
-# Python sees them. Write the script to a temp file as UTF-8 (no BOM) and
-# invoke Python with the file path — this guarantees the interpreter receives
-# the exact bytes the heredoc in the .sh wrapper does.
+# Invoke Python. Write the embedded script to a temp file as UTF-8 (no BOM)
+# to avoid PowerShell stdin pipeline re-encoding corrupting non-ASCII bytes.
 # ---------------------------------------------------------------------------
 $whatIfArg = if ($WhatIf) { "true" } else { "false" }
 $forceArg  = if ($Force)  { "true" } else { "false" }
@@ -206,6 +252,23 @@ try {
     [System.IO.File]::WriteAllText($tmpPy, $pyScript, $utf8NoBom)
     & $python $tmpPy $In $Out $whatIfArg $forceArg
     $code = $LASTEXITCODE
+
+    # -----------------------------------------------------------------------
+    # Wrapper drift-check prompt: on exit 3 with stdin tty, offer regeneration.
+    # Non-tty stdin → propagate 3 (CI-friendly).
+    # -----------------------------------------------------------------------
+    if ($code -eq 3 -and -not $Force) {
+        if (-not [Console]::IsInputRedirected) {
+            $response = Read-Host -Prompt "Regenerate $Out? [y/N]"
+            if ($response -match '^(y|Y|yes|Yes|YES)$') {
+                & $python $tmpPy $In $Out $whatIfArg "true"
+                $code = $LASTEXITCODE
+            } else {
+                [Console]::Error.WriteLine("Aborted — no changes written.")
+                $code = 4
+            }
+        }
+    }
 } finally {
     if (Test-Path $tmpPy) { Remove-Item $tmpPy -Force }
 }
