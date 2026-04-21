@@ -23,10 +23,14 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
 | [git-master](git-master.md) | sonnet | Utility agent for git operations — branching, commits, PRs, merges, conflict resolution, releases, repo hygiene, and work-in-progress pause/resume. Generates commit messages standalone when `/commit-message` is unavailable. Available at any pipeline stage. |
 | [ssh-executor](ssh-executor.md) | sonnet | Executes commands on remote servers via SSH. Handles remote command execution, file transfer (scp), remote verification, and service management. Uses SSH config for host resolution and key-based auth only. |
+| [preflight](preflight.md) | sonnet | Validates project environment readiness — runtime, dependencies, git, config files, disk space. Returns a structured pass/fail/warn checklist. Runs before any agent dispatch. |
+| [work-verifier](work-verifier.md) | sonnet | Verifies whether interrupted or prior agent work was actually completed by checking file existence, git diff, handoff files, and content quality. Returns per-deliverable verdicts for resume decisions. |
+| [rollback](rollback.md) | sonnet | Rolls back agent-produced changes at the appropriate scope — single task, task chain, full run, or worktree. Stashes before reverting, checks for file overlap, and respects guardrails. |
+| [change-analyzer](change-analyzer.md) | sonnet | Analyzes a git diff to classify changes and recommend which pipeline stages (verify, deslop, review) to run or skip. Returns per-stage recommendations with justification. |
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, preflight, work-verifier, rollback, change-analyzer.
 
 ### Overriding the default model
 
@@ -43,7 +47,7 @@ When the ops skill dispatches agents programmatically via the `Agent` tool, the 
 
 Custom agent files at `~/.claude/agents/` are loaded when a user invokes an agent by name in conversation, but they do **not** extend the `subagent_type` enum for programmatic dispatch. The ops skill works around this by reading the agent definition file, injecting its instructions into the prompt, and labeling the dispatch via the `description` field (e.g., `"executor(Implement auth middleware)"`). See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure.
 
-In Cursor, this is not an issue — Cursor's `Task` tool `subagent_type` enum includes all 15 agent types natively.
+In Cursor, this is not an issue — Cursor's `Task` tool `subagent_type` enum includes all agent types natively.
 
 ## Usage
 
@@ -143,6 +147,30 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Create a feature branch for the new verification framework"_
 - _"Resolve the merge conflicts on this branch"_
 - _"Tag this as v0.3.0 and generate a changelog"_
+
+### Preflight
+
+- _"Run a preflight check before I start working"_
+- _"Check if the environment is ready for agent work"_
+- _"Validate that dependencies are installed and the runtime works"_
+
+### Work Verifier
+
+- _"Check if the previous agent's work was actually completed"_
+- _"Verify the interrupted task — did the executor finish before the session died?"_
+- _"Assess the state of in-progress tasks before resuming"_
+
+### Rollback
+
+- _"Undo the last executor's changes — they didn't pass verification"_
+- _"Roll back everything from this run — the approach is wrong"_
+- _"Revert the changes to src/auth/ from the failed task"_
+
+### Change Analyzer
+
+- _"Classify my staged changes — do I need a full review?"_
+- _"Analyze the diff and tell me which pipeline stages to skip"_
+- _"Is this change trivial enough to skip verification?"_
 
 ### Ops (skill)
 
@@ -277,6 +305,30 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Service management (systemctl, docker) via SSH
 - ProxyJump/bastion host support via standard SSH config
 
+**Preflight:**
+
+- Environment readiness validation (runtime, dependencies, git, config, disk space)
+- Three-tier check system: critical (blocks), standard (auto-fix then block), warning (log only)
+- Standalone invocable — does not require an ops run
+
+**Work Verifier:**
+
+- 4-check verification protocol: file existence, git diff, handoff file, content validation
+- Per-deliverable verdicts: completed, partial, not-started, broken
+- Re-dispatch context generation for partially completed work
+
+**Rollback:**
+
+- Scope-level rollback: single task, task chain, full run, worktree
+- Always stashes before reverting — nothing is permanently lost
+- File overlap detection with successful tasks before auto-reverting
+
+**Change Analyzer:**
+
+- Diff classification by type: code, config, docs, tests
+- Per-stage skip/run recommendations for verify, deslop, review
+- NEVER-skip rules take precedence over skip conditions
+
 ### Utility Agent Handoffs
 
 Utility agents can hand off to pipeline agents or other utility agents depending on their outcome. Unlike the linear pipeline, these handoffs are conditional — they depend on what the agent found.
@@ -316,6 +368,25 @@ No outbound handoffs. Git-master is a pure utility — it is invoked by other ag
 | Remote config changed, needs review | **code-reviewer** (review config changes) |
 | Deployment complete, needs recording | **git-master** (tag deployment, update changelog) |
 | Connection or permission failure | Back to **user** with diagnostic details |
+
+**Preflight:**
+
+No outbound handoffs. Preflight returns a structured checklist — the caller (ops or user) decides whether to proceed, fix, or stop.
+
+**Work Verifier:**
+
+No outbound handoffs. Work-verifier returns per-deliverable verdicts — the caller uses them to decide: mark complete, re-dispatch with context, or rollback.
+
+**Rollback:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Rollback complete, clean state | Caller re-dispatches the failed task |
+| File overlap detected | Back to **user** for manual decision |
+
+**Change Analyzer:**
+
+No outbound handoffs. Change-analyzer returns per-stage recommendations — the caller decides whether to run or skip each stage.
 
 ### Parallelization
 

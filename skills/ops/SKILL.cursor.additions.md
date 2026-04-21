@@ -117,16 +117,16 @@ ANCHOR: | Spec or requirement text | If `--brainstorm` is set (or the user expli
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: | `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. Treat all `in_progress` tasks as orphaned. Run dedup verification (`resume-dedup.md`), then Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |
+ANCHOR: | `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. Treat all `in_progress` tasks as orphaned. Dispatch a **work-verifier** agent (see `~/.claude/agents/work-verifier.md`) per in-progress task to determine actual completion status. Then run Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |
 @@CONTENT
-| `resume` | Read the state file from `.ops-state/`. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
+| `resume` | Read the state file from `.ops-state/`. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per in-progress task to determine actual completion status. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
 @@END
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: | `status` | Read the state file. Run orphan detection on `in_progress` tasks (`agent-health-monitoring.md` §3b). Display the dashboard (see Status Dashboard), stop. |
+ANCHOR: | `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |
 @@CONTENT
-| `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
+| `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) via `Task(subagent_type="generalPurpose")` with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |
 @@END
 
 @@PATCH
@@ -326,9 +326,9 @@ ANCHOR: **Display the task board after creation.** After the state file is writt
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
+ANCHOR: After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`). If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 @@CONTENT
-After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent via `Task(subagent_type="verifier")` with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
+After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **preflight** agent (see `~/.cursor/agents/preflight.md`) via `Task(subagent_type="generalPurpose")`. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 @@END
 
 @@PATCH
@@ -360,11 +360,10 @@ ANCHOR: Use the brief format below.
 @@END
 
 @@PATCH
-ACTION: replace_through
-ANCHOR: After updating timing, evaluate health status for all in-progress background agents (see `agent-health-monitoring.md` Sections 3 and 3a). Emit proactive warnings for any threshold crossings before proceeding to result processing.
-@@STOP
-After updating timing, evaluate health status for all in-progress background agents (see `agent-health-monitoring.md` Sections 3 and 3a). Emit proactive warnings for any threshold crossings before proceeding to result processing.
+ACTION: replace_line
+ANCHOR: After updating timing, check elapsed time of all in-progress background agents against their estimates. Emit a `⚠️ SLOW` warning when elapsed exceeds 1.5× estimate, or `🔴 OVERRUN` when elapsed exceeds 2.5× estimate. Warnings are emitted once per threshold crossing per task. For tasks with `estimate_source: "ops"` (rough estimates), suppress SLOW and emit OVERRUN only.
 @@CONTENT
+After updating timing, check elapsed time of all in-progress background agents against their estimates. Emit a `⚠️ SLOW` warning when elapsed exceeds 1.5× estimate, or `🔴 OVERRUN` when elapsed exceeds 2.5× estimate. Warnings are emitted once per threshold crossing per task. For tasks with `estimate_source: "ops"` (rough estimates), suppress SLOW and emit OVERRUN only.
 @@END
 
 @@PATCH
@@ -399,9 +398,9 @@ ANCHOR: | **Blocked** — agent hit an external dependency or environment issue 
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: > **Reference:** You MUST Read `~/.claude/skills/ops/agent-health-monitoring.md` for timeout budgets, stall detection rules, health escalation procedures, proactive health warnings, and orphan detection. If the file is missing, proceed without health monitoring.
+ANCHOR: Orphan detection is handled by the **work-verifier** agent (see `~/.claude/agents/work-verifier.md`), which includes timeout budgets per agent type and orphan detection heuristics.
 @@CONTENT
-> **Reference:** You MUST Read `~/.cursor/skills/ops/agent-health-monitoring.md` for timeout budgets, stall detection rules, and health escalation procedures. If the file is missing, proceed without health monitoring.
+Orphan detection is handled by the **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`), which includes timeout budgets per agent type and orphan detection heuristics.
 @@END
 
 @@PATCH
@@ -434,9 +433,9 @@ ANCHOR:    > **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-case
 
 @@PATCH
 ACTION: replace_line
-ANCHOR:    > **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, and calibration procedure. If the file is missing, proceed without estimation feedback.
+ANCHOR:    > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.
 @@CONTENT
-   > **Reference:** You MUST Read `~/.cursor/skills/ops/estimation-feedback.md` for the estimation feedback loop and calibration procedure. If the file is missing, proceed without estimation feedback.
+   > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.cursor/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.
 @@END
 
 @@PATCH
@@ -500,9 +499,9 @@ When a chain has multiple implementation tasks, parallelize then converge:
 ACTION: replace_through
 ANCHOR: Security-reviewer is optional — dispatched for security-sensitive patterns (auth, secrets, API keys, encryption, external inputs).
 @@STOP
-> **Reference:** See `~/.claude/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, handoff format, and SSH handoff chains (read only for SSH tasks). If the file is missing, proceed without SSH-specific guidance.
+> **Reference:** The **ssh-executor** agent (see `~/.claude/agents/ssh-executor.md`) handles its own preflight checks (host validation, connectivity, key, source files, remote directory) and includes SSH-specific handoff fields in its output format. No separate preflight dispatch is needed for SSH tasks.
 @@CONTENT
-> **Reference:** See `~/.cursor/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, and handoff format (read only for SSH tasks). If the file is missing, proceed without SSH-specific guidance.
+> **Reference:** The **ssh-executor** agent (see `~/.cursor/agents/ssh-executor.md`) handles its own preflight checks (host validation, connectivity, key, source files, remote directory) and includes SSH-specific handoff fields in its output format. No separate preflight dispatch is needed for SSH tasks.
 @@END
 
 @@PATCH
@@ -566,16 +565,16 @@ ANCHOR: | 3 consecutive failures on same task | Escalate model (see Model Escala
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: > **Reference:** See `~/.claude/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, guardrails, and model escalation details (read only on failure escalation). If the file is missing, proceed without automatic rollback.
+ANCHOR: > **Reference:** When rollback is needed, dispatch a **rollback** agent (see `~/.claude/agents/rollback.md`) with the affected file list, scope level, and run ID.
 @@CONTENT
-> **Reference:** See `~/.cursor/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, and guardrails (read only on failure escalation). If the file is missing, proceed without automatic rollback.
+> **Reference:** When rollback is needed, dispatch a **rollback** agent (see `~/.cursor/agents/rollback.md`) via `Task(subagent_type="generalPurpose")` with the affected file list, scope level, and run ID.
 @@END
 
 @@PATCH
 ACTION: replace_through
 ANCHOR: - <agent> → Task #N: "<subject>" (in_progress, Xs elapsed) [health indicator]
 @@STOP
-Health indicators: ✓ ON TRACK, ⚠️ SLOW, 🔴 OVERRUN, 👻 ORPHAN? (defined in `agent-health-monitoring.md` §6)
+Health indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2.5×), 🔴 OVERRUN (> 2.5×), 👻 ORPHAN? (elapsed > agent-type timeout, no completion received)
 @@CONTENT
 - <agent> → Task #N: "<subject>" (in_progress, Xs elapsed)
 @@END
@@ -612,7 +611,7 @@ ANCHOR: | **Task too large** — agent reports the task needs splitting | Pause 
 ACTION: replace_through
 ANCHOR: ### Model escalation
 @@STOP
-> **Reference:** You MUST Read `~/.claude/skills/ops/rollback-strategy.md` for model escalation metadata format, skip conditions, and the complete rollback procedure. If the file is missing, proceed using the escalation ladder above.
+> **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.
 @@CONTENT
 ### Retry strategy
 
@@ -632,7 +631,7 @@ Note: Cursor does not support model escalation (changing the model between attem
 ACTION: replace_through
 ANCHOR: ### Learning across runs
 @@STOP
-> **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, calibration procedure, and cross-run learning patterns. If the file is missing, proceed without estimation feedback.
+> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start and `/timing-calibrator capture` at completion.
 @@CONTENT
 @@END
 
@@ -731,4 +730,25 @@ ANCHOR: > **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md`
 
 - **Write-before** (immediately before the nested-skill call): (1) build the `pending_nested_skill` record with fields `skill`, `invoked_at`, `resume_phase`, `resume_notes`; (2) read the state file from disk; (3) set the `pending_nested_skill` field on the root object; (4) write the state file to disk; (5) issue the nested-skill call.
 - **Clear-after** (immediately after the nested skill returns, in the same turn): (1) read the state file from disk (cache was invalidated — see Step 1); (2) read `pending_nested_skill.resume_phase` and `resume_notes` to identify where to resume and how to proceed; (3) capture any output the nested skill produced that downstream phases need — write it into a handoff file where one exists, or hold it in-turn for the next agent's brief when no handoff procedure applies; (4) set `pending_nested_skill` back to `null`; (5) write the state file to disk; (6) execute the `resume_phase`-specified next action. **Do not end the turn.** See Non-negotiable #10.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: - **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, invoke `/timing-calibrator read` (see `~/.claude/skills/timing-calibrator/SKILL.md`) for historical averages per agent type. If calibration data exists, use historical averages. If no calibration data, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
+@@CONTENT
+- **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, invoke `/timing-calibrator read` (see `~/.cursor/skills/timing-calibrator/SKILL.md`) for historical averages per agent type. If calibration data exists, use historical averages. If no calibration data, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: **Per-stage conditional skip:** When the trivial skip does not apply, dispatch a **change-analyzer** agent (see `~/.claude/agents/change-analyzer.md`) with the current diff to get per-stage run/skip recommendations for verify, deslop, and review. Apply its recommendations.
+@@CONTENT
+**Per-stage conditional skip:** When the trivial skip does not apply, dispatch a **change-analyzer** agent (see `~/.cursor/agents/change-analyzer.md`) via `Task(subagent_type="generalPurpose")` with the current diff to get per-stage run/skip recommendations for verify, deslop, and review. Apply its recommendations.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: > **Reference:** On `resume`, dispatch a **work-verifier** agent (see `~/.claude/agents/work-verifier.md`) per in-progress task to determine completion status.
+@@CONTENT
+> **Reference:** On `resume`, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) via `Task(subagent_type="generalPurpose")` per in-progress task to determine completion status.
 @@END

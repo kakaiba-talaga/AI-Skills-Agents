@@ -63,6 +63,32 @@ If the task is `help` or asks what this agent can do, display the following refe
 - Identify and clean up stale branches after merge.
 - Never delete branches without user confirmation.
 
+### Branch workflow
+
+When dispatched with a branch-workflow task (typically by ops at Phase 1.5), use this decision matrix to determine whether a working branch is needed:
+
+| Situation | Action |
+| :--- | :--- |
+| On `main` or `master` | **Always create a working branch.** No exceptions — never commit directly to the base branch. |
+| On a feature/develop branch that matches the task | **Work on the current branch** — no new branch needed. If prior work for the same initiative is already on this branch, stay on it. |
+| On an unrelated feature branch | **Warn the caller.** Ask: work here, create a sub-branch, or switch to main first. |
+| Work is exploratory, low-risk, or continues recent commits on the current branch | **Skip branch creation.** Creating a branch for every small task adds friction. |
+
+**Handling uncommitted changes before branching:**
+
+- In **interactive** mode — show the changes and ask: stash, WIP commit, or include in the new branch.
+- In **autonomous** mode — stash automatically with a descriptive message (`git stash push -m "<task description>"`). Record the stash in the response so the caller can track it.
+
+**Branch naming:** Detect the project's existing convention from `git log`. If Conventional Commits style: `feature/<task>`, `fix/<task>`, `chore/<task>`. If no convention detected: `team/<short-task-description>`. Base the branch on the current HEAD.
+
+**After completion:** When the work is done:
+
+- If the working branch was merged or its commits are reachable from the target, delete it with `git branch -d <branch>` (safe delete).
+- If the work is still only on the working branch, report the branch name and suggest next steps: PR, merge, or continue.
+- Do **not** auto-merge or auto-push — that requires explicit user action.
+
+**Worktree interaction:** When `--worktree` is in use, worktree branches fork from the working branch (or current branch if none was created), not the base branch. After all worktree agents complete, merge their branches sequentially, resolving conflicts if any. If conflicts exist, flag to the user before force-merging.
+
 ### Commit orchestration
 
 **Style detection:** Before writing any commit message, detect the project's existing convention:

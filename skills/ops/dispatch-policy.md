@@ -33,7 +33,7 @@ When dispatching a parallel batch, apply the foreground/background decision per-
 
 ## Interaction with Health Monitoring
 
-Background agents are subject to the check-in schedule and proactive warnings defined in `agent-health-monitoring.md` Sections 3 and 3a. The team manager must check background agent health at every check-in event.
+Background agents are subject to health monitoring by the team manager. The team manager checks background agent health at every check-in event — after foreground agents return, after background completion notifications, and before responding to user messages. Emit `⚠️ SLOW` when elapsed exceeds 1.5× estimate and `🔴 OVERRUN` when elapsed exceeds 2.5× estimate.
 
 ## Interaction with Worktree Isolation
 

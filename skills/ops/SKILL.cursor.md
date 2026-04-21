@@ -140,8 +140,8 @@ Determine the starting point from the parsed arguments:
 | :--- | :--- |
 | Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
-| `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
-| `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
+| `resume` | Read the state file from `.ops-state/`. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per in-progress task to determine actual completion status. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
+| `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) via `Task(subagent_type="generalPurpose")` with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
 
@@ -240,7 +240,7 @@ Branch isolation is the default — create a working branch before agents modify
 
 When skipping, **always log it as an adaptation**: "Adapted: skipped branch creation — current branch `develop` already contains related Phase 1 work."
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/branch-isolation.md` for complete branch handling procedures (uncommitted changes, branch creation, after-completion cleanup, worktree/ralph/resume interaction) and git worktree isolation rules (when to use, merge strategy). If the file is missing, proceed using the decision table above.
+> **Reference:** Dispatch the **git-master** agent (see `~/.cursor/agents/git-master.md`) with a branch-workflow task. The git-master's "Branch workflow" section contains the full decision matrix, uncommitted-change handling, naming conventions, completion cleanup, and worktree interaction rules.
 
 ### Phase 2 — Task Board Creation
 
@@ -273,8 +273,8 @@ Read the plan hierarchy (milestones > stages > tasks). For each actionable task,
 - **agent_type**: Agent to assign (see Agent Assignment Rules)
 - **stage**: Pipeline stage — `plan`, `implement`, `verify`, `review`, `document`
 - **priority**: `1` (critical path) through `5` (nice-to-have)
-- **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
-- **estimate_source**: `"scoping-doc"` or `"ops"`
+- **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, invoke `/timing-calibrator read` (see `~/.cursor/skills/timing-calibrator/SKILL.md`) for historical averages per agent type. If calibration data exists, use historical averages. If no calibration data, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
+- **estimate_source**: `"scoping-doc"`, `"calibration"`, or `"ops"`
 - **blocked_by**: Array of task IDs this task depends on
 
 > **Reference:** See `~/.cursor/skills/ops/state-schema.md` for the `description_ref` resolution algorithm and field definitions.
@@ -321,6 +321,10 @@ TodoWrite items (one per task):
 | Build error, import error, ModuleNotFoundError, type error, dependency error, compilation error, config error, broken build | `debugger-build` |
 | Commit, branch, merge, PR, tag, release, changelog | `git-master` |
 | Deploy, deploy to, ssh, scp, remote command, remote server, transfer files to, upload to, restart service on, check remote, verify endpoint on, tail logs on | `ssh-executor` |
+| Preflight, environment check, runtime check, dependency check, readiness validation | `preflight` |
+| Verify prior work, check if completed, resume verification, dedup check, orphan verification | `work-verifier` |
+| Rollback, revert changes, undo, restore files, clean state | `rollback` |
+| Analyze changes, classify diff, stage skip, change classification, diff analysis | `change-analyzer` |
 
 **Domain-specific agents take precedence** (`ssh-executor`, `debugger-build` over `verifier`/`executor`). Never assign documentation, scoping, or review tasks to the executor — these have dedicated agents. **When genuinely in doubt**, dispatch the **interviewer** via `Task(subagent_type="interviewer")` to clarify — a quick clarification is cheaper than re-doing the work.
 
@@ -342,6 +346,10 @@ Each agent must stay in its lane:
 | **debugger-build** | investigate runtime bugs or write features (fixes build/compilation errors) |
 | **git-master** | write code, docs, or tests (handles git operations only) |
 | **ssh-executor** | modify local code, write documentation, or run local tests (remote commands only) |
+| **preflight** | modify project code, dispatch agents, or run tests (diagnostic checks only) |
+| **work-verifier** | modify files, rollback changes, or dispatch agents (read-only verification only) |
+| **rollback** | decide rollback scope, re-dispatch agents, or modify code beyond git restore (git operations on specified files only) |
+| **change-analyzer** | execute pipeline stages, modify files, or dispatch agents (read-only diff analysis only) |
 
 **Debugger variant selection:**
 - If the task description contains a specific error type (ImportError, ModuleNotFoundError, TypeError, SyntaxError, dependency, build, compilation, config error), use `debugger-build`.
@@ -377,9 +385,7 @@ If `--dry-run` is set, display the task board and stop. Do not dispatch.
 
 ### Phase 2.5 — Preflight Validation
 
-After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent via `Task(subagent_type="verifier")` with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
-
-> **Reference:** You MUST Read `~/.cursor/skills/ops/preflight-validation.md` for the complete preflight validation procedure, check categories, and agent brief template. If the file is missing, proceed without preflight checks.
+After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **preflight** agent (see `~/.cursor/agents/preflight.md`) via `Task(subagent_type="generalPurpose")`. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 
 ### Phase 3 — Dispatch Loop
 
@@ -431,6 +437,8 @@ Once you have read the agent definition, execute the task below following the ag
 
 **Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (Non-negotiable — see #3.)
 
+After updating timing, check elapsed time of all in-progress background agents against their estimates. Emit a `⚠️ SLOW` warning when elapsed exceeds 1.5× estimate, or `🔴 OVERRUN` when elapsed exceeds 2.5× estimate. Warnings are emitted once per threshold crossing per task. For tasks with `estimate_source: "ops"` (rough estimates), suppress SLOW and emit OVERRUN only.
+
 | Outcome | Action |
 | :--- | :--- |
 | **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Update TodoWrite. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
@@ -440,7 +448,7 @@ Once you have read the agent definition, execute the task below following the ag
 | **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task in the state file and TodoWrite. Pause dependent chain. Flag to user. |
 | **Scope issue** — agent says the plan is wrong or incomplete | Pause chain. Ask the user whether to re-plan or adjust. |
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/agent-health-monitoring.md` for timeout budgets, stall detection rules, and health escalation procedures. If the file is missing, proceed without health monitoring.
+Orphan detection is handled by the **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`), which includes timeout budgets per agent type and orphan detection heuristics.
 
 **Step 5 — Stage transition check.** When all tasks in a pipeline stage finish:
 
@@ -474,7 +482,7 @@ When every task is `completed` (check state file):
 
    > **Reference:** You MUST Read `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, calibration, idle time). If the file is missing, proceed using the bullet points above.
 
-   > **Reference:** You MUST Read `~/.cursor/skills/ops/estimation-feedback.md` for the estimation feedback loop and calibration procedure. If the file is missing, proceed without estimation feedback.
+   > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.cursor/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.
 
 5. **Compute cost estimate (opt-in)** — Skip this step unless the user invoked with `--cost` flag or explicitly asked for cost information. When enabled, estimate token usage and cost per task based on `model_used`, `attempts`, and agent type. Prefer per-task token estimation from observed tool-use patterns; fall back to agent-type baselines only when that signal isn't available.
 
@@ -592,7 +600,7 @@ executor(task2) ──┤→ verifier(all) → [security-reviewer] → deslop(al
 executor(task3) ──┘
 ```
 
-> **Reference:** See `~/.cursor/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, and handoff format (read only for SSH tasks). If the file is missing, proceed without SSH-specific guidance.
+> **Reference:** The **ssh-executor** agent (see `~/.cursor/agents/ssh-executor.md`) handles its own preflight checks (host validation, connectivity, key, source files, remote directory) and includes SSH-specific handoff fields in its output format. No separate preflight dispatch is needed for SSH tasks.
 
 ---
 
@@ -652,7 +660,7 @@ After all verify tasks pass and before code review, run deslop with `--conservat
 
 When spawning parallel agents, always verify file independence first. If two tasks might touch the same file, sequence them.
 
-> When `--worktree` is set, see the worktree isolation rules in `branch-isolation.md` above.
+> When `--worktree` is set, see the worktree interaction rules in the **git-master** agent's "Branch workflow" section.
 
 ---
 
@@ -674,7 +682,7 @@ The team manager may create **internal bookkeeping tasks** (merge branches, fina
 
 When escalating, always include enough context for the user to make a decision without re-reading the entire history.
 
-> **Reference:** See `~/.cursor/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, and guardrails (read only on failure escalation). If the file is missing, proceed without automatic rollback.
+> **Reference:** When rollback is needed, dispatch a **rollback** agent (see `~/.cursor/agents/rollback.md`) via `Task(subagent_type="generalPurpose")` with the affected file list, scope level, and run ID.
 
 ---
 
@@ -807,7 +815,7 @@ When invoked with `ralph`, the team manager wraps its entire workflow inside a `
 
 **Trivial/mechanical changes:** For trivial fixes (adding a line, removing duplicates, typo), skip verify/deslop/review stages. **Always log it as an adaptation**: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/conditional-stage-skip.md` for per-stage skip conditions and evaluation procedure. If the file is missing, use only the trivial-skip logic above.
+**Per-stage conditional skip:** When the trivial skip does not apply, dispatch a **change-analyzer** agent (see `~/.cursor/agents/change-analyzer.md`) with the current diff to get per-stage run/skip recommendations for verify, deslop, and review. Apply its recommendations.
 
 **Conflicting agent outputs:** If two agents produce conflicting changes (e.g., both modify a shared config), flag the conflict to the user rather than picking a winner.
 
@@ -817,7 +825,7 @@ When invoked with `ralph`, the team manager wraps its entire workflow inside a `
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/interruption-recovery.md` for detailed procedures for cancel/abort, reprioritize, inject tasks, remove tasks, session recovery, and how foreground vs. background dispatch works. If the file is missing, proceed using the summary table below.
 
-> **Reference:** See `~/.cursor/skills/ops/resume-dedup.md` for the resume deduplication procedure and work verification checks (read only on `resume`). If the file is missing, re-dispatch in_progress tasks without dedup checks.
+> **Reference:** On `resume`, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per in-progress task to determine completion status.
 
 ### Summary of user commands during a run
 

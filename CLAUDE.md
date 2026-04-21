@@ -16,7 +16,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
-| `agents/README.md` | `agents/*.md` (15 agent definitions) |
+| `agents/README.md` | `agents/*.md` (19 agent definitions) |
 | `skills/clickup/README.md` | `skills/clickup/SKILL.md` |
 | `skills/code-review/README.md` | `skills/code-review/SKILL.md` |
 | `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |
@@ -28,6 +28,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `skills/ops/SKILL.cursor.md` | `skills/ops/SKILL.md`, `tooling/transform-cursor-ops.{ps1,sh}` |
 | `skills/ralph-loop/README.md` | `skills/ralph-loop/SKILL.md`, `skills/ralph-loop/*.md` |
 | `skills/ralph-loop/SKILL.cursor.md` | `skills/ralph-loop/SKILL.md`, `tooling/transform-cursor-ralph-loop.{ps1,sh}` |
+| `skills/timing-calibrator/README.md` | `skills/timing-calibrator/SKILL.md` |
 | `skills/ralph-loop/templates/README.md` | `skills/ralph-loop/templates/*.yaml` |
 
 ### Rules

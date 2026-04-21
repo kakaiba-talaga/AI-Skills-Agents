@@ -11,7 +11,7 @@ This document describes the format differences between Claude Code and Cursor, w
 | Skill entry point | `SKILL.md`; may have no frontmatter; can use `$ARGUMENTS` | `SKILL.md` with required `name` + `description` frontmatter |
 | Skill location | `~/.claude/skills/` | `~/.cursor/skills/` |
 | Tool names | `Bash`, `Edit`, `Write`, `Agent`, `Skill` | `Shell`, `StrReplace`, `Write`, `Task`, no `Skill` equivalent |
-| Subagent spawning | `Agent` tool (`subagent_type` has limited built-in enum; custom agents loaded via read-and-inject pattern) | `Task` tool (`subagent_type` enum covers all 15 agent types natively plus utility types; `model` limited to `"fast"`) |
+| Subagent spawning | `Agent` tool (`subagent_type` has limited built-in enum; custom agents loaded via read-and-inject pattern) | `Task` tool (`subagent_type` enum covers all 19 agent types natively plus utility types; `model` limited to `"fast"`) |
 | Invocation | `/skill-name args` with `$ARGUMENTS` | Description-matched by IDE; no slash commands |
 | Config/state paths | `~/.claude/config/`, `.claude/state/` | `~/.cursor/config/`, `.cursor/state/` |
 | Size limits | No formal limit | SKILL.md under 500 lines; use companion files |
