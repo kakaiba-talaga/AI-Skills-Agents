@@ -29,7 +29,8 @@
             "target": "~/.claude/",
             "include": [
                 "settings.json"
-            ]
+            ],
+            "prune": false
         }
     },
     "claude-code-wsl": {
@@ -62,7 +63,8 @@
             "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/",
             "include": [
                 "settings.json"
-            ]
+            ],
+            "prune": false
         }
     },
     "cursor": {

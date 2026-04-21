@@ -286,6 +286,12 @@ function Invoke-PruneSection {
         [PSCustomObject]$Config
     )
 
+    # Check manifest-level prune opt-out (e.g. settings whose target overlaps other categories)
+    if ($Config.PSObject.Properties['prune'] -and $Config.prune -eq $false) {
+        Write-Host "  [prune] Skipped — pruning disabled for $ToolName/$CategoryName" -ForegroundColor DarkGray
+        return @{ Pruned = 0; WouldPrune = 0 }
+    }
+
     $source  = $Config.source
     $target  = Resolve-TargetPath $Config.target
     $include = @($Config.include)

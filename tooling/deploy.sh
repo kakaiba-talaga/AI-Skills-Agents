@@ -269,6 +269,14 @@ prune_section() {
     local tool_key="$1"
     local cat_key="$2"
 
+    # Check manifest-level prune opt-out (e.g. settings whose target overlaps other categories)
+    local prune_flag
+    prune_flag=$(jq -r ".\"$tool_key\".\"$cat_key\".prune // true" "$MANIFEST")
+    if [[ "$prune_flag" == "false" ]]; then
+        echo -e "  ${DIM}[prune] Skipped — pruning disabled for $tool_key/$cat_key${NC}"
+        return
+    fi
+
     local source target
     source=$(jq -r ".\"$tool_key\".\"$cat_key\".source" "$MANIFEST")
     target=$(jq -r ".\"$tool_key\".\"$cat_key\".target" "$MANIFEST")
