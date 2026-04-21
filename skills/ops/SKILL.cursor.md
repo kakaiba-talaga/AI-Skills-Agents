@@ -141,7 +141,7 @@ Determine the starting point from the parsed arguments:
 | Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
 | `resume` | Read the state file from `.ops-state/`. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per in-progress task to determine actual completion status. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
-| `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
+| `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) via `Task(subagent_type="generalPurpose")` with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
 
@@ -240,7 +240,7 @@ Branch isolation is the default — create a working branch before agents modify
 
 When skipping, **always log it as an adaptation**: "Adapted: skipped branch creation — current branch `develop` already contains related Phase 1 work."
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/branch-isolation.md` for complete branch handling procedures (uncommitted changes, branch creation, after-completion cleanup, worktree/ralph/resume interaction) and git worktree isolation rules (when to use, merge strategy). If the file is missing, proceed using the decision table above.
+> **Reference:** Dispatch the **git-master** agent (see `~/.cursor/agents/git-master.md`) with a branch-workflow task. The git-master's "Branch workflow" section contains the full decision matrix, uncommitted-change handling, naming conventions, completion cleanup, and worktree interaction rules.
 
 ### Phase 2 — Task Board Creation
 
@@ -437,6 +437,8 @@ Once you have read the agent definition, execute the task below following the ag
 
 **Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (Non-negotiable — see #3.)
 
+After updating timing, check elapsed time of all in-progress background agents against their estimates. Emit a `⚠️ SLOW` warning when elapsed exceeds 1.5× estimate, or `🔴 OVERRUN` when elapsed exceeds 2.5× estimate. Warnings are emitted once per threshold crossing per task. For tasks with `estimate_source: "ops"` (rough estimates), suppress SLOW and emit OVERRUN only.
+
 | Outcome | Action |
 | :--- | :--- |
 | **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Update TodoWrite. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
@@ -446,7 +448,7 @@ Once you have read the agent definition, execute the task below following the ag
 | **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task in the state file and TodoWrite. Pause dependent chain. Flag to user. |
 | **Scope issue** — agent says the plan is wrong or incomplete | Pause chain. Ask the user whether to re-plan or adjust. |
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/agent-health-monitoring.md` for timeout budgets, stall detection rules, and health escalation procedures. If the file is missing, proceed without health monitoring.
+Orphan detection is handled by the **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`), which includes timeout budgets per agent type and orphan detection heuristics.
 
 **Step 5 — Stage transition check.** When all tasks in a pipeline stage finish:
 
@@ -598,7 +600,7 @@ executor(task2) ──┤→ verifier(all) → [security-reviewer] → deslop(al
 executor(task3) ──┘
 ```
 
-> **Reference:** See `~/.cursor/skills/ops/ssh-integration.md` for SSH-specific preflight checks, brief template, and handoff format (read only for SSH tasks). If the file is missing, proceed without SSH-specific guidance.
+> **Reference:** The **ssh-executor** agent (see `~/.cursor/agents/ssh-executor.md`) handles its own preflight checks (host validation, connectivity, key, source files, remote directory) and includes SSH-specific handoff fields in its output format. No separate preflight dispatch is needed for SSH tasks.
 
 ---
 
@@ -658,7 +660,7 @@ After all verify tasks pass and before code review, run deslop with `--conservat
 
 When spawning parallel agents, always verify file independence first. If two tasks might touch the same file, sequence them.
 
-> When `--worktree` is set, see the worktree isolation rules in `branch-isolation.md` above.
+> When `--worktree` is set, see the worktree interaction rules in the **git-master** agent's "Branch workflow" section.
 
 ---
 
