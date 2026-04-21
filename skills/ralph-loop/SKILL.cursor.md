@@ -63,6 +63,7 @@ If `--lightweight` is provided, set `lightweight_mode: true` in state. Implies `
    | **Verify** | Per-criterion pass/fail for the current work item. Table when 2+ metrics. | Reporting pass without per-criterion detail. | Bold the overall verdict. |
    | **Cleanup** | Scope (N files), linter used, fixes applied, regression result. | Broadening scope beyond `context.modified_files` (LB4). | Bullet list. |
    | **Reflect** | (1) assessment + `achieved_percent`, (2) work item status summary, (3) trend (1-2 lines), (4) new learnings as a bullet list, (5) next direction. | Flagging an auto-pause trigger without its assessment context. | 5-part structured output in the order shown. |
+
 4. **No exploratory reasoning in messages.** Deliberation happens internally, not in output.
 5. **Persist-before-proceed.** State JSON written BEFORE the next stage begins.
 6. **Post-summarization strict mode.** After context recovery, first full iteration uses strict discipline (one stage per message, full checklist, state persisted) regardless of `loop_mode`.
@@ -196,7 +197,7 @@ Evaluated during Reflect, after `achieved_percent` is updated. Uses template `au
 **Template-configurable heuristics:**
 
 | Parameter | Default | Description |
-|---|---|---|
+| :--- | :--- | :--- |
 | `plateau_iterations` | 3 | Flat iterations before plateau trigger |
 | `plateau_threshold` | 0.5 pp | Minimum delta to count as improvement |
 | `diminishing_returns.enabled` | — | Track average gain over sliding window |
@@ -240,7 +241,7 @@ Work items are discrete, ordered deliverables that Frame generates on iteration 
 **Acceptance criteria quality:** Every criterion must be **specific and testable**. The scaffolding step MUST replace any generic criteria with task-specific ones before proceeding.
 
 | Bad (generic) | Good (specific) |
-|---|---|
+| :--- | :--- |
 | "Implementation is complete" | "POST /events returns 201 for valid payload" |
 | "Tests pass" | "tests/test_date_parser.py exists and `pytest tests/test_date_parser.py` passes" |
 
