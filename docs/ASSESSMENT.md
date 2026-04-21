@@ -1,8 +1,8 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-04-17 (project audit)
-**Previous assessment:** 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
-**Scope:** All agents and skills in the repository
+**Date:** 2026-04-21 (ops decoupling and tooling expansion)
+**Previous assessment:** 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
 ---
@@ -11,7 +11,7 @@
 
 ### Agents (`agents/`)
 
-15 agent definitions + 1 README.
+19 agent definitions + 1 README.
 
 | File | Model | Role |
 |------|-------|------|
@@ -30,10 +30,14 @@
 | debugger.md | opus | Hypothesis-driven runtime bug investigation |
 | debugger-build.md | opus | Build/compilation error diagnosis (import, type, dependency, config) |
 | git-master.md | sonnet | Git operations, branching, commits, PRs, releases, pause/resume |
+| preflight.md | sonnet | Environment readiness checks before agent work begins |
+| work-verifier.md | sonnet | Verifies whether prior agent work was completed, partial, or never started |
+| rollback.md | sonnet | Safely undoes agent-produced changes at configurable scope |
+| change-analyzer.md | sonnet | Classifies git diffs and recommends pipeline stages to run or skip |
 
 ### Skills (`skills/`)
 
-9 multi-file skills. 6 converted from single-file commands in this update.
+10 multi-file skills. 6 converted from single-file commands in the initial restructure; 1 added in the ops decoupling.
 
 | Skill | Directory | Files | SKILL.md Lines | Purpose |
 |-------|-----------|-------|----------------|---------|
@@ -43,9 +47,10 @@
 | Deslop | `skills/deslop/` | 2 | ~669 | AI slop cleanup (dead code, redundant comments, over-abstraction) |
 | Doc Sync | `skills/doc-sync/` | 2 | ~83 | Documentation audit and sync against codebase |
 | Linter | `skills/linter/` | 2 | ~141 | Source file linting with auto-fix and incremental cache |
-| Ops | `skills/ops/` | 22 | ~757 (Claude), ~812 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
+| Ops | `skills/ops/` | 15 | ~846 (Claude), ~865 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
 | Deploy | `skills/deploy/` | 9 | ~412 (Claude), ~408 (Cursor) | Remote deployment orchestration via ssh-executor |
-| Ralph Loop | `skills/ralph-loop/` | 17 (incl. 5 YAML templates) | ~319 | Iterative execute-verify-reflect loop with state persistence |
+| Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
+| Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
 
 ### Documentation (`docs/`)
 
@@ -53,6 +58,13 @@
 |------|---------|
 | ASSESSMENT.md | This file |
 | portability-guide.md | Format differences and tool gaps between Claude Code and Cursor |
+
+### Hooks (`hooks/`)
+
+| File | Purpose |
+|------|---------|
+| post-compaction-context.sh | Restores project context after Claude Code compaction events |
+| notify.sh | Cross-platform notification script (Windows toast, macOS osascript, Linux notify-send) |
 
 ### Cursor Rules (`.cursor/rules/`)
 
@@ -64,11 +76,15 @@
 
 | File | Purpose |
 |------|---------|
-| deploy-manifest.json | Maps repo source directories to tool-specific global directories |
-| deploy.ps1 | PowerShell deploy script (primary). Includes `SKILL.cursor.md` detection, agent tool-restriction hardening. |
+| deploy-manifest.json | Maps repo source directories to tool-specific global directories. 3 targets (claude-code, claude-code-wsl, cursor), 4 categories (agents, skills, hooks, settings). |
+| deploy.ps1 | PowerShell deploy script (primary). `SKILL.cursor.md` detection, agent tool-restriction hardening, `--prune` mode, hooks/settings deployment. |
 | deploy.sh | Bash deploy script (cross-platform, requires `jq`). Same features as deploy.ps1. |
+| transform-cursor-ops.ps1 | PowerShell transform: generates `skills/ops/SKILL.cursor.md` from `SKILL.md` + `SKILL.cursor.additions.md`. |
+| transform-cursor-ops.sh | Bash version of the ops Cursor transform. |
+| transform-cursor-ralph-loop.ps1 | PowerShell transform: generates `skills/ralph-loop/SKILL.cursor.md` from `SKILL.md`. |
+| transform-cursor-ralph-loop.sh | Bash version of the ralph-loop Cursor transform. |
 
-### Planning Documents (`docs/plan/` — gitignored)
+### Planning Documents (`docs/plan/` — gitignored, except `ops-decoupling-plan.md` which is tracked)
 
 | File | Purpose |
 |------|---------|
@@ -76,16 +92,111 @@
 | agent-roster-expansion-architecture.md | Architecture doc for agent roster expansion (architect and security-reviewer additions) |
 | agent-splitting-plan.md | Plan to split large agents into smaller definitions |
 | cursor-portability-gaps.md | Plan for Cursor-native adaptations of ops and deploy (completed) |
+| deploy-prune-mode-plan.md | Plan for deploy `--prune` mode implementation |
 | deploy-skill-interface-contract.md | Interface spec for `/deploy` ↔ `ssh-executor` briefs |
 | deploy-skill-plan.md | Implementation plan for deploy skill |
 | next-steps-roadmap.md | Roadmap for restructure, portability, and deployment automation |
+| ops-claude-code-features-plan.md | Plan for Claude Code–specific ops features (--brainstorm, nested-skill handoff) |
+| ops-decoupling-plan.md | Plan for extracting ops companion files into standalone agents/skills (**tracked in git**) |
 | ops-handoff-cleanup-plan.md | Handoff file lifecycle and cleanup for ops |
+| ops-nested-skill-handoff-plan.md | Plan for nested-skill handoff gap closure |
 | ops-skill-optimization-plan.md | Context reduction plan for ops SKILL.md |
 | ops-skill-optimization-r2-assessment.md | Round-2 assessment and extraction plan for ops SKILL.md and SKILL.cursor.md |
+| ops-skill-optimization-r3-deep-dive.md | Round-3 deep-dive assessment for ops companion consolidation |
 | ralph-loop-audit-assessment.md | Post-migration audit of ralph-loop skill |
+| ralph-loop-optimization-r2-deep-dive.md | Round-2 deep-dive for ralph-loop optimization sprints |
 | ralph-loop-skill-optimization-plan.md | Modularization plan for ralph-loop |
 | ssh-agent-plan.md | Plan for ssh-executor and ops/deploy integration |
 | unify-ops-state-management-plan.md | Plan to unify ops state management across Claude Code and Cursor |
+
+---
+
+## Changes Since Last Assessment (2026-04-21 — ops decoupling and tooling expansion)
+
+### Ops decoupling — 8 companion files extracted or absorbed
+
+The ops skill carried operational logic (preflight checks, rollback, estimation feedback, health monitoring, etc.) inside companion `.md` files loaded at runtime. This inflated context and coupled unrelated concerns. The decoupling extracted that logic into standalone agents and skills, or folded it into existing agents.
+
+| Change | Detail |
+|--------|--------|
+| **Tier 1 — 5 files → 4 new agents + 1 new skill** (commit `9e3ac3a`) | `preflight-validation.md` → `agents/preflight.md` (189 lines). `resume-dedup.md` → `agents/work-verifier.md` (234 lines). `rollback-strategy.md` → `agents/rollback.md` (224 lines). `conditional-stage-skip.md` → `agents/change-analyzer.md` (229 lines). `estimation-feedback.md` → `skills/timing-calibrator/` (SKILL.md 214 lines, README.md 98 lines). |
+| **Tier 2 — 3 files → folded into existing agents** (commit `e5a449a`) | `agent-health-monitoring.md` → folded into `agents/interviewer.md` (+60 lines). `ssh-integration.md` → folded into `agents/ssh-executor.md` (+21 lines). `branch-isolation.md` → folded into `agents/git-master.md` (+26 lines). |
+| **Cursor companion updated** (commit `169b57d`) | `skills/ops/SKILL.cursor.md` regenerated to reflect Tier 1 + Tier 2 deletions. |
+| **Net effect** | `skills/ops/` shrank from 22 → 15 files. Agent roster grew from 15 → 19. New skill `timing-calibrator` added (2 files). |
+
+### Ralph-loop R2 optimization (Sprints 2-6 + P13)
+
+Sprints 2-6 ran between 2026-04-17 and 2026-04-18, compressing and consolidating ralph-loop companion files. P13 added Cursor support.
+
+| Change | Detail |
+|--------|--------|
+| **Sprints 2-4** (commits `4db9fe2`, `a529aa6`, `aa69493`) | Content-level optimizations: template YAML boilerplate dedup, state array caps, rule compression, README slimming. No file additions or removals. |
+| **Sprint 5 — P7/P8 consolidation** (commit `6220825`) | Pointer table added. Content from multiple companions merged. |
+| **Sprint 6 — P12 consolidation** (commit `ffeab6f`) | 4 companions deleted (`acceptance-criteria.md`, `rollback.md`, `subagent-parallelism.md`, `usage-examples.md`). Content folded into 2 files: `execution-extras.md` (new, 87 lines) and `lightweight-and-examples.md` (renamed from `lightweight-mode.md`, expanded). |
+| **P13 — Cursor support** (commit `cde1fda`) | `skills/ralph-loop/SKILL.cursor.md` added (338 lines). Transform scripts: `transform-cursor-ralph-loop.ps1` (275 lines) and `transform-cursor-ralph-loop.sh` (251 lines). |
+| **Net effect** | `skills/ralph-loop/` went from 17 → 16 files (4 deleted, 1 renamed, 2 added incl. SKILL.cursor.md). SKILL.md: 319 → 334 lines. |
+
+### Tooling expansion
+
+| Change | Detail |
+|--------|--------|
+| **`--prune` mode** (commit `700322d`) | Deploy scripts (`deploy.ps1`, `deploy.sh`) gained `--prune` mode to remove deployed files that no longer exist in the repo source directory. |
+| **Prune settings bug fix** (commit `8f2d493`) | Fixed a bug where `--prune` would delete all files under a settings target instead of only orphaned files. The settings category now sets `"prune": false` in the manifest. |
+| **Transform script rename** (commit `7702a9f`) | `transform-cursor.ps1` → `transform-cursor-ops.ps1`, `transform-cursor.sh` → `transform-cursor-ops.sh`. Added drift-check default behavior and `--force` bypass flag. |
+| **Hooks and settings categories** (commit `e8defda`) | Deploy scripts and manifest expanded with `hooks` and `settings` categories alongside `agents` and `skills`. |
+| **UTF-8 BOM fix** (commit `ab55ae1`) | Transform-cursor `.ps1` scripts now emit UTF-8 BOM for Windows PowerShell 5.1 compatibility. |
+| **Temp path fix** (commit `4a73242`) | Transform scripts resolve temp `.py` path against `$PWD` to survive `pwsh Set-Location` changes. |
+| **WSL target** | Deploy manifest added `claude-code-wsl` target for deploying to WSL Ubuntu environments. |
+
+### New infrastructure files
+
+| Change | Detail |
+|--------|--------|
+| **`settings.json`** (commit `1fd3751`) | Claude Code settings file at repo root. Configures permissions (allow/deny lists), model (`opus[1m]`), hooks (SessionStart, Notification), effort level (`xhigh`). |
+| **`hooks/post-compaction-context.sh`** (commit `1fd3751`) | Restores project context after Claude Code compaction events. Bound to `SessionStart` hook with `compact` matcher. |
+| **`hooks/notify.sh`** (commit `1e7eda4`) | Cross-platform notification script (Windows toast via PowerShell, macOS `osascript`, Linux `notify-send`). Bound to `Notification` hook. |
+| **`skills/ops/SKILL.cursor.additions.md`** | Transform side-car file (754 lines) containing patch blocks injected into `SKILL.md` during Cursor transform. Keyed by anchor lines and actions (prepend, replace_line, insert_after, etc.). Created during P14 transform infrastructure. |
+
+### Ops feature additions
+
+| Change | Detail |
+|--------|--------|
+| **`--brainstorm` gate** (commits `7353b42`, `e139c77`) | Opt-in pre-planning gate (`--brainstorm`) that pauses for autonomous-mode checkpoints before plan execution. |
+| **Nested-skill handoff gap** (commit `ce9a607`) | Fixed a gap where nested skill invocations lost state. Now uses state-based mechanism for handoff continuity. |
+| **UI-label doubling fix** (commits `1989529`, `1d6fa8a`) | Dispatch rules reordered with concrete examples to prevent duplicate labels in Agent dispatch procedure. |
+| **Line count changes** | `SKILL.md`: 757 → 846 lines. `SKILL.cursor.md`: 812 → 865 lines. |
+
+### Planning documents — 14 → 20
+
+Six new plan files, plus a `.handoffs/` subdirectory:
+
+- `deploy-prune-mode-plan.md` — plan for the `--prune` mode feature.
+- `ops-claude-code-features-plan.md` — `--brainstorm` gate and nested-skill handoff.
+- `ops-decoupling-plan.md` — companion extraction plan (**now tracked in git**, not gitignored).
+- `ops-nested-skill-handoff-plan.md` — nested-skill handoff gap closure.
+- `ops-skill-optimization-r3-deep-dive.md` — round-3 deep-dive for P12 consolidation.
+- `ralph-loop-optimization-r2-deep-dive.md` — R2 sprint analysis.
+
+### Documentation updates
+
+| Change | Detail |
+|--------|--------|
+| **`CLAUDE.md`** | Doc-sync map updated: 19 agents (was 15), added `timing-calibrator` and `ralph-loop/SKILL.cursor.md` entries. |
+| **`agents/README.md`** | +77 lines — 4 new agent entries documented with role descriptions, pipeline position, and usage examples. |
+| **`skills/ops/README.md`** | Updated to reflect decoupling changes and reduced companion file count. |
+| **`skills/ralph-loop/README.md`** | Updated for Sprint 5/6 consolidations and SKILL.cursor.md addition. |
+
+### Cross-reference spot-checks
+
+- `~/.claude/skills/ops/` companion references in `skills/ops/SKILL.md` — all resolve. 8 former companions no longer referenced.
+- `~/.claude/agents/preflight.md`, `work-verifier.md`, `rollback.md`, `change-analyzer.md` — all exist in `agents/`.
+- `~/.claude/skills/timing-calibrator/SKILL.md` — exists.
+- `~/.claude/skills/ralph-loop/SKILL.cursor.md` — exists.
+- No `~/.claude/commands/` references remain in any tracked file except this ASSESSMENT.md (historical narrative only).
+
+### Carried-issue re-evaluation
+
+Both carried issues were re-evaluated. The `git-master.md` Co-Authored-By override and the `agents/README.md` `/schedule` reference remain valid for the same reasons previously recorded. See active issues section for a new documentation drift finding.
 
 ---
 
@@ -144,8 +255,8 @@ All three issues in the "Issues noted but not changed" table were re-evaluated. 
 
 ### Other structural changes
 
-- No agents added or removed between `2026-04-15` and `2026-04-21`. On `2026-04-21`, 4 agents were added (`preflight`, `work-verifier`, `rollback`, `change-analyzer`) and 1 skill was added (`timing-calibrator`) as part of the ops decoupling. Existing agents `git-master`, `work-verifier`, and `ssh-executor` were enriched with logic from 3 additional deleted helper files. Total: 8 ops companion files deleted across Tier 1 and Tier 2 (see `docs/plan/ops-decoupling-plan.md`).
-- No tooling files added or removed.
+- No agents added or removed between `2026-04-15` and `2026-04-17`.
+- No tooling files added or removed between `2026-04-15` and `2026-04-17`.
 
 ---
 
@@ -235,7 +346,9 @@ Path references to `~/.claude/commands/` updated in 6 files:
 
 ### Active issues
 
-No active issues.
+| File | Issue | Severity |
+|------|-------|----------|
+| .cursor/rules/documentation-sync.mdc | Doc-sync map references "13 agent definitions" — should be 19. Missing `timing-calibrator` entry. Drifted from `CLAUDE.md` mirror (which is correct at 19). | Low — cosmetic, does not affect agent behavior. Fix with `/doc-sync`. |
 
 ### Issues noted but not changed (carried from previous assessments)
 
@@ -252,26 +365,29 @@ No active issues.
 
 ### Strengths
 
-- **Unified skill structure:** All 9 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
-- **Consistent structure** across all 15 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
+- **Unified skill structure:** All 10 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
+- **Consistent structure** across all 19 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
+- **Clean separation of concerns:** The ops decoupling moved operational logic (preflight, rollback, work verification, change analysis, timing calibration) out of skill companion files and into standalone agents/skills where it belongs. This reduces ops context pressure and makes each capability independently dispatchable.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
 - **Shared constraints repeated verbatim** in all agents: no compound Bash commands, no `cd` prefix, relative paths only. No variations.
-- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master). No mismatches between frontmatter and README.
-- **Valid cross-references** between agents and skills — no broken path references.
-- **Deployment automation** in place — deploy script with dry-run, diff, per-target, and per-category support. Cursor transform is fully automatic.
+- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer). No mismatches between frontmatter and README.
+- **Valid cross-references** between agents and skills — no broken path references. Former ops companion references removed.
+- **Deployment automation** expanded — deploy scripts support 4 categories (agents, skills, hooks, settings), 3 targets (claude-code, claude-code-wsl, cursor), dry-run, diff, per-target, per-category, and `--prune` mode. Cursor transform is fully automatic with dedicated transform scripts per skill.
 - **Portability documented** — format differences, tool gaps, and verified findings captured in `docs/portability-guide.md`.
 - **Comprehensive agents/README.md** with usage examples, full pipeline, utility agent handoff matrices, parallelization thresholds, and permissions reference.
+- **Infrastructure as code:** `settings.json` and hooks are now version-controlled and deployable, ensuring consistent Claude Code configuration across machines.
 
 ### Observations
 
 These are not defects — they are patterns worth monitoring.
 
-- **Large skill files:** After two rounds of extractions, `skills/ops/SKILL.cursor.md` (~812 lines) is now the largest single file, followed by `skills/ops/SKILL.md` (~757 lines) and `skills/deslop/SKILL.md` (~669 lines). Context pressure may still occur when ops loads multiple companion files simultaneously, but the trend is down from the ~958-line peak. See `docs/plan/ops-skill-optimization-plan.md` and `docs/plan/ops-skill-optimization-r2-assessment.md`.
+- **Large skill files:** `skills/ops/SKILL.cursor.md` (~865 lines) remains the largest single file, followed by `skills/ops/SKILL.md` (~846 lines), `skills/ops/SKILL.cursor.additions.md` (~754 lines), and `skills/deslop/SKILL.md` (~669 lines). The ops files grew by ~90 lines each due to `--brainstorm` and nested-skill handoff features, partially offsetting the 8-file companion reduction. Net context per ops invocation is still lower because companions are no longer loaded.
 - **No version identifiers** in any agent or skill file. If these files are shared across machines or updated frequently, a version field in frontmatter would aid change tracking.
-- **Planning docs gitignored:** `docs/plan/` is in `.gitignore`, meaning planning context is local-only and won't survive a machine change or clone.
-- **Cursor transform is text-based:** Tool name replacements (`Bash`→`Shell`, `Edit`→`StrReplace`, `Agent`→`Task`) use word-boundary matching, which may produce false positives in prose that coincidentally matches tool names. No issues observed in current files.
-- **ops and deploy have Cursor-native versions:** Both skills have `SKILL.cursor.md` files. State management (`.ops-state/` JSON files) is now unified across both versions; the Cursor-native file is still needed for `Task` tool dispatch, TodoWrite display layer, read-and-dispatch skill invocation, and Cursor-specific limitations. Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
-- **Agent dispatch mechanism differs between platforms:** Claude Code's `subagent_type` enum is limited — `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from the ops taxonomy are built-in (Claude Code built-ins; the enum may expand). All other agents dispatch as `general-purpose` and require a read-and-inject workaround. Cursor's `Task` tool includes all 15 agent types as built-in `subagent_type` values. This is the primary reason ops needs a `SKILL.cursor.md` companion. See `docs/portability-guide.md` § Agent Dispatch Mechanism.
+- **Planning docs mostly gitignored:** `docs/plan/` is in `.gitignore`, meaning most planning context is local-only. Exception: `ops-decoupling-plan.md` is now tracked in git, establishing a precedent for tracking significant architectural plans.
+- **Cursor transform is text-based:** The ops transform now uses a dedicated side-car file (`SKILL.cursor.additions.md`) with an anchor-and-patch format, which is more robust than pure text replacement. Ralph-loop still uses the simpler transform approach. No false-positive issues observed in current files.
+- **Three skills have Cursor-native versions:** ops, deploy, and ralph-loop all have `SKILL.cursor.md` files. State management (`.ops-state/` JSON files) is unified across both versions. Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
+- **Agent dispatch mechanism differs between platforms:** Claude Code's `subagent_type` enum is limited — `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from the ops taxonomy are built-in (Claude Code built-ins; the enum may expand). All other agents dispatch as `general-purpose` and require a read-and-inject workaround. Cursor's `Task` tool now includes all 19 agent types as built-in `subagent_type` values plus additional utility types. This is the primary reason ops needs a `SKILL.cursor.md` companion. See `docs/portability-guide.md` § Agent Dispatch Mechanism.
+- **Documentation drift:** `.cursor/rules/documentation-sync.mdc` has fallen behind `CLAUDE.md` (its declared mirror). See Active Issues.
 
 ---
 
@@ -302,24 +418,26 @@ Skills invoked within pipeline stages:
 
 | Category | Files | Total |
 |----------|-------|-------|
-| Agents | 15 definitions + 1 README | 16 |
+| Agents | 19 definitions + 1 README | 20 |
 | Skills (clickup) | 2 | 2 |
 | Skills (code-review) | 2 | 2 |
 | Skills (commit-message) | 2 | 2 |
 | Skills (deslop) | 2 | 2 |
 | Skills (doc-sync) | 2 | 2 |
 | Skills (linter) | 2 | 2 |
-| Skills (ops) | 22 (incl. SKILL.cursor.md) | 22 |
+| Skills (ops) | 15 (incl. SKILL.cursor.md, SKILL.cursor.additions.md) | 15 |
 | Skills (deploy) | 9 (incl. SKILL.cursor.md) | 9 |
-| Skills (ralph-loop) | 17 (incl. 5 templates + templates README) | 17 |
+| Skills (ralph-loop) | 16 (incl. SKILL.cursor.md, 5 templates + templates README) | 16 |
+| Skills (timing-calibrator) | 2 | 2 |
 | Documentation | 2 (ASSESSMENT.md, portability-guide.md) | 2 |
 | Cursor Rules | 1 (documentation-sync.mdc) | 1 |
-| Tooling | 3 (manifest + 2 scripts) | 3 |
-| Planning (gitignored) | 14 | 14 |
-| Config | 1 (.gitignore) | 1 |
-| Root | 1 (README.md) | 1 |
-| **Total** | | **97** |
+| Tooling | 7 (manifest + 2 deploy scripts + 4 transform scripts) | 7 |
+| Hooks | 2 (post-compaction-context.sh, notify.sh) | 2 |
+| Planning (gitignored + 1 tracked) | 20 | 20 |
+| Config | 2 (.gitignore, .markdownlint.json) | 2 |
+| Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
+| **Total** | | **111** |
 
 ---
 
-*Assessment updated 2026-04-17 (project audit). Files assessed: 15 agents, 9 skills (60 files, incl. 2 SKILL.cursor.md), 1 agents README, 2 docs, 1 cursor rule, 3 tooling, 14 plans, 1 root README, 1 CLAUDE.md, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2.*
+*Assessment updated 2026-04-21 (ops decoupling and tooling expansion). Files assessed: 19 agents, 10 skills (54 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md), 1 agents README, 2 docs, 1 cursor rule, 7 tooling, 2 hooks, 20 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 1. Carried from previous: 2.*
