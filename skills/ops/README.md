@@ -111,6 +111,10 @@ The manager creates bookkeeping tasks (merging branches, final verification, com
 
 Spawned agents are workers, not managers. They cannot spawn sub-agents, make scope decisions, or invoke orchestration commands. The team manager enforces these rules in every brief.
 
+The team manager does not end its turn on a nested-skill return — nested-skill invocations (deslop, clickup, etc.) are mid-loop events, not terminal events. The team manager writes a `pending_nested_skill` marker to the state file before invoking, and clears it after return.
+
+> **Note:** When `/ops` is wrapped with `/ralph-loop` (`/ops ralph`), nested-skill invocations inside the ralph-loop wrapper (e.g., ralph-loop's Cleanup stage → `/deslop`) are governed by ralph-loop's own prompt, which does not currently have an equivalent non-negotiable. A follow-up fix to `skills/ralph-loop/` is needed for full coverage. See Appendix A of the fix plan.
+
 ### Agent Dispatch
 
 Agent dispatch differs between Claude Code and Cursor due to platform limitations:

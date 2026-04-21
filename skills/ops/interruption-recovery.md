@@ -60,11 +60,12 @@ All `in_progress` tasks are considered **orphaned** after a session boundary —
 On `/ops resume`:
 
 1. Read the state file from `.ops-state/` to recover the board.
-2. For tasks still marked `in_progress` — check whether the agent's work was actually applied (read the files, check git status). If changes are present and look correct, mark as `completed`. If not, reset to `pending` for re-dispatch.
-3. **Read the plan document** from `docs/plan/` (look for the most recently modified `*-plan.md` file, or use the path stored in the state file's root `plan_file` field).
-4. **Read handoff files** from the run's subdirectory in `docs/plan/.handoffs/<run_id>/` (the `run_id` is stored at the root of the state file). Use these to reconstruct the context chain when briefing the next agent to dispatch.
-5. Rebuild the dispatch state from the task board (what's done, what's blocked, what's ready).
-6. Show the recovered dashboard — including a note about which handoff files were recovered — and ask the user to confirm before resuming.
+2. **Check `pending_nested_skill`.** Read the state file's root-level `pending_nested_skill` field. If it is `null` or absent, proceed to the next step (orphan detection and dedup verification for `in_progress` tasks). If it is non-null, the previous session was interrupted **inside a nested-skill call** (between the write-before step and the return). **Do not re-invoke the nested skill automatically** — the side-effects of a partial invocation are not known to the team manager. Instead, escalate to the user with the marker's contents (`skill`, `invoked_at`, `resume_phase`, `resume_notes`) and ask whether to (a) clear the marker and continue resume (if the user has verified the nested skill's effects are in the correct terminal state), (b) re-invoke the nested skill (if the user has verified the pre-invocation conditions still hold), or (c) abort the resume. Record the user's decision. Do not clear `pending_nested_skill` automatically until the user confirms. See `state-schema.md` for the field shape.
+3. For tasks still marked `in_progress` — check whether the agent's work was actually applied (read the files, check git status). If changes are present and look correct, mark as `completed`. If not, reset to `pending` for re-dispatch.
+4. **Read the plan document** from `docs/plan/` (look for the most recently modified `*-plan.md` file, or use the path stored in the state file's root `plan_file` field).
+5. **Read handoff files** from the run's subdirectory in `docs/plan/.handoffs/<run_id>/` (the `run_id` is stored at the root of the state file). Use these to reconstruct the context chain when briefing the next agent to dispatch.
+6. Rebuild the dispatch state from the task board (what's done, what's blocked, what's ready).
+7. Show the recovered dashboard — including a note about which handoff files were recovered — and ask the user to confirm before resuming.
 
 The team manager does not rely on conversation history for stage-to-stage context — everything is on disk (plan doc + handoff files + state file).
 

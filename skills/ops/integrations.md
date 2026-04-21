@@ -27,6 +27,8 @@ After all verify tasks pass and before code review begins, the team manager runs
 
 **Stage transition:** In interactive mode, the deslop pass runs silently during the verify→review transition. The stage checkpoint after verify mentions deslop results: "Deslop: cleaned N findings in M files" or "Deslop: no changes" or "Deslop: skipped (--no-deslop)".
 
+**After this nested skill returns, do not end the turn and do not write "Handing control back."** A nested-skill return is a mid-loop event (see Non-negotiable #10). Before invoking, write `pending_nested_skill` to the state file with `skill: "/deslop"`, `resume_phase: "phase-3-deslop-stage"`, and `resume_notes: "integrations.md steps 5-6"`. After the skill returns, re-read the state file, follow integrations.md steps 5–6 — if deslop made changes, re-dispatch the verifier against the modified files; if deslop made no changes, proceed to the code-review stage. Either branch: do not end the turn. Then clear `pending_nested_skill` back to `null` and continue.
+
 ---
 
 ## Ralph Loop Integration
