@@ -21,6 +21,7 @@ Parse arguments as follows:
 - `--no-branch` — skip automatic working branch creation; work directly on the current branch.
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
+- `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
 
 Default mode is **interactive** — check in after each pipeline stage completes.
@@ -106,6 +107,10 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 7. **Timing section mandatory** — always include Timing in every dashboard display (mid-run and completion).
 8. **Dashboard gating** — runs with ≤ 2 non-internal tasks: render full dashboard at completion only; stage transitions use one-liner `✓ [stage] complete (Xs)`. Always render full dashboard on `/ops status`.
 9. **Trivial route still enforces LB1 and LB2** — even on the trivial path, a state file is created and verified on disk (LB1) and the agent brief is fully self-contained (LB2). The triage gate never bypasses these invariants.
+10. **Nested skill returns are mid-loop events.** Never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. A nested-skill return is a **mid-loop checkpoint**, never a terminal event. The team manager's ritual around every nested skill invocation is:
+    - **Before** invoking another skill (e.g., `/deslop`, `/clickup`), write a `pending_nested_skill` record to the state file on disk (fields: `skill`, `invoked_at`, `resume_phase`, `resume_notes`). See `state-schema.md`.
+    - **After** the nested skill returns, re-read the state file, consult `pending_nested_skill.resume_phase` and `resume_notes` to know where to resume, capture any output that downstream phases need (into a handoff file where one exists per the Handoff Documents section, or into the next agent's brief when no handoff procedure applies — e.g., ClickUp), clear the field back to `null`, write the state file, and execute the resume action in the same turn.
+    - The dispatch loop terminates **only** on Phase 4 completion (all tasks `completed`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
 
 ---
 
@@ -121,7 +126,7 @@ Classify the invocation before reading any further. Apply the first matching rul
 | :--- | :--- | :--- |
 | **trivial** | Single-sentence scope AND no code changes across multiple modules AND user did not say `plan` AND not `resume` / `status` / `execute` AND no stage-crossing dependencies implied (no verify→review→document chain) | Skip to **Trivial Dispatch** below. Never reads Phase 1a, Phase 2.5, or full Phase 4. |
 | **status-only** | Argument is `status` | Read state file, render dashboard, stop. |
-| **pipeline** | Everything else — `plan`, `execute`, `resume`, any multi-stage or multi-module request | Full workflow: Phase 1a → Phase 2 → Phase 2.5 → Phase 3 → Phase 4. |
+| **pipeline** | Everything else — `plan`, `execute`, `resume`, `--brainstorm`, any multi-stage or multi-module request | Full workflow: Phase 1a → Phase 2 → Phase 2.5 → Phase 3 → Phase 4. |
 
 **Trivial examples:** "commit the changes using git-master", "run the deploy script to all channels", "get the assessment doc updated", "fix this typo in README".
 
@@ -133,9 +138,9 @@ Determine the starting point from the parsed arguments:
 
 | Input | Action |
 | :--- | :--- |
-| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
+| Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
-| `resume` | Read the state file from `.ops-state/`. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
+| `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
 | `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
@@ -152,11 +157,23 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
 
-**Spec clarity evaluation:** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says "just plan it", dispatch planner regardless.
+#### Brainstorm Gate (opt-in, pre-planning)
+
+When `--brainstorm` is enabled (or the user explicitly requests brainstorm/design-first behavior), run this gate before any planner dispatch:
+
+1. **Clarify requirements first:** Dispatch **interviewer** to produce a requirements document. The interviewer must decompose oversized requests into sub-projects before deep clarification.
+2. **Explore design alternatives:** Dispatch **architect** using the requirements document as input. The architect must produce an ADD with concrete options and a recommendation.
+3. **Require explicit design approval:** Present the ADD summary and ask the user to approve before planning. This approval checkpoint is mandatory for the brainstorm path.
+4. **If not approved:** Route feedback back to **interviewer** and/or **architect** as needed, then re-run the approval checkpoint.
+5. **Only after approval:** Dispatch **planner** with both artifacts (requirements doc + ADD), then continue to Phase 1a.
+
+In `--autonomous` mode, still pause at Step 3 for user approval. Brainstorm gating always requires an explicit user decision before planning proceeds.
+
+**Spec clarity evaluation (default path, skip when Brainstorm Gate is active):** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says "just plan it", dispatch planner regardless.
 
 In **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.
 
-**Architect dispatch (optional):** Dispatch an **architect** agent via `Task(subagent_type="architect")` before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.
+**Architect dispatch (optional, default path only):** Dispatch an **architect** agent via `Task(subagent_type="architect")` before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.
 
 **Plan document persistence:** When the planner produces a plan, persist it to disk as the source of truth for the run:
 
@@ -169,6 +186,8 @@ In **interactive mode**, prefer asking the user directly for simple ambiguities;
 The plan document is infrastructure — not a deliverable task — written before the task board and used as input for Phase 2.
 
 **ClickUp context enrichment:** If a ClickUp task ID is referenced, pull task details before planning. Read `~/.cursor/skills/clickup/SKILL.md` and dispatch via `Task(subagent_type="generalPurpose")` if available; otherwise fall back to `curl https://api.clickup.com/api/v2/task/<id>` with token from `~/.cursor/config/clickup/config.json`. Extract title, description, status, checklist items, and comments as spec context. Intake-only — does not write back to ClickUp.
+
+**After this nested skill returns, do not end the turn and do not write "Handing control back."** A nested-skill return is a mid-loop event (see Non-negotiable #10). Before invoking, write `pending_nested_skill` to the state file with `skill: "/clickup"`, `resume_phase: "phase-1-intake"`, and `resume_notes: "return to Phase 1 plan-clarity evaluation"`. After the skill returns, re-read the state file, attach the ClickUp context to the planner/interviewer brief and continue Phase 1 plan-clarity evaluation — either dispatch the planner or the interviewer depending on spec clarity. Then clear `pending_nested_skill` back to `null` and continue.
 
 ### Phase 1a — Plan Validation (adaptive)
 
@@ -373,6 +392,7 @@ This is the core orchestration loop. Repeat until all tasks are completed or the
 - **Task completed**: immediately after Step 4 writes task completion to disk (state file just mutated).
 - **Resume / status subcommand**: always re-read on `resume` or `status` — external changes may have occurred.
 - **User mid-run command** (`add`, `drop`, `reprioritize`, `do #N next`, `skip`) — re-read after processing the command.
+- **Nested skill return** — after any nested-skill call returns, the cache is invalidated. The state file on disk may have been written by the team manager in the same turn (via the `pending_nested_skill` write-before step). Re-read before processing the return. See `state-schema.md` and Non-negotiable #10.
 
 Between these events, operate on the cached snapshot. Do not re-read on routine Step 1 → Step 2 → Step 3 cycles within one dispatch iteration.
 
@@ -403,6 +423,11 @@ Once you have read the agent definition, execute the task below following the ag
 
 5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
 6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
+
+**Nested skill invocations:** When the team manager invokes a nested skill (e.g., `/deslop`, `/clickup`) during the dispatch loop, execute the write-before / clear-after ritual to prevent the turn from ending on the nested skill's return. The ritual has eleven steps (5 write-before + 6 clear-after):
+
+- **Write-before** (immediately before the nested-skill call): (1) build the `pending_nested_skill` record with fields `skill`, `invoked_at`, `resume_phase`, `resume_notes`; (2) read the state file from disk; (3) set the `pending_nested_skill` field on the root object; (4) write the state file to disk; (5) issue the nested-skill call.
+- **Clear-after** (immediately after the nested skill returns, in the same turn): (1) read the state file from disk (cache was invalidated — see Step 1); (2) read `pending_nested_skill.resume_phase` and `resume_notes` to identify where to resume and how to proceed; (3) capture any output the nested skill produced that downstream phases need — write it into a handoff file where one exists, or hold it in-turn for the next agent's brief when no handoff procedure applies; (4) set `pending_nested_skill` back to `null`; (5) write the state file to disk; (6) execute the `resume_phase`-specified next action. **Do not end the turn.** See Non-negotiable #10.
 
 **Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (Non-negotiable — see #3.)
 
@@ -545,6 +570,12 @@ Pre-planning chain (optional, for work requiring design exploration):
 interviewer → architect → planner → project-scoper → critic → executor → ...
 ```
 
+With `--brainstorm`, treat this as a strict gate:
+
+```text
+interviewer → architect → user approval checkpoint → planner
+```
+
 Architect dispatches for architectural decisions; otherwise team manager goes directly to planner.
 
 ```text
@@ -595,6 +626,8 @@ After all verify tasks pass and before code review, run deslop with `--conservat
 **How to invoke deslop (read-and-dispatch):** Read `~/.cursor/skills/deslop/SKILL.md`. Dispatch via `Task(subagent_type="generalPurpose", prompt=<deslop skill content + "--conservative" + file list>)`.
 
 **Skip when:** `--no-deslop` set, deslop skill file unavailable, run produced no code changes, or all changes are trivial/mechanical.
+
+**After this nested skill returns, do not end the turn and do not write "Handing control back."** A nested-skill return is a mid-loop event (see Non-negotiable #10). Before invoking, write `pending_nested_skill` to the state file with `skill: "/deslop"`, `resume_phase: "phase-3-deslop-stage"`, and `resume_notes: "integrations.md steps 5-6"`. After the skill returns, re-read the state file, follow integrations.md steps 5–6 — if deslop made changes, re-dispatch the verifier against the modified files; if deslop made no changes, proceed to the code-review stage. Either branch: do not end the turn. Then clear `pending_nested_skill` back to `null` and continue.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/integrations.md` (Deslop Integration section) for the full deslop procedure, skip conditions, dashboard display rules, and re-verification logic. If the file is missing, proceed using the inline summary above.
 
