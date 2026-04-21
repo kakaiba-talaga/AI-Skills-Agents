@@ -379,13 +379,10 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | :--- | :--- | :--- |
 | `help-card.md` | Quick-reference card for commands, flags, and mid-run actions | `help` command |
 | `plan-validation.md` | Spec clarity evaluation, plan complexity scoring, critic verdict handling, scoper/critic output descriptions, execute-skip detection, adaptation rules | Phase 1a Plan Validation (Tier 2/3 runs) |
-| `branch-isolation.md` | Detailed branch handling procedures (uncommitted changes, worktree isolation rules, merge strategy, worktree/ralph/resume interaction) | Branching decisions in Phase 1.5 and `--worktree` flag |
 | `state-schema.md` | State file JSON structure, field definitions, directory conventions | Phase 2 state file creation |
-| `dispatch-policy.md` | Foreground/background dispatch decision criteria, thresholds, batch rules, interaction with health monitoring and worktree isolation | Phase 3 dispatch decisions (tasks 8+ min) |
-| `agent-health-monitoring.md` | Timeout budgets, stall detection rules, health escalation procedures | Phase 3 dispatch loop (agent monitoring) |
+| `dispatch-policy.md` | Foreground/background dispatch decision criteria, thresholds, batch rules | Phase 3 dispatch decisions (tasks 8+ min) |
 | `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules | Team manager tool use decisions |
 | `handoffs.md` | Full handoff template, run identity rules, naming examples, accumulation rules, cleanup lifecycle | Writing or reading handoff documents |
-| `ssh-integration.md` | SSH-specific preflight checks, brief template, handoff format, SSH handoff chains, SSH parallel safety rules | SSH tasks on the board |
 | `integrations.md` | Deslop and Ralph Loop integration procedures | Verify→review stage transition; `ralph` flag |
 | `timing-edge-cases.md` | 7 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time) | Phase 4 completion and Status Dashboard display |
 | `cost-tracking.md` | Token estimation heuristics, model pricing, cost dashboard format, per-task and per-model rollup templates | Phase 4 completion (cost estimate and dashboard) |
@@ -394,7 +391,7 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 
 These companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
 
-Five procedures previously in companion files have been extracted into standalone agents and a skill:
+Eight procedures previously in companion files have been extracted into standalone agents and a skill:
 
 | Extracted to | Replaces | Used for |
 | :--- | :--- | :--- |
@@ -403,6 +400,9 @@ Five procedures previously in companion files have been extracted into standalon
 | `~/.claude/agents/rollback.md` | `rollback-strategy.md` | Failure rollback |
 | `~/.claude/agents/change-analyzer.md` | `conditional-stage-skip.md` | Per-stage skip analysis |
 | `~/.claude/skills/timing-calibrator/SKILL.md` | `estimation-feedback.md` | Timing calibration and cross-run learning |
+| `~/.claude/agents/git-master.md` (enriched) | `branch-isolation.md` | Branch workflow decisions and worktree isolation |
+| `~/.claude/agents/work-verifier.md` (enriched) | `agent-health-monitoring.md` | Orphan detection and timeout budgets |
+| `~/.claude/agents/ssh-executor.md` (enriched) | `ssh-integration.md` | SSH preflight checks and handoff format |
 
 ---
 

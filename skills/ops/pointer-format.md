@@ -18,4 +18,4 @@ A **pointer** is a one-line blockquote in `SKILL.md` that tells the model where 
 
 ## When to downgrade from MUST to softer
 
-Downgrade to `See` / `Refer to` when the companion is only needed for a specific, rarely-fired condition: SSH-only tasks, ralph-mode runs, `resume` command, failure escalation, or opt-in features like cost tracking. Keep `You MUST Read` for always-hot companions: `state-schema.md`, `handoffs.md`, `dispatch-policy.md`, `tool-restrictions.md`, `plan-validation.md`, `agent-health-monitoring.md`.
+Downgrade to `See` / `Refer to` when the companion is only needed for a specific, rarely-fired condition: SSH-only tasks, ralph-mode runs, `resume` command, failure escalation, or opt-in features like cost tracking. Keep `You MUST Read` for always-hot companions: `state-schema.md`, `handoffs.md`, `dispatch-policy.md`, `tool-restrictions.md`, `plan-validation.md`.

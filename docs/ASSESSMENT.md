@@ -133,7 +133,7 @@ Four new plan files landed since the last audit:
 
 ### Cross-reference spot-checks
 
-- `~/.claude/skills/ops/help-card.md`, `state-schema.md`, `plan-validation.md`, `branch-isolation.md`, `dispatch-policy.md`, `agent-health-monitoring.md` references in `skills/ops/SKILL.md` — all resolve to files present in `skills/ops/`. (Note: `preflight-validation.md`, `resume-dedup.md`, `rollback-strategy.md`, `conditional-stage-skip.md`, and `estimation-feedback.md` were extracted into standalone agents/skills and deleted — see `docs/plan/ops-decoupling-plan.md`.)
+- `~/.claude/skills/ops/help-card.md`, `state-schema.md`, `plan-validation.md`, `dispatch-policy.md` references in `skills/ops/SKILL.md` — all resolve to files present in `skills/ops/`. (Note: 8 ops companion files were extracted into standalone agents/skills and deleted in Tier 1 and Tier 2 of the ops decoupling — see `docs/plan/ops-decoupling-plan.md`.)
 - `~/.claude/skills/deploy/help-card.md`, `brief-construction.md`, `deployment-patterns.md`, `response-interpretation.md` references in `skills/deploy/SKILL.md` — all resolve.
 - `~/.claude/agents/ssh-executor.md` reference in deploy dispatch procedure — resolves.
 - No `~/.claude/commands/` references remain in any tracked file except this ASSESSMENT.md (historical narrative only).
@@ -144,7 +144,7 @@ All three issues in the "Issues noted but not changed" table were re-evaluated. 
 
 ### Other structural changes
 
-- No agents added or removed between `2026-04-15` and `2026-04-21`. On `2026-04-21`, 4 agents were added (`preflight`, `work-verifier`, `rollback`, `change-analyzer`) and 1 skill was added (`timing-calibrator`) as part of the ops decoupling (see `docs/plan/ops-decoupling-plan.md`). 5 ops companion files were deleted (replaced by the new agents/skill).
+- No agents added or removed between `2026-04-15` and `2026-04-21`. On `2026-04-21`, 4 agents were added (`preflight`, `work-verifier`, `rollback`, `change-analyzer`) and 1 skill was added (`timing-calibrator`) as part of the ops decoupling. Existing agents `git-master`, `work-verifier`, and `ssh-executor` were enriched with logic from 3 additional deleted helper files. Total: 8 ops companion files deleted across Tier 1 and Tier 2 (see `docs/plan/ops-decoupling-plan.md`).
 - No tooling files added or removed.
 
 ---

@@ -55,7 +55,7 @@ If the conversation is interrupted (terminal closed, context reset, session time
 - **Plan document on disk** survives — it contains the overall work scope and acceptance criteria.
 - Tasks that were `in_progress` when the session died remain marked as such, but the agent that was working on them is gone.
 
-All `in_progress` tasks are considered **orphaned** after a session boundary — the agents from the prior session no longer exist (see `agent-health-monitoring.md` Section 3b for the formal orphan detection logic). The **work-verifier** agent (`~/.claude/agents/work-verifier.md`) determines whether each orphaned task's work was actually applied.
+All `in_progress` tasks are considered **orphaned** after a session boundary — the agents from the prior session no longer exist. The **work-verifier** agent (`~/.claude/agents/work-verifier.md`) handles orphan detection (via timeout budgets per agent type) and determines whether each orphaned task's work was actually applied.
 
 On `/ops resume`:
 

@@ -90,7 +90,17 @@ This agent executes commands on remote servers via SSH. Hard stops:
 
 1. **Read the brief** — Understand target host, commands to execute, acceptance criteria, sudo authorization, timeout budget.
 
-2. **Validate prerequisites** — (a) Check that the target host exists in SSH config: `grep -i "^Host " ~/.ssh/config` and verify the alias is present. (b) Test connectivity: `ssh -o BatchMode=yes -o ConnectTimeout=5 HOST "echo ok"`. If either fails, STOP and report the specific failure.
+2. **Validate prerequisites** — Run the following checks before executing any commands. If any critical check fails, STOP and report the specific failure.
+
+   a. **Host exists in SSH config** (critical): `grep -i "^Host " ~/.ssh/config` — verify the target alias is listed. If absent, report with remediation: ask the user to add an entry to `~/.ssh/config`.
+
+   b. **Connectivity test** (critical): `ssh -o BatchMode=yes -o ConnectTimeout=5 HOST "echo ok"` — exit code 0 = pass. Non-zero = connectivity failure.
+
+   c. **SSH key loaded** (advisory): `ssh-add -l` — best-effort diagnostic. If `ssh-add -l` fails but the connectivity test (b) passes, the connection works via `IdentityFile` in SSH config — proceed. If both (b) and (c) fail, auth will fail. Report the specific condition.
+
+   d. **Source files exist** (critical, file transfer tasks only): Verify the local file or directory to be transferred exists before attempting the transfer. Use Read or Glob to confirm. Skip for command-only tasks.
+
+   e. **Remote directory exists** (advisory, file transfer tasks only): `ssh -o BatchMode=yes HOST "test -d /remote/path"` — if absent, include `mkdir -p /remote/path` as the first remote command or ask the user.
 
 3. **Execute commands one at a time** — Run each command individually via `ssh -o BatchMode=yes -o ConnectTimeout=10 HOST "command"`. Capture exit code and output. Do NOT chain multiple remote commands in a single SSH call unless the brief specifies a pipeline.
 
@@ -369,6 +379,15 @@ Host staging-db
 ### Summary
 [1-2 sentences on what was accomplished]
 ```
+
+When the output feeds into a downstream agent (e.g., verifier), extend the report with these SSH-specific fields for the handoff:
+
+- **Target host:** SSH config alias
+- **Commands executed:** each with exit code and pass/fail
+- **Remote state changes:** files created, services restarted, configs changed
+- **Rollback commands:** in reverse order, even if the task succeeded
+- **Remote artifacts:** paths created or modified on the remote server
+- **Verification hints:** what the downstream verifier should check (endpoints, log entries, file contents)
 
 ## Escalation
 

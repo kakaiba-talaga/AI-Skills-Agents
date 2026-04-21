@@ -142,51 +142,49 @@ This plan covers 5 Tier 1 extractions (implemented), 3 Tier 2 moderate candidate
 
 ---
 
-## Tier 2 — Future (Enrich Existing / Fold In)
+## Tier 2 — Implemented (Enrich Existing Agents)
 
-### 6. Branch Isolation → Enrich `git-master` agent
+### 6. Branch Isolation → Enriched `git-master` agent
 
-**Source file:** `skills/ops/branch-isolation.md` (retained)
+**Replaces:** `skills/ops/branch-isolation.md` (deleted)
 
-**What to do:** Add a `branch-workflow` mode or section to the existing `agents/git-master.md` that incorporates the decision matrix from `branch-isolation.md`:
+**What was done:** Added a "Branch workflow" section to `agents/git-master.md` incorporating the full decision matrix:
 
-- When to create a branch vs. work on current
+- When to create a branch vs. work on current (on main → always branch; on matching feature branch → stay; on unrelated branch → warn)
 - How to handle uncommitted changes (interactive: ask; autonomous: stash)
 - Branch naming conventions (detect from git log)
 - After-completion cleanup (delete merged branches, remind about unmerged)
-- Worktree interaction rules
+- Worktree interaction rules (worktree branches fork from working branch, ralph tags are branch-independent)
 
-This is not a new agent — git-master already handles branches. The gap is the decision logic for "should I create a branch?" which currently lives only in ops.
-
-**Effort:** Add a ~40-line "Branch Workflow" section to `agents/git-master.md`. Update ops to dispatch git-master with a `branch-workflow` task type instead of inlining the decision.
+**Ops integration:** Ops dispatches git-master for branch workflow decisions instead of inlining the logic.
 
 ---
 
-### 7. Agent Health Monitoring → Shared reference document
+### 7. Agent Health Monitoring → Folded into `work-verifier` agent and ops inline
 
-**Source file:** `skills/ops/agent-health-monitoring.md` (retained)
+**Replaces:** `skills/ops/agent-health-monitoring.md` (deleted)
 
-**What to do:** Keep as a reference document, but make it a shared resource rather than ops-private. Move or symlink to a location accessible by any orchestrator (e.g., `docs/agent-health-monitoring.md` or `skills/shared/agent-health-monitoring.md`).
+**What was done:**
 
-The content is primarily passive configuration (timeout budgets per agent type, threshold definitions) and event-driven checks. It's not agent-shaped — there's no independent work to dispatch. Any orchestrator that dispatches agents can read these tables to set timeout expectations and detect orphans.
-
-The one extractable piece is orphan detection (Section 3b), which could become a lightweight check within the `work-verifier` agent — "is this task orphaned?" is a prerequisite question before "was the work completed?"
+- **Orphan detection** (Section 3b) folded into `agents/work-verifier.md` as a new "Orphan detection" section. The work-verifier now handles both "is this task orphaned?" and "was the work completed?" in a single dispatch.
+- **Timeout budgets** (Section 1) and **stall detection thresholds** (Section 2) moved inline into ops `SKILL.md` — these are small tables the team manager needs directly, not a procedure to delegate.
+- **Health warnings, escalation, dashboard integration** (Sections 3a, 4, 6) moved inline into ops `SKILL.md` — these are team manager responsibilities, not delegatable work.
+- **Calibration feedback** (Section 7) already handled by the `timing-calibrator` skill.
 
 ---
 
-### 8. SSH Integration → Fold into `ssh-executor` agent
+### 8. SSH Integration → Enriched `ssh-executor` agent
 
-**Source file:** `skills/ops/ssh-integration.md` (retained)
+**Replaces:** `skills/ops/ssh-integration.md` (deleted)
 
-**What to do:** The SSH preflight checks (host exists, connectivity test, key loaded, source files exist, remote directory exists) should be folded into `agents/ssh-executor.md` as a self-preflight step. The ssh-executor already understands SSH — it's the right agent to validate its own prerequisites.
+**What was done:**
 
-Specifically:
-- Add a "Preflight" section to `agents/ssh-executor.md` with the 5 checks from `ssh-integration.md`.
-- The ssh-executor runs these checks as its first action before executing the actual task.
-- If any critical check fails, the agent reports failure immediately (no retry needed — it's an environment problem).
-- The SSH-specific handoff format moves into the ssh-executor's output protocol section.
+- **SSH preflight checks** (5 checks: host exists, connectivity, key loaded, source files, remote directory) folded into `agents/ssh-executor.md` as a self-preflight procedure. The ssh-executor already had host validation and connectivity checks in its workflow (Steps 1-2); the remaining checks (key loaded, source files, remote directory) were added.
+- **SSH handoff format** (SSH-specific fields for handoff documents) folded into the ssh-executor's output format section.
+- **SSH parallel safety rules** folded into the ssh-executor's scaling section.
+- **SSH handoff chains** already documented in the ssh-executor's handoff section.
 
-This eliminates the need for ops to dispatch a separate verifier for SSH preflight and makes the ssh-executor self-sufficient.
+Ops no longer needs to dispatch a separate verifier for SSH preflight — the ssh-executor validates its own prerequisites.
 
 ---
 

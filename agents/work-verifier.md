@@ -128,6 +128,47 @@ For `partial` verdicts, include re-dispatch context:
 - Note: "Continue from where the previous agent left off — do NOT start over or re-write sections that are already complete."
 ```
 
+## Orphan detection
+
+An **orphaned task** is one marked `in_progress` in the state file but with no agent actively running. This occurs when a background agent silently completed or errored, the session was disrupted, or the orchestrator crashed before updating the state file.
+
+When the brief indicates orphan detection is needed (e.g., on `resume` or `status`), apply this heuristic before running the 4-check verification:
+
+- **On `resume` after a session boundary:** ALL `in_progress` tasks are treated as orphaned — the agents from the previous session are gone. Proceed directly to the verification checks.
+- **Mid-session orphan suspicion:** If a task's elapsed time exceeds its agent-type timeout AND no completion notification was received, flag it as a **suspected orphan**.
+
+| Agent Type | Default Timeout |
+| :--- | :--- |
+| architect | 15 min |
+| code-reviewer / code-reviewer-diff | 10 min |
+| critic | 8 min |
+| debugger | 20 min |
+| debugger-build | 10 min |
+| documentor | 8 min |
+| executor | 15 min |
+| git-master | 5 min |
+| interviewer | 5 min |
+| planner | 10 min |
+| project-scoper | 12 min |
+| security-reviewer | 12 min |
+| ssh-executor | 10 min |
+| verifier | 10 min |
+| preflight | 5 min |
+| work-verifier | 5 min |
+| rollback | 5 min |
+| change-analyzer | 5 min |
+
+The per-task timeout is the MINIMUM of (agent type default, 3× task estimate).
+
+For suspected orphans, include the orphan status in the output:
+
+```
+### Task #N: [subject]
+- **Orphan status:** Suspected orphan (elapsed Xm, timeout Ym)
+- Check A (files): [result]
+- ...
+```
+
 ## Edge cases
 
 ### Multiple tasks to verify
