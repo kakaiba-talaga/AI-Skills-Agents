@@ -90,7 +90,7 @@ An **orphaned task** is one marked `in_progress` in the state file but with no a
 
 **Detection trigger:** Orphan detection runs at the same check-in events as health monitoring (Section 3), plus:
 - On every `status` command.
-- On every `resume` command (before the dedup procedure in `resume-dedup.md`).
+- On every `resume` command (before the work-verifier agent dispatch).
 
 **Detection heuristic** (since Claude Code cannot query "is agent X still running?"):
 - If a background agent's elapsed time exceeds its agent-type timeout (Section 1) AND no completion notification has been received → flag as **suspected orphan**.
@@ -100,7 +100,7 @@ An **orphaned task** is one marked `in_progress` in the state file but with no a
 
 **Response to suspected orphan:**
 - Display the orphan status in the dashboard (see Section 6).
-- Recommend the user run `resume` to trigger dedup verification (Checks A–D from `resume-dedup.md`) which determines whether the agent's work was actually applied.
+- Recommend the user run `resume` to trigger the **work-verifier** agent (`~/.claude/agents/work-verifier.md`) which determines whether the agent's work was actually applied.
 - Do not automatically reset orphaned tasks — the dedup procedure handles that.
 
 ---

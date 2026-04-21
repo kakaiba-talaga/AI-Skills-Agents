@@ -45,6 +45,10 @@ The team manager auto-detects which agent to assign based on task content:
 | security-reviewer | Security audits, vulnerability scanning, OWASP checks, auth review |
 | ssh-executor | Deploying to remote servers, SSH commands, file transfer, remote verification |
 | critic | Reviewing plans, quality gates |
+| preflight | Environment readiness checks (runtime, dependencies, git, disk space) |
+| work-verifier | Verifying whether interrupted agent work was completed |
+| rollback | Rolling back agent-produced changes after failures |
+| change-analyzer | Classifying diffs and recommending pipeline stage skips |
 
 ## Autonomy Modes
 
@@ -277,31 +281,37 @@ Builds a task board spanning two milestones. Milestone 3 skips the code-reviewer
 ### Mid-run interactions
 
 **Check status while work is in progress:**
+
 ```
 /ops status
 ```
 
 **Add a task you forgot:**
+
 ```
 Also add input validation for the email field in the signup endpoint
 ```
 
 **Skip a stage:**
+
 ```
 Skip documentation for now, we'll do that later
 ```
 
 **Promote a task:**
+
 ```
 Do task #7 next, it's blocking the frontend team
 ```
 
 **Stop everything:**
+
 ```
 Stop, I need to rethink the approach
 ```
 
 **Resume later (even in a new conversation):**
+
 ```
 /ops resume
 ```
@@ -309,6 +319,7 @@ Stop, I need to rethink the approach
 ### Combining with other skills
 
 **Plan first, then hand off to ops:**
+
 ```
 User: Use the planner to break down adding WebSocket support
 [planner produces structured plan]
@@ -316,6 +327,7 @@ User: /ops execute
 ```
 
 **Ops then doc-sync:**
+
 ```
 User: /ops --autonomous Implement the new detection module
 [team-manager completes, documentor finishes]
@@ -323,6 +335,7 @@ User: /doc-sync
 ```
 
 **Review before committing:**
+
 ```
 User: /ops Implement the refactoring plan. Stop before documentation.
 [team-manager runs executor → verifier → code-reviewer, pauses]
@@ -368,23 +381,28 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | `plan-validation.md` | Spec clarity evaluation, plan complexity scoring, critic verdict handling, scoper/critic output descriptions, execute-skip detection, adaptation rules | Phase 1a Plan Validation (Tier 2/3 runs) |
 | `branch-isolation.md` | Detailed branch handling procedures (uncommitted changes, worktree isolation rules, merge strategy, worktree/ralph/resume interaction) | Branching decisions in Phase 1.5 and `--worktree` flag |
 | `state-schema.md` | State file JSON structure, field definitions, directory conventions | Phase 2 state file creation |
-| `preflight-validation.md` | Preflight validation procedure, check categories, agent brief template | Phase 2.5 before first dispatch |
 | `dispatch-policy.md` | Foreground/background dispatch decision criteria, thresholds, batch rules, interaction with health monitoring and worktree isolation | Phase 3 dispatch decisions (tasks 8+ min) |
 | `agent-health-monitoring.md` | Timeout budgets, stall detection rules, health escalation procedures | Phase 3 dispatch loop (agent monitoring) |
 | `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules | Team manager tool use decisions |
 | `handoffs.md` | Full handoff template, run identity rules, naming examples, accumulation rules, cleanup lifecycle | Writing or reading handoff documents |
 | `ssh-integration.md` | SSH-specific preflight checks, brief template, handoff format, SSH handoff chains, SSH parallel safety rules | SSH tasks on the board |
 | `integrations.md` | Deslop and Ralph Loop integration procedures | Verify→review stage transition; `ralph` flag |
-| `rollback-strategy.md` | Rollback procedure, scope levels, guardrails, model escalation metadata format and skip conditions | Failure handling (chain failures, model escalation) |
 | `timing-edge-cases.md` | 7 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time) | Phase 4 completion and Status Dashboard display |
-| `estimation-feedback.md` | Estimation feedback loop, memory format, calibration procedure, cross-run learning patterns | Phase 4 completion (estimate accuracy and learning) |
 | `cost-tracking.md` | Token estimation heuristics, model pricing, cost dashboard format, per-task and per-model rollup templates | Phase 4 completion (cost estimate and dashboard) |
-| `conditional-stage-skip.md` | Per-stage skip conditions and evaluation procedure | Edge case evaluation (trivial changes) |
 | `interruption-recovery.md` | Detailed procedures for cancel, reprioritize, inject tasks, remove tasks, session recovery, foreground/background dispatch explainer | User interrupts, `resume` command, dispatch context |
-| `resume-dedup.md` | Resume deduplication procedure and work verification checks | `resume` command |
 | `pointer-format.md` | Standard format for pointer lines, usage notes for extraction agents | Meta-reference for maintaining pointer consistency |
 
-These 19 companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
+These companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
+
+Five procedures previously in companion files have been extracted into standalone agents and a skill:
+
+| Extracted to | Replaces | Used for |
+| :--- | :--- | :--- |
+| `~/.claude/agents/preflight.md` | `preflight-validation.md` | Phase 2.5 environment readiness checks |
+| `~/.claude/agents/work-verifier.md` | `resume-dedup.md` | Resume dedup verification |
+| `~/.claude/agents/rollback.md` | `rollback-strategy.md` | Failure rollback |
+| `~/.claude/agents/change-analyzer.md` | `conditional-stage-skip.md` | Per-stage skip analysis |
+| `~/.claude/skills/timing-calibrator/SKILL.md` | `estimation-feedback.md` | Timing calibration and cross-run learning |
 
 ---
 

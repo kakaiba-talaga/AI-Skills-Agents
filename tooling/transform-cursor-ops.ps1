@@ -233,8 +233,8 @@ rep(
 # PATCH 7 — Input table: resume row
 # ---------------------------------------------------------------------------
 rep(
-    "| `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. Treat all `in_progress` tasks as orphaned. Run dedup verification (`resume-dedup.md`), then Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |",
-    "| `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |",
+    "| `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. Treat all `in_progress` tasks as orphaned. Dispatch a **work-verifier** agent (see `~/.claude/agents/work-verifier.md`) per in-progress task to determine actual completion status. Then run Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |",
+    "| `resume` | Read the state file from `.ops-state/`. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per in-progress task to determine actual completion status. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |",
 )
 
 # ---------------------------------------------------------------------------
@@ -440,8 +440,8 @@ Before displaying the task board, confirm the state file exists and is valid:
 # PATCH 20 — Preflight dispatch
 # ---------------------------------------------------------------------------
 rep(
-    "Dispatch a **verifier** agent with the preflight checklist.",
-    'Dispatch a **verifier** agent via `Task(subagent_type="verifier")` with the preflight checklist.',
+    "Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`).",
+    'Dispatch a **preflight** agent (see `~/.cursor/agents/preflight.md`) via `Task(subagent_type="generalPurpose")`.',
 )
 
 # ---------------------------------------------------------------------------
@@ -607,11 +607,11 @@ rep(
 )
 
 # ---------------------------------------------------------------------------
-# PATCH 34 — estimation-feedback.md ref
+# PATCH 34 — timing-calibrator ref (replaces estimation-feedback.md)
 # ---------------------------------------------------------------------------
 rep(
-    "   > **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, and calibration procedure. If the file is missing, proceed without estimation feedback.",
-    "   > **Reference:** You MUST Read `~/.cursor/skills/ops/estimation-feedback.md` for the estimation feedback loop and calibration procedure. If the file is missing, proceed without estimation feedback.",
+    "   > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.",
+    "   > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.cursor/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.",
 )
 
 # ---------------------------------------------------------------------------
@@ -770,11 +770,11 @@ rep(
 )
 
 # ---------------------------------------------------------------------------
-# PATCH 44 — rollback-strategy.md ref: remove "model escalation details"
+# PATCH 44 — rollback agent ref (replaces rollback-strategy.md)
 # ---------------------------------------------------------------------------
 rep(
-    "> **Reference:** See `~/.claude/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, guardrails, and model escalation details (read only on failure escalation). If the file is missing, proceed without automatic rollback.",
-    "> **Reference:** See `~/.cursor/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, and guardrails (read only on failure escalation). If the file is missing, proceed without automatic rollback.",
+    "> **Reference:** When rollback is needed, dispatch a **rollback** agent (see `~/.claude/agents/rollback.md`) with the affected file list, scope level, and run ID.",
+    "> **Reference:** When rollback is needed, dispatch a **rollback** agent (see `~/.cursor/agents/rollback.md`) via `Task(subagent_type=\"generalPurpose\")` with the affected file list, scope level, and run ID.",
 )
 
 # ---------------------------------------------------------------------------
@@ -823,7 +823,7 @@ rep(
 # PATCH 49 — Model escalation → Retry strategy
 # ---------------------------------------------------------------------------
 rep(
-    "### Model escalation\n\n```\n1st attempt: assigned model (from frontmatter)\n2nd attempt: same model, with error context and narrowed scope\n3rd attempt: escalate model (sonnet → opus), with full error history\n4th attempt: escalate to user\n```\n\n> **Reference:** You MUST Read `~/.claude/skills/ops/rollback-strategy.md` for model escalation metadata format, skip conditions, and the complete rollback procedure. If the file is missing, proceed using the escalation ladder above.",
+    "### Model escalation\n\n```\n1st attempt: assigned model (from frontmatter)\n2nd attempt: same model, with error context and narrowed scope\n3rd attempt: escalate model (sonnet → opus), with full error history\n4th attempt: escalate to user\n```\n\n> **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.",
     """### Retry strategy
 
 When an agent fails, the team-manager retries with increasing context before escalating:
@@ -842,7 +842,7 @@ Note: Cursor does not support model escalation (changing the model between attem
 # PATCH 50 — Remove "Learning across runs" section
 # ---------------------------------------------------------------------------
 rep(
-    "### Learning across runs\n\nUses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at run start, apply as soft defaults, log when applied.\n\n> **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, calibration procedure, and cross-run learning patterns. If the file is missing, proceed without estimation feedback.\n\n### Adaptation log",
+    "### Learning across runs\n\nUses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at run start, apply as soft defaults, log when applied.\n\n> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start and `/timing-calibrator capture` at completion.\n\n### Adaptation log",
     "### Adaptation log",
 )
 

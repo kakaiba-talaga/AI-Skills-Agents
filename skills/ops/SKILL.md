@@ -114,7 +114,7 @@ Determine the starting point from the parsed arguments:
 | :--- | :--- |
 | Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
-| `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. Treat all `in_progress` tasks as orphaned. Run dedup verification (`resume-dedup.md`), then Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |
+| `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. Treat all `in_progress` tasks as orphaned. Dispatch a **work-verifier** agent (see `~/.claude/agents/work-verifier.md`) per in-progress task to determine actual completion status. Then run Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |
 | `status` | Read the state file. Run orphan detection on `in_progress` tasks (`agent-health-monitoring.md` §3b). Display the dashboard (see Status Dashboard), stop. |
 
 If no arguments are given, ask the user what they want to manage.
@@ -237,8 +237,8 @@ Read the plan hierarchy (milestones > stages > tasks). For each actionable task,
 - **agent_type**: Agent to assign (see Agent Assignment Rules)
 - **stage**: Pipeline stage — `plan`, `implement`, `verify`, `review`, `document`
 - **priority**: `1` (critical path) through `5` (nice-to-have)
-- **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
-- **estimate_source**: `"scoping-doc"` or `"ops"`
+- **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, invoke `/timing-calibrator read` (see `~/.claude/skills/timing-calibrator/SKILL.md`) for historical averages per agent type. If calibration data exists, use historical averages. If no calibration data, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
+- **estimate_source**: `"scoping-doc"`, `"calibration"`, or `"ops"`
 - **blocked_by**: Array of task IDs this task depends on
 
 > **Reference:** See `~/.claude/skills/ops/state-schema.md` for the `description_ref` resolution algorithm and field definitions.
@@ -280,6 +280,10 @@ Before displaying the task board, confirm the state file exists and is valid:
 | Build error, import error, ModuleNotFoundError, type error, dependency error, compilation error, config error, broken build | `debugger-build` |
 | Commit, branch, merge, PR, tag, release, changelog | `git-master` |
 | Deploy, deploy to, ssh, scp, remote command, remote server, transfer files to, upload to, restart service on, check remote, verify endpoint on, tail logs on | `ssh-executor` |
+| Preflight, environment check, runtime check, dependency check, readiness validation | `preflight` |
+| Verify prior work, check if completed, resume verification, dedup check, orphan verification | `work-verifier` |
+| Rollback, revert changes, undo, restore files, clean state | `rollback` |
+| Analyze changes, classify diff, stage skip, change classification, diff analysis | `change-analyzer` |
 
 **Domain-specific agents take precedence** (`ssh-executor`, `debugger-build` over `verifier`/`executor`). Never assign documentation, scoping, or review tasks to the executor — these have dedicated agents. **When genuinely in doubt**, dispatch an **interviewer** to clarify — a quick clarification is cheaper than re-doing the work.
 
@@ -301,6 +305,10 @@ Each agent must stay in its lane:
 | **debugger-build** | investigate runtime bugs or write features (fixes build/compilation errors) |
 | **git-master** | write code, docs, or tests (handles git operations only) |
 | **ssh-executor** | modify local code, write documentation, or run local tests (remote commands only) |
+| **preflight** | modify project code, dispatch agents, or run tests (diagnostic checks only) |
+| **work-verifier** | modify files, rollback changes, or dispatch agents (read-only verification only) |
+| **rollback** | decide rollback scope, re-dispatch agents, or modify code beyond git restore (git operations on specified files only) |
+| **change-analyzer** | execute pipeline stages, modify files, or dispatch agents (read-only diff analysis only) |
 
 **Debugger variant selection:**
 - If the task description contains a specific error type (ImportError, ModuleNotFoundError, TypeError, SyntaxError, dependency, build, compilation, config error), use `debugger-build`.
@@ -328,9 +336,7 @@ If `--dry-run` is set, display the task board and stop. Do not dispatch.
 
 ### Phase 2.5 — Preflight Validation
 
-After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **verifier** agent with the preflight checklist. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
-
-> **Reference:** You MUST Read `~/.claude/skills/ops/preflight-validation.md` for the complete preflight validation procedure, check categories, and agent brief template. If the file is missing, proceed without preflight checks.
+After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`). If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 
 ### Phase 3 — Dispatch Loop
 
@@ -472,7 +478,7 @@ When every task is `completed`:
 
    > **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the bullet points above.
 
-   > **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, and calibration procedure. If the file is missing, proceed without estimation feedback.
+   > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.
 
 5. **Compute cost estimate (opt-in)** — Skip this step unless the user invoked with `--cost` flag or explicitly asked for cost information. When enabled, estimate token usage and cost per task based on `model_used`, `attempts`, and agent type. Prefer per-task token estimation from observed tool-use patterns; fall back to agent-type baselines only when that signal isn't available.
 
@@ -670,7 +676,7 @@ The team manager may create **internal bookkeeping tasks** (merge branches, fina
 
 When escalating, always include enough context for the user to make a decision without re-reading the entire history.
 
-> **Reference:** See `~/.claude/skills/ops/rollback-strategy.md` for the complete rollback procedure, scope levels, guardrails, and model escalation details (read only on failure escalation). If the file is missing, proceed without automatic rollback.
+> **Reference:** When rollback is needed, dispatch a **rollback** agent (see `~/.claude/agents/rollback.md`) with the affected file list, scope level, and run ID.
 
 ---
 
@@ -751,7 +757,7 @@ The team manager adapts strategy based on runtime conditions. Every adaptation i
 4th attempt: escalate to user
 ```
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/rollback-strategy.md` for model escalation metadata format, skip conditions, and the complete rollback procedure. If the file is missing, proceed using the escalation ladder above.
+> **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.
 
 ### Strategy adaptation
 
@@ -767,7 +773,7 @@ The team manager adapts strategy based on runtime conditions. Every adaptation i
 
 Uses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at run start, apply as soft defaults, log when applied.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/estimation-feedback.md` for the estimation feedback loop, memory format, calibration procedure, and cross-run learning patterns. If the file is missing, proceed without estimation feedback.
+> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start and `/timing-calibrator capture` at completion.
 
 ### Adaptation log
 
@@ -791,7 +797,7 @@ With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → i
 
 **Trivial/mechanical changes:** For trivial fixes (adding a line, removing duplicates, typo), skip verify/deslop/review stages. **Always log it as an adaptation**: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/conditional-stage-skip.md` for per-stage skip conditions and evaluation procedure. If the file is missing, use only the trivial-skip logic above.
+**Per-stage conditional skip:** When the trivial skip does not apply, dispatch a **change-analyzer** agent (see `~/.claude/agents/change-analyzer.md`) with the current diff to get per-stage run/skip recommendations for verify, deslop, and review. Apply its recommendations.
 
 **Conflicting agent outputs:** If two agents produce conflicting changes (e.g., both modify a shared config), flag the conflict to the user rather than picking a winner.
 
@@ -801,7 +807,7 @@ With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → i
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/interruption-recovery.md` for detailed procedures for cancel/abort, reprioritize, inject tasks, remove tasks, session recovery, and how foreground vs. background dispatch works. If the file is missing, proceed using the summary table below.
 
-> **Reference:** See `~/.claude/skills/ops/resume-dedup.md` for the resume deduplication procedure and work verification checks (read only on `resume`). If the file is missing, re-dispatch in_progress tasks without dedup checks.
+> **Reference:** On `resume`, dispatch a **work-verifier** agent (see `~/.claude/agents/work-verifier.md`) per in-progress task to determine completion status.
 
 ### Summary of user commands during a run
 
