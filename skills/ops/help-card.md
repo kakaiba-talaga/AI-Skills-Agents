@@ -14,7 +14,7 @@
   /ops help             Show this reference card
 
 ### Flags
-  --autonomous     Run end-to-end, stop only on escalation or blockers
+  --autonomous     Run end-to-end; stops on escalation/blockers and brainstorm approval gates
   --supervised     Checkpoint after every single task
   --parallel N     Max concurrent agents (default: 3)
   --agents <list>  Comma-separated agent types to use
@@ -23,6 +23,7 @@
   --no-branch      Skip working branch creation, work on current branch
   --no-deslop      Skip the deslop cleanup stage after verification
   --cost           Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default)
+  --brainstorm     Run interviewer → architect and require design approval before planning
 
 ### Mid-run actions (say these during a run)
   stop / cancel    Stop dispatching, preserve task list

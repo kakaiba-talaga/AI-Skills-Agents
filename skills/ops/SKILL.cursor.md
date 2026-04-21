@@ -34,7 +34,7 @@ If the argument is `help`, read and display the help card:
 
 ```text
 Commands: /ops <spec> | plan | execute | status | resume | ralph "<goal>" | help
-Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop
+Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor
 Retry: 3 attempts with narrowed scope and debugger diagnosis, then escalate to user
@@ -447,7 +447,7 @@ Once you have read the agent definition, execute the task below following the ag
 | Mode | Behavior |
 | :--- | :--- |
 | Interactive (default) | Show stage summary + dashboard (full if ≥ 3 tasks; one-liner per task if ≤ 2). Ask user to proceed, adjust, or stop. |
-| Autonomous | Proceed automatically. Stop only on escalation or scope issue. |
+| Autonomous | Proceed automatically. Stop on escalation/scope issues and any brainstorm design-approval checkpoint. |
 | Supervised | Already checking in per-task — just note the stage boundary. |
 
 **Step 6 — Loop.** Return to Step 1.
@@ -724,7 +724,7 @@ The Timing section is mandatory in every dashboard display — see Non-negotiabl
 | Mode | Checkpoints | Stops when |
 | :--- | :--- | :--- |
 | Interactive (default) | After each pipeline stage | User confirms, adjusts, skips, stops, or injects/reprioritizes tasks |
-| Autonomous (`--autonomous`) | None | 3x task failure, scope/plan issue, blocker, all tasks complete |
+| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 3x task failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks complete |
 | Supervised (`--supervised`) | After every task | User approves before next dispatch |
 
 ---

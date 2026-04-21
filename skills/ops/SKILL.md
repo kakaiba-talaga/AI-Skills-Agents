@@ -445,7 +445,7 @@ After updating timing, evaluate health status for all in-progress background age
 | Mode | Behavior |
 | :--- | :--- |
 | Interactive (default) | Show stage summary + dashboard (full if ≥ 3 tasks; one-liner per task if ≤ 2). Ask user to proceed, adjust, or stop. |
-| Autonomous | Proceed automatically. Stop only on escalation or scope issue. |
+| Autonomous | Proceed automatically. Stop on escalation/scope issues and any brainstorm design-approval checkpoint. |
 | Supervised | Already checking in per-task — just note the stage boundary. |
 
 **Step 6 — Loop.** Return to Step 1.
@@ -722,7 +722,7 @@ The Timing section is mandatory in every dashboard display — see Non-negotiabl
 | Mode | Checkpoints | Stops when |
 | :--- | :--- | :--- |
 | Interactive (default) | After each pipeline stage | User confirms, adjusts, skips, stops, or injects/reprioritizes tasks |
-| Autonomous (`--autonomous`) | None | 3x task failure, scope/plan issue, blocker, all tasks complete |
+| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 3x task failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks complete |
 | Supervised (`--supervised`) | After every task | User approves before next dispatch |
 
 ---

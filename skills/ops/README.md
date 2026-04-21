@@ -51,7 +51,7 @@ The team manager auto-detects which agent to assign based on task content:
 | Mode | Flag | Behavior |
 | :--- | :--- | :--- |
 | Interactive | _(default)_ | Checkpoints after each pipeline stage. User confirms before proceeding. |
-| Autonomous | `--autonomous` | Runs end-to-end. Stops only on escalation or blockers. |
+| Autonomous | `--autonomous` | Runs end-to-end. Stops on escalation/blockers and brainstorm design-approval checkpoints. |
 | Supervised | `--supervised` | Checkpoints after every single task. Maximum control. |
 
 ## Options
@@ -67,6 +67,7 @@ The team manager auto-detects which agent to assign based on task content:
 | `--no-branch` | Skip working branch creation, work on current branch |
 | `--no-deslop` | Skip the deslop cleanup stage after verification |
 | `--cost` | Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default) |
+| `--brainstorm` | Run interviewer + architect and require design approval before planner |
 | `ralph` | Wrap workflow in a `/ralph-loop` for iterative metric-driven goals |
 
 ## Key Features
