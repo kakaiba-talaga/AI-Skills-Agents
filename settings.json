@@ -1,0 +1,143 @@
+{
+    "permissions": {
+      "allow": [
+        "Agent",
+        "Edit",
+        "Glob",
+        "Grep",
+        "NotebookEdit",
+        "Read",
+        "Skill",
+        "WebFetch",
+        "WebSearch",
+        "Write",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "TaskCreate",
+        "TaskGet",
+        "TaskList",
+        "TaskOutput",
+        "TaskStop",
+        "TaskUpdate",
+        "TodoWrite",
+        "Bash(git *)",
+        "Bash(gh *)",
+        "Bash(.venv/**)",
+        "Bash(black *)",
+        "Bash(flake8 *)",
+        "Bash(mypy *)",
+        "Bash(pip *)",
+        "Bash(pip3 *)",
+        "Bash(poetry *)",
+        "Bash(pytest *)",
+        "Bash(python *)",
+        "Bash(python3 *)",
+        "Bash(ruff *)",
+        "Bash(uv *)",
+        "Bash(eslint *)",
+        "Bash(node *)",
+        "Bash(npm *)",
+        "Bash(prettier *)",
+        "Bash(tsc *)",
+        "Bash(docker *)",
+        "Bash(docker-compose *)",
+        "Bash(jq *)",
+        "Bash(shellcheck *)",
+        "Bash(awk *)",
+        "Bash(basename *)",
+        "Bash(cat *)",
+        "Bash(cd *)",
+        "Bash(chmod *)",
+        "Bash(cp *)",
+        "Bash(curl *)",
+        "Bash(date *)",
+        "Bash(diff *)",
+        "Bash(dirname *)",
+        "Bash(echo *)",
+        "Bash(env *)",
+        "Bash(find *)",
+        "Bash(grep *)",
+        "Bash(head *)",
+        "Bash(ls *)",
+        "Bash(mkdir *)",
+        "Bash(mv *)",
+        "Bash(printenv *)",
+        "Bash(realpath *)",
+        "Bash(rg *)",
+        "Bash(rm *)",
+        "Bash(sed *)",
+        "Bash(sleep *)",
+        "Bash(sort *)",
+        "Bash(source *)",
+        "Bash(tail *)",
+        "Bash(tar *)",
+        "Bash(tee *)",
+        "Bash(touch *)",
+        "Bash(type *)",
+        "Bash(unzip *)",
+        "Bash(wc *)",
+        "Bash(which *)",
+        "Bash(xargs *)",
+        "Bash(zip *)",
+        "Bash(bash *)",
+        "Bash(cmd *)",
+        "Bash(cmd.exe *)",
+        "Bash(powershell *)",
+        "Bash(pwsh *)",
+        "Bash(tasklist *)",
+        "Bash(winget *)",
+        "Read(.claude/**)",
+        "Read(.claude\\**)",
+        "Edit(.claude/**)",
+        "Edit(.claude\\**)",
+        "Update(.claude/**)",
+        "Update(.claude\\**)",
+        "Write(.claude/**)",
+        "Write(.claude\\**)"
+      ],
+      "deny": [
+        "Bash(git branch -D *)",
+        "Bash(git clean *)",
+        "Bash(git push --force *)",
+        "Bash(git push origin main*)",
+        "Bash(git push origin master*)",
+        "Bash(git reset --hard*)",
+        "Bash(rm -rf *)",
+        "Bash(ssh * rm -rf *)"
+      ],
+      "defaultMode": "default"
+    },
+    "model": "opus[1m]",
+    "hooks": {
+      "SessionStart": [
+        {
+          "matcher": "compact",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash \"$HOME/.claude/hooks/post-compaction-context.sh\""
+            }
+          ]
+        }
+      ],
+      "Notification": [
+        {
+          "matcher": "",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "powershell.exe -NoProfile -Command \"Add-Type -AssemblyName System.Windows.Forms; $n = New-Object System.Windows.Forms.NotifyIcon; $n.Icon = [System.Drawing.SystemIcons]::Information; $n.Visible = $true; $n.ShowBalloonTip(5000, 'Claude Code', 'Claude Code needs your attention', 'Info'); Start-Sleep -Milliseconds 500; $n.Dispose()\""
+            }
+          ]
+        }
+      ]
+    },
+    "effortLevel": "xhigh",
+    "autoUpdatesChannel": "latest",
+    "skipDangerousModePermissionPrompt": true
+  }
