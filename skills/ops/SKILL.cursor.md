@@ -21,6 +21,7 @@ Parse arguments as follows:
 - `--no-branch` — skip automatic working branch creation; work directly on the current branch.
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
+- `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
 
 Default mode is **interactive** — check in after each pipeline stage completes.
@@ -121,7 +122,7 @@ Classify the invocation before reading any further. Apply the first matching rul
 | :--- | :--- | :--- |
 | **trivial** | Single-sentence scope AND no code changes across multiple modules AND user did not say `plan` AND not `resume` / `status` / `execute` AND no stage-crossing dependencies implied (no verify→review→document chain) | Skip to **Trivial Dispatch** below. Never reads Phase 1a, Phase 2.5, or full Phase 4. |
 | **status-only** | Argument is `status` | Read state file, render dashboard, stop. |
-| **pipeline** | Everything else — `plan`, `execute`, `resume`, any multi-stage or multi-module request | Full workflow: Phase 1a → Phase 2 → Phase 2.5 → Phase 3 → Phase 4. |
+| **pipeline** | Everything else — `plan`, `execute`, `resume`, `--brainstorm`, any multi-stage or multi-module request | Full workflow: Phase 1a → Phase 2 → Phase 2.5 → Phase 3 → Phase 4. |
 
 **Trivial examples:** "commit the changes using git-master", "run the deploy script to all channels", "get the assessment doc updated", "fix this typo in README".
 
@@ -133,7 +134,7 @@ Determine the starting point from the parsed arguments:
 
 | Input | Action |
 | :--- | :--- |
-| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
+| Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
 | `resume` | Read the state file from `.ops-state/`. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Run the dedup verification procedure (`resume-dedup.md`) to determine actual status before re-dispatching. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
 | `status` | Read the state file. Before rendering the dashboard, run orphan detection on all `in_progress` tasks (see `agent-health-monitoring.md` Section 3b). Flag suspected orphans in the dashboard. Display the dashboard (see Status Dashboard), stop. |
@@ -152,11 +153,23 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
 
-**Spec clarity evaluation:** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says "just plan it", dispatch planner regardless.
+#### Brainstorm Gate (opt-in, pre-planning)
+
+When `--brainstorm` is enabled (or the user explicitly requests brainstorm/design-first behavior), run this gate before any planner dispatch:
+
+1. **Clarify requirements first:** Dispatch **interviewer** to produce a requirements document. The interviewer must decompose oversized requests into sub-projects before deep clarification.
+2. **Explore design alternatives:** Dispatch **architect** using the requirements document as input. The architect must produce an ADD with concrete options and a recommendation.
+3. **Require explicit design approval:** Present the ADD summary and ask the user to approve before planning. This approval checkpoint is mandatory for the brainstorm path.
+4. **If not approved:** Route feedback back to **interviewer** and/or **architect** as needed, then re-run the approval checkpoint.
+5. **Only after approval:** Dispatch **planner** with both artifacts (requirements doc + ADD), then continue to Phase 1a.
+
+In `--autonomous` mode, still pause at Step 3 for user approval. Brainstorm gating always requires an explicit user decision before planning proceeds.
+
+**Spec clarity evaluation (default path, skip when Brainstorm Gate is active):** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says "just plan it", dispatch planner regardless.
 
 In **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.
 
-**Architect dispatch (optional):** Dispatch an **architect** agent via `Task(subagent_type="architect")` before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.
+**Architect dispatch (optional, default path only):** Dispatch an **architect** agent via `Task(subagent_type="architect")` before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.
 
 **Plan document persistence:** When the planner produces a plan, persist it to disk as the source of truth for the run:
 
@@ -543,6 +556,12 @@ Pre-planning chain (optional, for work requiring design exploration):
 
 ```text
 interviewer → architect → planner → project-scoper → critic → executor → ...
+```
+
+With `--brainstorm`, treat this as a strict gate:
+
+```text
+interviewer → architect → user approval checkpoint → planner
 ```
 
 Architect dispatches for architectural decisions; otherwise team manager goes directly to planner.

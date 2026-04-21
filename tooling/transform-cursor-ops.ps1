@@ -225,8 +225,8 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 # PATCH 6 — Input table: Spec row
 # ---------------------------------------------------------------------------
 rep(
-    '| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |',
-    '| Spec or requirement text | Evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |',
+    '| Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |',
+    '| Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |',
 )
 
 # ---------------------------------------------------------------------------
@@ -273,8 +273,8 @@ rep(
 # PATCH 12 — Spec clarity + Architect dispatch reorder
 # ---------------------------------------------------------------------------
 rep(
-    "**Spec clarity evaluation:** If clear, dispatch planner directly. If vague/ambiguous, dispatch **interviewer** first. If user says \"just plan it\", dispatch planner regardless.\n\n**Architect dispatch (optional):** Dispatch an **architect** agent before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.\n\nIn **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.",
-    "**Spec clarity evaluation:** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says \"just plan it\", dispatch planner regardless.\n\nIn **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.\n\n**Architect dispatch (optional):** Dispatch an **architect** agent via `Task(subagent_type=\"architect\")` before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.",
+    "**Spec clarity evaluation (default path, skip when Brainstorm Gate is active):** If clear, dispatch planner directly. If vague/ambiguous, dispatch **interviewer** first. If user says \"just plan it\", dispatch planner regardless.\n\n**Architect dispatch (optional, default path only):** Dispatch an **architect** agent before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.\n\nIn **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.",
+    "**Spec clarity evaluation (default path, skip when Brainstorm Gate is active):** Before dispatching the planner, assess whether the user's input is clear enough to plan from. If clear, dispatch planner directly. If vague or ambiguous, dispatch **interviewer** first. If the user says \"just plan it\", dispatch planner regardless.\n\nIn **interactive mode**, prefer asking the user directly for simple ambiguities; use the interviewer for deep ambiguity (multiple unclear dimensions, conflicting requirements). In **autonomous mode**, dispatch the interviewer — the team manager cannot ask interactively.\n\n**Architect dispatch (optional, default path only):** Dispatch an **architect** agent via `Task(subagent_type=\"architect\")` before the planner when the spec involves new subsystems, significant technology choices, competing implementation strategies, or API/data model design. The architect produces an ADD the planner uses as input. Skip for well-understood work.",
 )
 
 # ---------------------------------------------------------------------------
@@ -488,6 +488,7 @@ rep(
     """**Dispatch examples — description field:**
 
 Built-in agent (`git-master` — matches `subagent_type`, so `subagent_type` is set):
+
 ```
 Agent(
   description: "commit the approved diff with a conventional message",
@@ -499,6 +500,7 @@ UI renders: git-master(commit the approved diff with a conventional message)
 ```
 
 Custom agent (`executor` — not a built-in, so `subagent_type` is omitted):
+
 ```
 Agent(
   description: "executor(Implement auth middleware)",
@@ -661,6 +663,12 @@ rep(
 interviewer → architect → planner → project-scoper → critic → executor → ...
 ```
 
+With `--brainstorm`, treat this as a strict gate:
+
+```
+interviewer → architect → user approval checkpoint → planner
+```
+
 Architect dispatches for architectural decisions; otherwise team manager goes directly to planner.
 
 ```
@@ -682,6 +690,12 @@ Security-reviewer is optional — dispatched for security-sensitive patterns (au
 
 ```text
 interviewer → architect → planner → project-scoper → critic → executor → ...
+```
+
+With `--brainstorm`, treat this as a strict gate:
+
+```text
+interviewer → architect → user approval checkpoint → planner
 ```
 
 Architect dispatches for architectural decisions; otherwise team manager goes directly to planner.
