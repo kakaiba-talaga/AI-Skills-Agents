@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 #
-# Deploy AI skills and agents to Claude Code and/or Cursor global directories.
+# Deploy AI agents, skills, hooks, and settings to Claude Code and/or Cursor global directories.
 #
 # Usage:
 #   ./deploy.sh [options]
 #
 # Options:
 #   -t, --target <all|claude|cursor|wsl> Target tool (default: all)
-#   -c, --category <agents|skills>      Deploy one category only (default: both)
+#   -c, --category <agents|skills|hooks|settings>
+#                                       Deploy one category only (default: all)
 #   -n, --dry-run                       Show what would change without copying
 #   -d, --diff                          Show diffs between repo and deployed files
 #   -f, --force                         Skip confirmation prompt
@@ -204,6 +205,27 @@ convert_skill_file() {
     printf "%s\n%s" "$header" "$body"
 }
 
+# --- Include-aware file discovery ---
+
+find_source_files() {
+    local tool_key="$1"
+    local cat_key="$2"
+    local source_dir="$3"
+
+    local includes
+    includes=$(jq -r ".\"$tool_key\".\"$cat_key\".include // [\"**/*\"] | .[]" "$MANIFEST")
+
+    while IFS= read -r pattern; do
+        [[ -z "$pattern" ]] && continue
+        if [[ "$pattern" == "**/*" ]]; then
+            find "$source_dir" -type f
+            return
+        else
+            find "$source_dir" -maxdepth 1 -type f -name "$pattern" 2>/dev/null
+        fi
+    done <<< "$includes"
+}
+
 # --- Expected set helper ---
 
 get_expected_relative_paths() {
@@ -218,7 +240,7 @@ get_expected_relative_paths() {
     [[ ! -d "$source_dir" ]] && return
 
     local files
-    files=$(find "$source_dir" -type f | sort)
+    files=$(find_source_files "$tool_key" "$cat_key" "$source_dir" | sort)
 
     while IFS= read -r file; do
         [[ -z "$file" ]] && continue
@@ -408,7 +430,7 @@ deploy_section() {
     fi
 
     local files
-    files=$(find "$source_dir" -type f | sort)
+    files=$(find_source_files "$tool_key" "$cat_key" "$source_dir" | sort)
 
     while IFS= read -r file; do
         [[ -z "$file" ]] && continue
@@ -525,6 +547,8 @@ targets=()
 categories=()
 [[ -z "$CATEGORY" || "$CATEGORY" == "agents" ]] && categories+=("agents")
 [[ -z "$CATEGORY" || "$CATEGORY" == "skills" ]] && categories+=("skills")
+[[ -z "$CATEGORY" || "$CATEGORY" == "hooks" ]]     && categories+=("hooks")
+[[ -z "$CATEGORY" || "$CATEGORY" == "settings" ]]  && categories+=("settings")
 
 if $DRY_RUN; then
     if $PRUNE_ONLY; then
@@ -598,20 +622,20 @@ echo ""
 echo -e "${CYAN}--- Summary ---${NC}"
 if ! $PRUNE_ONLY; then
     if $DRY_RUN; then
-        echo "Would create: $TOTAL_CREATED"
-        echo "Would update: $TOTAL_UPDATED"
+        printf "%-15s %s\n" "Would create:" "$TOTAL_CREATED"
+        printf "%-15s %s\n" "Would update:" "$TOTAL_UPDATED"
     elif $DIFF_MODE; then
-        echo "New:     $TOTAL_CREATED"
-        echo "Changed: $TOTAL_UPDATED"
+        printf "%-15s %s\n" "New:" "$TOTAL_CREATED"
+        printf "%-15s %s\n" "Changed:" "$TOTAL_UPDATED"
     else
-        echo "Created: $TOTAL_CREATED"
-        echo "Updated: $TOTAL_UPDATED"
+        printf "%-15s %s\n" "Created:" "$TOTAL_CREATED"
+        printf "%-15s %s\n" "Updated:" "$TOTAL_UPDATED"
     fi
-    echo "Up to date: $TOTAL_SKIPPED"
+    printf "%-15s %s\n" "Up to date:" "$TOTAL_SKIPPED"
 fi
 if $DRY_RUN || $DIFF_MODE; then
-    echo "Would prune: $TOTAL_WOULD_PRUNE"
+    printf "%-15s %s\n" "Would prune:" "$TOTAL_WOULD_PRUNE"
 else
-    echo "Pruned:      $TOTAL_PRUNED"
+    printf "%-15s %s\n" "Pruned:" "$TOTAL_PRUNED"
 fi
 echo ""

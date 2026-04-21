@@ -1,47 +1,89 @@
 {
-  "claude-code": {
-    "agents": {
-      "source": "agents/",
-      "target": "~/.claude/agents/",
-      "include": ["*.md"],
-      "exclude": ["README.md"],
-      "transform": false
+    "claude-code": {
+        "agents": {
+            "source": "agents/",
+            "target": "~/.claude/agents/",
+            "include": [
+                "*.md"
+            ],
+            "exclude": [
+                "README.md"
+            ]
+        },
+        "skills": {
+            "source": "skills/",
+            "target": "~/.claude/skills/",
+            "include": [
+                "**/*"
+            ]
+        },
+        "hooks": {
+            "source": "hooks/",
+            "target": "~/.claude/hooks/",
+            "include": [
+                "**/*"
+            ]
+        },
+        "settings": {
+            "source": ".",
+            "target": "~/.claude/",
+            "include": [
+                "settings.json"
+            ]
+        }
     },
-    "skills": {
-      "source": "skills/",
-      "target": "~/.claude/skills/",
-      "include": ["**/*"],
-      "transform": false
-    }
-  },
-  "claude-code-wsl": {
-    "agents": {
-      "source": "agents/",
-      "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/agents/",
-      "include": ["*.md"],
-      "exclude": ["README.md"],
-      "transform": false
+    "claude-code-wsl": {
+        "agents": {
+            "source": "agents/",
+            "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/agents/",
+            "include": [
+                "*.md"
+            ],
+            "exclude": [
+                "README.md"
+            ]
+        },
+        "skills": {
+            "source": "skills/",
+            "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/skills/",
+            "include": [
+                "**/*"
+            ]
+        },
+        "hooks": {
+            "source": "hooks/",
+            "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/hooks/",
+            "include": [
+                "**/*"
+            ]
+        },
+        "settings": {
+            "source": ".",
+            "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/",
+            "include": [
+                "settings.json"
+            ]
+        }
     },
-    "skills": {
-      "source": "skills/",
-      "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/skills/",
-      "include": ["**/*"],
-      "transform": false
+    "cursor": {
+        "agents": {
+            "source": "agents/",
+            "target": "~/.cursor/agents/",
+            "include": [
+                "*.md"
+            ],
+            "exclude": [
+                "README.md"
+            ],
+            "transform": true
+        },
+        "skills": {
+            "source": "skills/",
+            "target": "~/.cursor/skills/",
+            "include": [
+                "**/*"
+            ],
+            "transform": true
+        }
     }
-  },
-  "cursor": {
-    "agents": {
-      "source": "agents/",
-      "target": "~/.cursor/agents/",
-      "include": ["*.md"],
-      "exclude": ["README.md"],
-      "transform": true
-    },
-    "skills": {
-      "source": "skills/",
-      "target": "~/.cursor/skills/",
-      "include": ["**/*"],
-      "transform": true
-    }
-  }
 }

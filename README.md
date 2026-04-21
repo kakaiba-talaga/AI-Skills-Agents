@@ -22,8 +22,10 @@ The project is organized into the following directories:
 
 - `/agents` — 15 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
 - `/skills` — 9 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
+- `/hooks` — Event hooks (e.g., post-compaction context re-injection).
 - `/docs` — Assessment and portability guide.
 - `/tooling` — Deploy script and manifest for syncing to global directories.
+- `settings.json` — Claude Code settings (permissions, preferences). Deployed to `~/.claude/` via the deploy script.
 
 ## Deployment
 
@@ -84,7 +86,7 @@ The deploy scripts are additive by default: they create and update files at the 
 # Deploy + prune in one pass (prompts for confirmation twice: once for upsert, once for prune)
 .\tooling\deploy.ps1 -Prune
 
-# Prune only, skip upsert, no confirmation prompt — useful after renaming or deleting agents/skills in the repo
+# Prune only, skip upsert, no confirmation prompt — useful after renaming or deleting files in the repo
 .\tooling\deploy.ps1 -PruneOnly -Force
 ```
 
@@ -97,7 +99,7 @@ The deploy scripts are additive by default: they create and update files at the 
 
 Before deleting, the script prints the full orphan list and prompts: `Delete N orphan file(s)? [y/N]`. Pass `-Force` / `-f` to skip the prompt, or `-DryRun` / `-n` to preview without deleting anything. When both flags are present, dry-run wins — no deletion occurs regardless of `-Force`.
 
-`-PruneOnly` / `--prune-only` skips the upsert pass entirely, making it the right choice after renaming or deleting agents/skills in the repo when you only want to clean up the targets, not re-deploy.
+`-PruneOnly` / `--prune-only` skips the upsert pass entirely, making it the right choice after renaming or deleting files in the repo when you only want to clean up the targets, not re-deploy.
 
 ## Compatibility
 

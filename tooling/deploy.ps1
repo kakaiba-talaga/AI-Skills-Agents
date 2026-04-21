@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Deploy AI skills and agents to Claude Code and/or Cursor global directories.
+    Deploy AI agents, skills, hooks, and settings to Claude Code and/or Cursor global directories.
 
 .DESCRIPTION
     Reads tooling/deploy-manifest.json and syncs repo files to the target tool's
@@ -14,7 +14,7 @@
     Which tool to deploy to: all, claude, or cursor. Default: all.
 
 .PARAMETER Category
-    Deploy only one category: agents or skills. Default: both.
+    Deploy only one category: agents, skills, hooks, or settings. Default: all.
 
 .PARAMETER DryRun
     Show what would change without copying any files.
@@ -48,7 +48,7 @@ param(
     [ValidateSet("all", "claude", "cursor", "wsl")]
     [string]$Target = "all",
 
-    [ValidateSet("agents", "skills", "")]
+    [ValidateSet("agents", "skills", "hooks", "settings", "")]
     [string]$Category = "",
 
     [switch]$DryRun,
@@ -267,7 +267,7 @@ function Get-ExpectedRelativePaths {
         [string[]]$Exclude,
         [string]$CategoryType
     )
-    $fullSource = Join-Path $RepoRoot $SourceDir
+    $fullSource = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $SourceDir))
     $files = Get-SourceFiles -SourceDir $SourceDir -Include $Include -Exclude $Exclude -CategoryType $CategoryType
     $relPaths = @()
     foreach ($file in $files) {
@@ -439,7 +439,7 @@ function Deploy-Section {
     }
 
     $stats = @{ Copied = 0; Skipped = 0; Updated = 0 }
-    $sourceRoot = Join-Path $RepoRoot $source
+    $sourceRoot = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $source))
 
     foreach ($file in $files) {
         $relativePath = $file.FullName.Substring($sourceRoot.Length).TrimStart('\', '/')
@@ -547,6 +547,8 @@ if ($Target -eq "all" -or $Target -eq "wsl")     { $targets += "claude-code-wsl"
 $categories = @()
 if ($Category -eq "" -or $Category -eq "agents") { $categories += "agents" }
 if ($Category -eq "" -or $Category -eq "skills") { $categories += "skills" }
+if ($Category -eq "" -or $Category -eq "hooks")     { $categories += "hooks" }
+if ($Category -eq "" -or $Category -eq "settings")  { $categories += "settings" }
 
 $modeLabel = if ($DryRun) { "DRY RUN" } elseif ($Diff) { "DIFF" } else { "DEPLOY" }
 if ($Prune -and $PruneOnly) {
@@ -615,15 +617,13 @@ foreach ($t in $targets) {
 
 Write-Host "`n--- Summary ---" -ForegroundColor Cyan
 if (-not $PruneOnly) {
-    $action       = if ($DryRun) { "Would create" } elseif ($Diff) { "New" } else { "Created" }
-    $updateAction = if ($DryRun) { "Would update" } elseif ($Diff) { "Changed" } else { "Updated" }
-    Write-Host "$action`:    $($totalStats.Copied)"
-    Write-Host "$updateAction`: $($totalStats.Updated)"
-    Write-Host "Up to date: $($totalStats.Skipped)"
+    $action       = if ($DryRun) { "Would create:" } elseif ($Diff) { "New:" } else { "Created:" }
+    $updateAction = if ($DryRun) { "Would update:" } elseif ($Diff) { "Changed:" } else { "Updated:" }
+    Write-Host ("{0,-15} {1}" -f $action, $totalStats.Copied)
+    Write-Host ("{0,-15} {1}" -f $updateAction, $totalStats.Updated)
+    Write-Host ("{0,-15} {1}" -f "Up to date:", $totalStats.Skipped)
 }
-if ($DryRun -or $Diff) {
-    Write-Host "Would prune: $($totalStats.WouldPrune)"
-} else {
-    Write-Host "Pruned:      $($totalStats.Pruned)"
-}
+$pruneLabel = if ($DryRun -or $Diff) { "Would prune:" } else { "Pruned:" }
+$pruneCount = if ($DryRun -or $Diff) { $totalStats.WouldPrune } else { $totalStats.Pruned }
+Write-Host ("{0,-15} {1}" -f $pruneLabel, $pruneCount)
 Write-Host ""
