@@ -266,12 +266,12 @@ All three issues in the "Issues noted but not changed" table were re-evaluated. 
 
 | Change | Detail |
 |--------|--------|
-| **Claude Code `subagent_type` gap documented** | Claude Code's `Agent` tool `subagent_type` enum only includes `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from the ops taxonomy (Claude Code built-ins; the enum may expand). All other agent types (executor, verifier, planner, etc.) dispatch as `general-purpose` and display as "Agent" — custom agent files at `~/.claude/agents/` do not extend the enum for programmatic dispatch. |
-| **Read-and-inject workaround in ops `SKILL.md`** | Phase 3 now includes an Agent Dispatch Procedure: read the agent definition, set `description` to `"<agent_type>(<subject>)"` for UI labeling, set `model` from frontmatter, inject full agent instructions into the prompt. |
+| **Claude Code `subagent_type` parity reached** | All agent definition files at `~/.claude/agents/` are now auto-registered as `subagent_type` values for the `Agent` tool. The ops skill dispatches directly via `Agent(subagent_type="<agent_type>")` — the previous 4-value whitelist and read-and-inject workaround are no longer needed for dispatch labeling. The self-read prompt pattern is retained so agents read their full definition on startup. |
+| **Dispatch procedure simplified in ops `SKILL.md`** | Rules c and d no longer branch on a whitelist. Always set `subagent_type=<agent_type>` and `description="<task subject>"`. Single example pattern, no built-in vs custom distinction. |
 | **Cursor `SKILL.cursor.md` explicit dispatch** | `debugger-build` dispatch in failure handling made explicit: `Task(subagent_type="debugger-build")`. |
-| **Portability guide expanded** | New "Agent Dispatch Mechanism" section documenting the platform difference and workaround. Feature gap table updated with `subagent_type` coverage row. |
-| **`agents/README.md` updated** | New "Programmatic dispatch" subsection documenting the `subagent_type` limitation and read-and-inject workaround. |
-| **`skills/ops/README.md` updated** | Dispatch section added explaining the difference between Claude Code and Cursor dispatch mechanisms. |
+| **Portability guide updated** | "Agent Dispatch Mechanism" section rewritten to reflect platform parity. Feature gap table updated — `subagent_type` row now shows parity. |
+| **`agents/README.md` updated** | "Programmatic dispatch" subsection updated to document direct `subagent_type` dispatch (no workaround needed). |
+| **`skills/ops/README.md` updated** | Dispatch section simplified — both platforms now dispatch directly. |
 | **`skills/deploy/README.md` updated** | Architecture section expanded with platform-specific dispatch mechanism (Cursor uses `Task(subagent_type="ssh-executor")` directly; Claude Code uses read-and-inject pattern). |
 
 ---
@@ -386,7 +386,7 @@ These are not defects — they are patterns worth monitoring.
 - **Planning docs mostly gitignored:** `docs/plan/` is in `.gitignore`, meaning most planning context is local-only. Exception: `ops-decoupling-plan.md` is now tracked in git, establishing a precedent for tracking significant architectural plans.
 - **Cursor transform is text-based:** The ops transform now uses a dedicated side-car file (`SKILL.cursor.additions.md`) with an anchor-and-patch format, which is more robust than pure text replacement. Ralph-loop still uses the simpler transform approach. No false-positive issues observed in current files.
 - **Three skills have Cursor-native versions:** ops, deploy, and ralph-loop all have `SKILL.cursor.md` files. State management (`.ops-state/` JSON files) is unified across both versions. Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
-- **Agent dispatch mechanism differs between platforms:** Claude Code's `subagent_type` enum is limited — `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from the ops taxonomy are built-in (Claude Code built-ins; the enum may expand). All other agents dispatch as `general-purpose` and require a read-and-inject workaround. Cursor's `Task` tool now includes all 19 agent types as built-in `subagent_type` values plus additional utility types. This is the primary reason ops needs a `SKILL.cursor.md` companion. See `docs/portability-guide.md` § Agent Dispatch Mechanism.
+- **Agent dispatch mechanism at parity:** Claude Code's `Agent` tool auto-registers all agent definition files at `~/.claude/agents/` as `subagent_type` values — matching Cursor's native coverage. Both platforms dispatch directly via `subagent_type="<agent_type>"`. The ops skill retains the self-read prompt pattern so agents load their full definition on startup. `SKILL.cursor.md` is still needed for Cursor-specific differences (TodoWrite, `Task` tool, `~/.cursor/` paths). See `docs/portability-guide.md` § Agent Dispatch Mechanism.
 - **Documentation drift:** `.cursor/rules/documentation-sync.mdc` has fallen behind `CLAUDE.md` (its declared mirror). See Active Issues.
 
 ---

@@ -365,12 +365,12 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 
 **Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
 
-The Agent tool's `subagent_type` enum is environment-dependent (Claude Code typically includes at least `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`; Cursor's Task tool may expose more). In Claude Code, the known built-ins are: `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff` — treat that list as the reference, there is no runtime introspection. For each dispatch:
+The Agent tool's `subagent_type` parameter accepts any agent type that has a definition file at `~/.claude/agents/` (Claude Code) or `~/.cursor/agents/` (Cursor). All agents in this taxonomy are registered `subagent_type` values in both environments. For each dispatch:
 
    a. **Read** `~/.claude/agents/<agent_type>.md` where `<agent_type>` is the task's `agent_type` value from the state file. Extract the `model` from YAML frontmatter **only** — do NOT read or store the agent body in the team manager's context.
    b. **`model`**: Set from the agent's frontmatter `model` field (e.g., `"sonnet"`, `"opus"`).
-   c. **`subagent_type`**: Set when `agent_type` matches a built-in `subagent_type` available in the current environment (Claude Code built-ins: `debugger-build`, `git-master`, `code-reviewer`, `code-reviewer-diff`). Omit for all other agents — they fall back to `general-purpose` and the agent's definition materializes via the self-read prompt (rule e).
-   d. **`description`**: If you set `subagent_type` in rule c (the `agent_type` matched a built-in), set description to just `"<task subject>"` — the UI already prefixes the subagent_type name, so wrapping would double-label. If you omitted `subagent_type` (the agent falls back to general-purpose), set description to `"<agent_type>(<task subject>)"` so the custom agent remains identifiable in the UI.
+   c. **`subagent_type`**: Always set to the task's `agent_type`. All agents with definition files at `~/.claude/agents/` are registered `subagent_type` values — no whitelist check is needed. The agent's definition still materializes via the self-read prompt (rule e) for full context.
+   d. **`description`**: Always set to just `"<task subject>"`. The UI prefixes the `subagent_type` name automatically — wrapping the description with the agent_type (e.g., `"executor(Implement auth middleware)"`) produces double-labeling: `executor(executor(Implement auth middleware))`.
    e. **`prompt`**: Compose using the self-read template below, followed by the task brief (see Agent Briefing Format). The agent reads its full definition as its first action — self-containment is preserved because the agent body materializes in the agent's own context, not the team manager's.
 
 **Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):
@@ -387,34 +387,20 @@ Once you have read the agent definition, execute the task below following the ag
 <task brief here>
 ```
 
-**Dispatch examples — description field:**
-
-Built-in agent (`git-master` — matches `subagent_type`, so `subagent_type` is set):
+**Dispatch example:**
 
 ```
 Agent(
-  description: "commit the approved diff with a conventional message",
+  description: "Implement auth middleware",
   model: "sonnet",
-  subagent_type: "git-master",
+  subagent_type: "executor",
   prompt: <self-read template + task brief>
 )
-UI renders: git-master(commit the approved diff with a conventional message)
+UI renders: executor(Implement auth middleware)
 ```
 
-Custom agent (`executor` — not a built-in, so `subagent_type` is omitted):
-
-```
-Agent(
-  description: "executor(Implement auth middleware)",
-  model: "sonnet",
-  subagent_type: <omitted — falls back to general-purpose>,
-  prompt: <self-read template + task brief>
-)
-UI renders: Agent(executor(Implement auth middleware))   [custom agent stays identifiable]
-```
-
-DO NOT: set `subagent_type="git-master"` AND `description="git-master(...)"`.
-This produces `git-master(git-master(...))` in the UI — the exact regression rule d prevents.
+DO NOT set `description: "executor(Implement auth middleware)"` when `subagent_type: "executor"` is set.
+This produces `executor(executor(Implement auth middleware))` in the UI.
 
 Use the brief format below.
 3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.

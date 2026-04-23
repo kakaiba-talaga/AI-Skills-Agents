@@ -122,12 +122,12 @@ The team manager does not end its turn on a nested-skill return — nested-skill
 
 ### Agent Dispatch
 
-Agent dispatch differs between Claude Code and Cursor due to platform limitations:
+Both Claude Code and Cursor support direct `subagent_type` dispatch for all agent types:
 
-- **Cursor** — The `Task` tool's `subagent_type` enum includes all agent types natively. Dispatch is direct: `Task(subagent_type="executor", prompt=<brief>)`.
-- **Claude Code** — The `Agent` tool's `subagent_type` enum only includes `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from the ops taxonomy (Claude Code built-ins; the enum may expand). All other agents (executor, verifier, planner, etc.) dispatch as `general-purpose`. The ops skill works around this by reading the agent definition from `~/.claude/agents/<agent_type>.md`, injecting the full instructions into the prompt, and labeling the dispatch via the `description` field (e.g., `"executor(Implement auth middleware)"`). This preserves the agent's specialized behavior and model while making the role visible in dispatch notifications.
+- **Cursor** — `Task(subagent_type="executor", prompt=<brief>)`.
+- **Claude Code** — `Agent(subagent_type="executor", description="<task subject>", model="<from frontmatter>", prompt=<self-read template + brief>)`. All agents with definition files at `~/.claude/agents/` are auto-registered as `subagent_type` values. The self-read prompt template instructs the agent to read its own definition for full workflow context.
 
-See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure and rationale.
+See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure.
 
 ### Adaptability
 

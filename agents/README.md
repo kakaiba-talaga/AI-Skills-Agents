@@ -43,11 +43,9 @@ For example, to run the executor on opus for a particularly complex implementati
 
 ### Programmatic dispatch (ops skill)
 
-When the ops skill dispatches agents programmatically via the `Agent` tool, the `subagent_type` parameter only accepts a limited built-in enum (`general-purpose`, `Explore`, `Plan`, `debugger-build`, `git-master`, `claude-code-guide`, `statusline-setup`). `debugger-build`, `git-master`, `code-reviewer`, and `code-reviewer-diff` from this taxonomy have matching entries (Claude Code built-ins; the enum may expand); all other agents dispatch as `general-purpose`.
+All agent definition files at `~/.claude/agents/` are auto-registered as `subagent_type` values for the `Agent` tool. The ops skill dispatches directly: `Agent(subagent_type="<agent_type>", description="<task subject>", model="<from frontmatter>", prompt=<self-read template + brief>)`. The self-read prompt template instructs the agent to read its own definition file as its first action, providing full workflow context. See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure.
 
-Custom agent files at `~/.claude/agents/` are loaded when a user invokes an agent by name in conversation, but they do **not** extend the `subagent_type` enum for programmatic dispatch. The ops skill works around this by reading the agent definition file, injecting its instructions into the prompt, and labeling the dispatch via the `description` field (e.g., `"executor(Implement auth middleware)"`). See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure.
-
-In Cursor, this is not an issue — Cursor's `Task` tool `subagent_type` enum includes all agent types natively.
+Cursor's `Task` tool also includes all agent types as `subagent_type` values natively.
 
 ## Usage
 
