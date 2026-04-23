@@ -14,7 +14,11 @@
             "source": "skills/",
             "target": "~/.claude/skills/",
             "include": [
-                "**/*"
+                "**/*.md",
+                "**/*.yaml"
+            ],
+            "exclude": [
+                "**/SKILL.cursor.additions.md"
             ]
         },
         "hooks": {
@@ -48,7 +52,11 @@
             "source": "skills/",
             "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/skills/",
             "include": [
-                "**/*"
+                "**/*.md",
+                "**/*.yaml"
+            ],
+            "exclude": [
+                "**/SKILL.cursor.additions.md"
             ]
         },
         "hooks": {
