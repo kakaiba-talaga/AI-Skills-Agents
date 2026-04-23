@@ -220,6 +220,9 @@ find_source_files() {
         if [[ "$pattern" == "**/*" ]]; then
             find "$source_dir" -type f
             return
+        elif [[ "$pattern" == "**/"* ]]; then
+            local glob="${pattern#**/}"
+            find "$source_dir" -type f -name "$glob" 2>/dev/null
         else
             find "$source_dir" -maxdepth 1 -type f -name "$pattern" 2>/dev/null
         fi
@@ -252,7 +255,8 @@ get_expected_relative_paths() {
         local skip=false
         while IFS= read -r ex; do
             [[ -z "$ex" ]] && continue
-            [[ "$filename" == "$ex" ]] && skip=true
+            local ex_name="${ex#**/}"
+            [[ "$filename" == $ex_name ]] && skip=true
         done <<< "$excludes"
         $skip && continue
         [[ "$filename" == "SKILL.cursor.md" ]] && continue
@@ -452,7 +456,8 @@ deploy_section() {
         local skip=false
         while IFS= read -r ex; do
             [[ -z "$ex" ]] && continue
-            [[ "$filename" == "$ex" ]] && skip=true
+            local ex_name="${ex#**/}"
+            [[ "$filename" == $ex_name ]] && skip=true
         done <<< "$excludes"
         $skip && continue
         [[ "$filename" == "SKILL.cursor.md" ]] && continue
