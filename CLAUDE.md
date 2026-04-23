@@ -2,6 +2,10 @@
 
 A collection of reusable AI agents and multi-file skills for Claude Code and Cursor, with automated deployment and Cursor portability transforms.
 
+## Git Conventions
+
+Do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the default system commit instructions.
+
 ## Documentation Sync
 
 Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
