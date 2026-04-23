@@ -33,6 +33,7 @@ fi
 # ---------------------------------------------------------------------------
 if [ -d ".ops-state" ]; then
     BOARD_FILES=$(find .ops-state -maxdepth 1 -name "*-board.json" -type f 2>/dev/null)
+
     if [ -n "$BOARD_FILES" ]; then
         echo ""
         echo "## Active Ops Runs"
@@ -64,6 +65,7 @@ fi
 # ---------------------------------------------------------------------------
 if [ -d ".ralph-state" ]; then
     RALPH_FILES=$(find .ralph-state -maxdepth 1 -name "*.json" -type f 2>/dev/null)
+
     if [ -n "$RALPH_FILES" ]; then
         echo ""
         echo "## Active Ralph Loop"

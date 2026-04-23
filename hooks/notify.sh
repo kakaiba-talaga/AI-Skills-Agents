@@ -4,10 +4,11 @@
 # Called by the Notification hook in ~/.claude/settings.json.
 # Works on macOS, Linux, and Windows (Git Bash / WSL).
 
-MSG="${1:-Claude Code needs your attention}"
+MSG="${1:-Claude Code needs your attention.}"
 TITLE="Claude Code"
 
 OS="$(uname -s)"
+
 case "$OS" in
     Darwin)
         osascript -e "display notification \"$MSG\" with title \"$TITLE\"" 2>/dev/null
