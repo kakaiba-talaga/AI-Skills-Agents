@@ -93,6 +93,9 @@
             "include": [
                 "**/*"
             ],
+            "exclude": [
+                "kickoff/**"
+            ],
             "transform": true
         }
     }
