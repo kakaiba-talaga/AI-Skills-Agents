@@ -53,7 +53,9 @@ Before doing ANY work, read and understand the current state:
 
 7. **If any CRITICAL items exist above the current phase in the queue** (e.g., security issues), the agent must address those first regardless of what was previously "in progress."
 
-#### Branch routing
+---
+
+## Branch routing
 
 Every phase targets a specific branch. Confirm the correct branch before writing any code.
 
@@ -70,7 +72,7 @@ Every phase targets a specific branch. Confirm the correct branch before writing
 
 ---
 
-#### Subagent dispatch
+## Subagent dispatch
 
 **Dispatch method:** Use the `Agent` tool directly with a `prompt` parameter. Do NOT use `subagent_type` — the target project may not have registered agent definitions. Every subagent prompt must be fully self-contained with the task description, scope, and constraints inline.
 
