@@ -252,8 +252,11 @@ function Get-SourceFiles {
             $rel = $_.FullName.Substring($fullSource.Length).TrimStart('\', '/').Replace('\', '/')
             $excluded = $false
             foreach ($ex in $Exclude) {
-                $exName = if ($ex.StartsWith('**/')) { $ex.Substring(3) } else { $ex }
-                if ($rel -like $exName) { $excluded = $true; break }
+                if ($ex.StartsWith('**/')) {
+                    if ($_.Name -like $ex.Substring(3)) { $excluded = $true; break }
+                } else {
+                    if ($rel -like $ex) { $excluded = $true; break }
+                }
             }
             -not $excluded
         }
