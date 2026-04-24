@@ -381,7 +381,8 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | `plan-validation.md` | Spec clarity evaluation, plan complexity scoring, critic verdict handling, scoper/critic output descriptions, execute-skip detection, adaptation rules | Phase 1a Plan Validation (Tier 2/3 runs) |
 | `state-schema.md` | State file JSON structure, field definitions, directory conventions | Phase 2 state file creation |
 | `dispatch-policy.md` | Foreground/background dispatch decision criteria, thresholds, batch rules | Phase 3 dispatch decisions (tasks 8+ min) |
-| `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules | Team manager tool use decisions |
+| `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules, subagent dispatch decision framework | Team manager tool use decisions |
+| `dispatch-log.md` | Dispatch decision log spec — opt-in via `--dispatch-log` flag; file location, retention, entry format, kinds, append procedure, audit usage | Appending entries to `docs/ops-dispatch-log.md` when `--dispatch-log` is set |
 | `handoffs.md` | Full handoff template, run identity rules, naming examples, accumulation rules, cleanup lifecycle | Writing or reading handoff documents |
 | `integrations.md` | Deslop and Ralph Loop integration procedures | Verify→review stage transition; `ralph` flag |
 | `timing-edge-cases.md` | 7 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time) | Phase 4 completion and Status Dashboard display |

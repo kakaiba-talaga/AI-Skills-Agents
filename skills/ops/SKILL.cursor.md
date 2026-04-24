@@ -22,6 +22,7 @@ Parse arguments as follows:
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
+- `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
 
 Default mode is **interactive** — check in after each pipeline stage completes.
@@ -34,7 +35,7 @@ If the argument is `help`, read and display the help card:
 
 ```text
 Commands: /ops <spec> | plan | execute | status | resume | ralph "<goal>" | help
-Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm
+Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor
 Retry: 3 attempts with narrowed scope and debugger diagnosis, then escalate to user
@@ -430,6 +431,10 @@ Once you have read the agent definition, execute the task below following the ag
 5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
 6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
 
+**Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.
+
 **Nested skill invocations:** When the team manager invokes a nested skill (e.g., `/deslop`, `/clickup`) during the dispatch loop, execute the write-before / clear-after ritual to prevent the turn from ending on the nested skill's return. The ritual has eleven steps (5 write-before + 6 clear-after):
 
 - **Write-before** (immediately before the nested-skill call): (1) build the `pending_nested_skill` record with fields `skill`, `invoked_at`, `resume_phase`, `resume_notes`; (2) read the state file from disk; (3) set the `pending_nested_skill` field on the root object; (4) write the state file to disk; (5) issue the nested-skill call.
@@ -491,7 +496,7 @@ When every task is `completed` (check state file):
 6. Display the final task board (with per-task durations).
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
-9. **Clean up temp files, handoffs, and state** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** other runs' handoff subdirectories or state files.
+9. **Clean up temp files, handoffs, and state** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files.
 10. Suggest natural next steps (e.g., "Ready for commit" or "Run the full test suite").
 
 ---
@@ -540,7 +545,7 @@ Include this block verbatim in every agent brief's `## Constraints` section:
 
 **Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.
 
 ### Shell rules
 

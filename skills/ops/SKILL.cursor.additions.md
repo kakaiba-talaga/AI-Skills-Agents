@@ -357,6 +357,10 @@ ANCHOR: Use the brief format below.
 @@CONTENT
 5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
 6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
+
+**Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.
 @@END
 
 @@PATCH
@@ -463,13 +467,13 @@ ANCHOR: - **No sub-agent spawning** — do not use the Agent tool. Only the team
 ACTION: replace_through
 ANCHOR: ### Bash rules
 @@STOP
-> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.
 @@CONTENT
 ### Team manager tool restrictions
 
 **Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.
 
 ### Shell rules
 
@@ -482,9 +486,9 @@ ANCHOR: ### Team manager tool restrictions
 
 **Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.
 @@STOP
-> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.
 @@CONTENT
 @@END
 

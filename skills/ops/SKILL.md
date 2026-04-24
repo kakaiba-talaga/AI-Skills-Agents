@@ -18,6 +18,7 @@ Parse arguments as follows:
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
+- `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
 
 Default mode is **interactive** — check in after each pipeline stage completes.
@@ -405,6 +406,10 @@ This produces `executor(executor(Implement auth middleware))` in the UI.
 Use the brief format below.
 3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
 
+**Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.
+
 **Foreground vs. Background Dispatch Policy**
 
 Default is **foreground**. Use **background** (`run_in_background: true`) for tasks estimated at 8+ minutes when other tasks can advance concurrently. Adapt the threshold based on runtime conditions.
@@ -473,7 +478,7 @@ When every task is `completed`:
 6. Display the final task board (with per-task durations).
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
-9. **Clean up temp files, handoffs, and state** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** other runs' handoff subdirectories or state files.
+9. **Clean up temp files, handoffs, and state** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files.
 10. Suggest natural next steps (e.g., "Ready for commit" or "Run the full test suite").
 
 ---
@@ -526,7 +531,7 @@ The Shared Brief Constraints block (see `#shared-brief-constraints` above) defin
 
 **Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.
+> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.
 
 ### Agent-specific rules
 

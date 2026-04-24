@@ -24,6 +24,7 @@
   --no-deslop      Skip the deslop cleanup stage after verification
   --cost           Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default)
   --brainstorm     Run interviewer → architect and require design approval before planning
+  --dispatch-log   Opt-in audit log: append each dispatch to docs/ops-dispatch-log.md (off by default)
 
 ### Mid-run actions (say these during a run)
   stop / cancel    Stop dispatching, preserve task list

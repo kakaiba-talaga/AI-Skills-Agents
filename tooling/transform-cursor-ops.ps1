@@ -169,7 +169,7 @@ rep(
 
 ```text
 Commands: /ops <spec> | plan | execute | status | resume | ralph "<goal>" | help
-Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm
+Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor
 Retry: 3 attempts with narrowed scope and debugger diagnosis, then escalate to user
@@ -503,13 +503,21 @@ This produces `executor(executor(Implement auth middleware))` in the UI.
 Use the brief format below.
 3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
 
+**Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.
+
 **Foreground vs. Background Dispatch Policy**
 
 Default is **foreground**. Use **background** (`run_in_background: true`) for tasks estimated at 8+ minutes when other tasks can advance concurrently. Adapt the threshold based on runtime conditions.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.""",
     """5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
-6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.""",
+6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
+
+**Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.""",
 )
 
 # ---------------------------------------------------------------------------
@@ -635,8 +643,8 @@ rep(
 # PATCH 37 — Constraints section: reorder Bash rules ↔ Team manager
 # ---------------------------------------------------------------------------
 rep(
-    "## Constraints (applies to team manager AND all spawned agents)\n\n### Bash rules\n\nThe Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical bash rules \u2014 no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.\n\n### Team manager tool restrictions\n\n**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.\n\n> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.",
-    "## Constraints (applies to team manager AND all spawned agents)\n\n### Team manager tool restrictions\n\n**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.\n\n> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, and self-check rules. If the file is missing, proceed using the delegate-first principle above.\n\n### Shell rules\n\nThe Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical Shell rules \u2014 no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.",
+    "## Constraints (applies to team manager AND all spawned agents)\n\n### Bash rules\n\nThe Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical bash rules \u2014 no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.\n\n### Team manager tool restrictions\n\n**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.\n\n> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.",
+    "## Constraints (applies to team manager AND all spawned agents)\n\n### Team manager tool restrictions\n\n**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.\n\n> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.\n\n### Shell rules\n\nThe Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical Shell rules \u2014 no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.",
 )
 
 # ---------------------------------------------------------------------------
