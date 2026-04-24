@@ -239,7 +239,7 @@ function Get-SourceFiles {
     foreach ($pattern in $Include) {
         if ($pattern -eq "**/*") {
             $files += Get-ChildItem -Path $fullSource -Recurse -File
-        } elseif ($pattern -like "**/*") {
+        } elseif ($pattern.StartsWith('**/')) {
             $glob = $pattern.Substring(3)
             $files += Get-ChildItem -Path $fullSource -Recurse -Filter $glob -File
         } else {
@@ -252,7 +252,7 @@ function Get-SourceFiles {
             $rel = $_.FullName.Substring($fullSource.Length).TrimStart('\', '/').Replace('\', '/')
             $excluded = $false
             foreach ($ex in $Exclude) {
-                $exName = if ($ex -like "**/*") { $ex.Substring(3) } else { $ex }
+                $exName = if ($ex.StartsWith('**/')) { $ex.Substring(3) } else { $ex }
                 if ($rel -like $exName) { $excluded = $true; break }
             }
             -not $excluded
