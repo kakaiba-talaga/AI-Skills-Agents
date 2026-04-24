@@ -249,7 +249,7 @@ function Get-SourceFiles {
 
     if ($Exclude) {
         $files = $files | Where-Object {
-            $rel = $_.Name
+            $rel = $_.FullName.Substring($fullSource.Length).TrimStart('\', '/').Replace('\', '/')
             $excluded = $false
             foreach ($ex in $Exclude) {
                 $exName = if ($ex -like "**/*") { $ex.Substring(3) } else { $ex }

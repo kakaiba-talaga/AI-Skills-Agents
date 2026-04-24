@@ -248,6 +248,8 @@ get_expected_relative_paths() {
     while IFS= read -r file; do
         [[ -z "$file" ]] && continue
 
+        local rel_path="${file#$source_dir}"
+        rel_path="${rel_path#/}"
         local filename
         filename=$(basename "$file")
 
@@ -256,12 +258,10 @@ get_expected_relative_paths() {
         while IFS= read -r ex; do
             [[ -z "$ex" ]] && continue
             local ex_name="${ex#**/}"
-            [[ "$filename" == $ex_name ]] && skip=true
+            [[ "$rel_path" == $ex_name ]] && skip=true
         done <<< "$excludes"
         $skip && continue
         [[ "$filename" == "SKILL.cursor.md" ]] && continue
-
-        local rel_path="${file#$source_dir}"
         rel_path="${rel_path#/}"
         echo "$rel_path"
     done <<< "$files"
@@ -457,7 +457,7 @@ deploy_section() {
         while IFS= read -r ex; do
             [[ -z "$ex" ]] && continue
             local ex_name="${ex#**/}"
-            [[ "$filename" == $ex_name ]] && skip=true
+            [[ "$rel_path" == $ex_name ]] && skip=true
         done <<< "$excludes"
         $skip && continue
         [[ "$filename" == "SKILL.cursor.md" ]] && continue
