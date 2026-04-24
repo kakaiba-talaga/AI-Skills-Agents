@@ -24,6 +24,7 @@ alwaysApply: false
 | `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |
 | `skills/deploy/README.md` | `skills/deploy/SKILL.md`, `skills/deploy/SKILL.cursor.md`, `skills/deploy/*.md` |
 | `skills/deslop/README.md` | `skills/deslop/SKILL.md` |
+| `skills/kickoff/README.md` | `skills/kickoff/SKILL.md`, `skills/kickoff/project-template/**` |
 | `skills/doc-sync/README.md` | `skills/doc-sync/SKILL.md` |
 | `skills/linter/README.md` | `skills/linter/SKILL.md` |
 | `skills/ops/README.md` | `skills/ops/SKILL.md`, `skills/ops/SKILL.cursor.md`, `skills/ops/*.md` |

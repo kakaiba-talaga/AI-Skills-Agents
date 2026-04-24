@@ -21,7 +21,7 @@ Initially, these should work on Claude Code and Cursor. Other AI development too
 The project is organized into the following directories:
 
 - `/agents` — 19 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
-- `/skills` — 10 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
+- `/skills` — 11 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
 - `/hooks` — Event hooks (e.g., post-compaction context re-injection).
 - `/docs` — Assessment and portability guide.
 - `/tooling` — Deploy script and manifest for syncing to global directories.
@@ -131,6 +131,7 @@ Before deleting, the script prints the full orphan list and prompts: `Delete N o
 | commit-message | Yes | Yes | |
 | deslop | Yes | Yes | |
 | doc-sync | Yes | Yes | |
+| kickoff | Yes | No | Scaffolds planning infrastructure; dispatches interviewer, architect, planner, critic, and project-scoper agents. No Cursor-native version. |
 | linter | Yes | Yes | |
 | ops | Yes | Yes | Cursor-native version uses state file + TodoWrite for task board, `Task` tool for dispatch. No model escalation. |
 | deploy | Yes | Yes | Cursor-native version uses `Task(subagent_type="ssh-executor")` for dispatch. No model/tool enforcement on subagent. |
