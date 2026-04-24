@@ -13,3 +13,5 @@
 .cursor/*
 !.cursor/rules
 !.cursor/rules/**
+!skills/kickoff/project-template/.claude/
+!skills/kickoff/project-template/.claude/**

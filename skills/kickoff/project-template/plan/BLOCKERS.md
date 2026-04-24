@@ -20,7 +20,7 @@
      - **Status:** PENDING
 -->
 
-(None active)
+<!-- KICKOFF:BLOCKERS -->
 
 ---
 
@@ -40,7 +40,7 @@
 ## Resolved Blockers
 
 | Date | Blocker | Resolution |
-|------|---------|------------|
+| :--- | :--- | :--- |
 | <!-- YYYY-MM-DD --> | <!-- Blocker name --> | <!-- How it was resolved --> |
 
 ---
@@ -48,5 +48,5 @@
 ## Technical Decisions Resolved
 
 | Date | Decision | Choice | Rationale |
-|------|----------|--------|-----------|
+| :--- | :--- | :--- | :--- |
 | <!-- YYYY-MM-DD --> | <!-- Decision name --> | <!-- What was chosen --> | <!-- Why --> |
