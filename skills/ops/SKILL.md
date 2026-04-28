@@ -285,6 +285,7 @@ Before displaying the task board, confirm the state file exists and is valid:
 | Verify prior work, check if completed, resume verification, dedup check, orphan verification | `work-verifier` |
 | Rollback, revert changes, undo, restore files, clean state | `rollback` |
 | Analyze changes, classify diff, stage skip, change classification, diff analysis | `change-analyzer` |
+| Impact analysis, symbol lookup, caller graph, dependency graph, structural query on source — dispatched per code-modifying task when brief contains a risk keyword (`refactor`, `rename`, `delete`, `breaking change`, `migrate`, `deprecate`, `extract`, `move`) or `files_touched > 1`; not assigned to tasks the way executor/verifier are (see Phase 2.5b) | `code-intel` |
 
 **Domain-specific agents take precedence** (`ssh-executor`, `debugger-build` over `verifier`/`executor`). Never assign documentation, scoping, or review tasks to the executor — these have dedicated agents. **When genuinely in doubt**, dispatch an **interviewer** to clarify — a quick clarification is cheaper than re-doing the work.
 
@@ -310,6 +311,7 @@ Each agent must stay in its lane:
 | **work-verifier** | modify files, rollback changes, or dispatch agents (read-only verification only) |
 | **rollback** | decide rollback scope, re-dispatch agents, or modify code beyond git restore (git operations on specified files only) |
 | **change-analyzer** | execute pipeline stages, modify files, or dispatch agents (read-only diff analysis only) |
+| **code-intel** | write to source files (read-only on source code); Write only to `docs/code-intel/**`, `.code-intel/**`, `_tmp_*` (glob-matched); refuse-and-halt on first write-allowlist violation per R8a; Bash constrained per R8b allow/deny lists |
 
 **Debugger variant selection:**
 - If the task description contains a specific error type (ImportError, ModuleNotFoundError, TypeError, SyntaxError, dependency, build, compilation, config error), use `debugger-build`.
@@ -334,6 +336,101 @@ These deliverable tasks must be on the board **from the start**, blocked by the 
 **Display the task board after creation.** After the state file is written and verified, render a Status Dashboard before any dispatch begins. For runs with ≥ 3 non-internal tasks, render the full dashboard table (task numbers, agents, statuses, estimates, blocked-by chains, progress bar, timing section). For runs with ≤ 2 non-internal tasks, render a one-line status per task instead — `[agent-type] task: subject — status` — and skip the full table. This applies to every run, not just `--dry-run`. (Non-negotiable — see #8.)
 
 If `--dry-run` is set, display the task board and stop. Do not dispatch.
+
+### Phase 2.5b — Code Intelligence Preflight (advisory)
+
+Before each code-modifying executor dispatch in Phase 3 Step 2, the team manager may dispatch a **code-intel** agent to perform an impact analysis. This phase is *advisory* — its output enriches the executor's brief but never blocks it.
+
+#### Trigger predicate
+
+Evaluate the predicate `(ii) OR (iv)` against each code-modifying task at Phase 3 Step 2, before composing the executor brief:
+
+- **(ii)** `files_touched > 1` — the task touches more than one file.
+- **(iv)** The task brief contains at least one *risk keyword* (case-insensitive match): `refactor`, `rename`, `delete`, `breaking change`, `migrate`, `deprecate`, `extract`, `move`.
+
+If the predicate matches, dispatch `code-intel` synchronously (wait for the report path) before composing the executor brief. Synchronous dispatch closes the door on race conditions with mid-Phase-3 work.
+
+#### Flags
+
+- `--code-intel` — alias for `--code-intel=always`. Fires `code-intel` on every code-modifying task regardless of predicate.
+- `--code-intel=off` — disables Phase 2.5b for the entire run. This is additionally a no-op for non-code-modifying tasks, which the R5 predicate already excludes from Phase 2.5b.
+
+#### Dispatch trigger point (C-PLAN-4)
+
+The team manager dispatches `code-intel` during **Phase 3 Step 2 (Batch parallel work), before each code-modifying executor dispatch**. The team manager evaluates `(ii) OR (iv)` against the task's `files_touched` and brief contents at that moment; if matched (or `--code-intel` is set), dispatches `code-intel` synchronously and waits for the JSON response before composing the executor brief.
+
+#### First-time index build (G10)
+
+On the first Phase 2.5b dispatch when `.code-intel/index.sqlite` is absent, the agent builds the index synchronously as preflight per R11a. The indexer wall-clock counts against `max_wall_clock_s`. The team manager's wait covers both the build and the query.
+
+#### Dispatch contract — what the team manager passes in
+
+Compose a JSON-fenced brief and embed it in the dispatch prompt. The **JSON-fenced brief is the sole and authoritative orchestrator-path signal** — the agent detects the orchestrator caller by the presence of a fenced `json` block, not by any additional marker or sentinel. Do not add a `[context]` literal block. Run-scoped context (`run_id`, `files_touched`, `predicate_match`, `executor_brief_excerpt`) belongs in the standard **`## Context` Markdown section** of the agent brief per `skills/ops/SKILL.md:486-506` — the agent reads that Markdown for human-readable display only and does not act on it programmatically.
+
+```json
+{
+  "query_type": "impact_analysis",
+  "symbol": "<primary symbol from the executor's task brief>",
+  "scope": "<optional file glob, e.g. 'src/auth/**'>",
+  "depth": 2,
+  "output_mode": "disk",
+  "max_results": 200,
+  "max_depth": 5,
+  "max_files": 5000,
+  "max_wall_clock_s": 600
+}
+```
+
+`query_type` must be one of: `find_definition`, `find_callers`, `find_dependencies`, `impact_analysis`, `find_implementations`, `execution_flow`. Use `impact_analysis` for typical executor preflight. `output_mode` should be `"disk"` for orchestrator dispatch — the agent writes the report to disk and returns the path.
+
+#### Dispatch contract — what code-intel returns
+
+For `output_mode: "disk"` (the orchestrator default), `code-intel` returns this JSON-fenced response:
+
+```json
+{
+  "status": "ok" | "partial" | "refused",
+  "report_path": ".code-intel/runs/<run-id>/impact_analysis-<symbol>.md",
+  "json_sidecar": ".code-intel/runs/<run-id>/impact_analysis-<symbol>.json",
+  "summary": "<one-paragraph human summary>",
+  "db_indexed_sha": "a3f7c12",
+  "generated_at": "2026-04-26T14:35:00Z",
+  "caveats": ["tier-2 partition: rust files", "truncated at 200 results"]
+}
+```
+
+For `output_mode: "inline"`: includes `report_inline` (full Markdown), omits `report_path`. For `output_mode: "both"`: both populated, but `report_inline` carries only the summary and path — not duplicate full content (per R6b).
+
+#### State cache invalidation (Q2)
+
+After `code-intel` returns from a Phase 2.5b dispatch, the team manager invalidates its state cache (read-on-next-Step-1) before composing the executor brief. `code-intel` is an agent rather than a nested skill, so the nested-skill-return rule at Phase 3 Step 1 does not strictly fire on its own — but because `code-intel` writes a report to disk that the executor must subsequently read, invalidation is required to keep the executor's view consistent.
+
+#### Refusal handling (Q3)
+
+If `code-intel` returns `status: refused` for any reason (timeout, symbol-not-found, hard-cap hit, malformed brief, lane violation, DB corruption), the team manager:
+
+1. Logs the refusal in the dispatch log when `--dispatch-log` is set (standard entry format: timestamp, agent name, task ID, brief excerpt, return status `refused`).
+2. Attaches the refusal reason to the executor's brief so the executor knows the consultation was attempted but did not yield results.
+3. Proceeds. Phase 2.5b is *advisory* — refusal does not block the executor.
+
+#### Dispatch log entry (Q4)
+
+When `--dispatch-log` is set, Phase 2.5b dispatches append to `docs/ops-dispatch-log.md` following the standard dispatch-log entry format (timestamp, agent name, task ID, brief excerpt, return status). When `--dispatch-log` is not set, no log entry is written — matching the existing per-dispatch behavior in `dispatch-log.md`.
+
+#### Attaching to the executor brief
+
+After a successful Phase 2.5b dispatch, append a `Code Intelligence Context:` block to the executor's brief:
+
+```text
+Code Intelligence Context: see .code-intel/runs/<run-id>/impact_analysis-<symbol>.md
+  - <one-line summary from the response>
+  - <caveat 1, if any>
+  - <caveat 2, if any>
+```
+
+#### Cleanup pointer
+
+Phase 4 step 9 cleans `.code-intel/runs/<run-id>/` (ephemeral, this run only — analogous to `docs/plan/.handoffs/<run_id>/`). Persistent infrastructure (`.code-intel/index.sqlite` and its WAL/SHM sidecars) is **not** Phase 4 cleaned per R11c. The Phase 4 cleanup edit for this pointer is captured in `task-implement-phase4-cleanup` (M3.2).
 
 ### Phase 2.5 — Preflight Validation
 
@@ -478,7 +575,7 @@ When every task is `completed`:
 6. Display the final task board (with per-task durations).
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
-9. **Clean up temp files, handoffs, and state** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files.
+9. **Clean up temp files, handoffs, state, and code-intel run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs (R11c). **Do not delete** the parent `.code-intel/runs/` directory itself.
 10. Suggest natural next steps (e.g., "Ready for commit" or "Run the full test suite").
 
 ---

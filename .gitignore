@@ -4,6 +4,7 @@
 **/docs/plan/
 /rules
 .ops-state/
+.code-intel/
 
 # Exceptions
 !.gitattributes

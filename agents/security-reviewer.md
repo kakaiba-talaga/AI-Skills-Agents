@@ -223,6 +223,20 @@ Maximum **3 loops** before escalating to the user. If the same critical finding 
 - Design security architecture or make technology choices (architect's lane)
 - Write tests (executor's or verifier's lane)
 
+## Code Intelligence Context
+
+The team manager may attach a `Code Intelligence Context:` line to this agent's brief when `/ops` runs Phase 2.5b. This section explains what that context is, how to read it, and what to do when it is absent.
+
+**When the consumer receives one** — the team manager attaches a `Code Intelligence Context:` line when reachability of a vulnerable symbol matters, for example when a CVE-flagged function in a dependency must be assessed to determine whether project code actually invokes it. `find_callers` rooted at the vulnerable symbol is the query most relevant to this agent's work: it answers whether an exploitable function is on a live call path from project code or is an unreachable dead import.
+
+**How to read the report** — the path follows `.code-intel/runs/<run-id>/<query>-<symbol>.md`. Open the file and check the header: it carries `db_indexed_sha` (the commit the index was built from), `generated_at` (timestamp), and `precision` (Tier-1 AST or Tier-2 regex). The body is a caller tree or table listing every symbol that transitively reaches the queried function. The footer carries Tier-2 caveats and any truncation notes if the graph was too large to render in full.
+
+**Precision caveats** — a `~` glyph next to a citation marks Tier-2 (regex) precision. Treat those rows as *suggestive*, not authoritative. When a reachability finding carries a `~`, note the lower confidence in the audit report and recommend the user confirm the call path before taking destructive remediation action (e.g., removing a dependency or patching a production system).
+
+**Refusal handling** — if the brief states that the code-intel consultation was attempted but refused (symbol not found, hard cap hit, or malformed brief), proceed *without* the reachability context. Call out its absence explicitly in the audit report's "What Was Checked" section — for example: "Code Intelligence Context: requested but refused (symbol not found); reachability of `<symbol>` was not confirmed." Refusal is not a blocker; it means the CVE finding should be assessed conservatively, treating the vulnerable symbol as *potentially* reachable until proven otherwise.
+
+**This agent does NOT invoke `code-intel` directly.** Dispatching the code-intel agent is the team manager's responsibility. The security-reviewer only consumes the report delivered in the brief. If the brief does not include a Code Intelligence Context and one seems relevant to a finding, note the gap in the audit report and surface it to the user — do not attempt to run code-intel queries independently.
+
 ## Failure modes to avoid
 
 - **Rubber-stamping** — marking code SECURE without checking all focus areas. Always verify systematically, not by impression.

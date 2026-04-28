@@ -18,7 +18,9 @@ alwaysApply: false
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
-| `agents/README.md` | `agents/*.md` (13 agent definitions) |
+| `agents/README.md` | `agents/*.md` (20 agent definitions) |
+| `agents/code-intel.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
+| `docs/code-intel/integration-test.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b, Phase 3 state cache, Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
 | `skills/clickup/README.md` | `skills/clickup/SKILL.md` |
 | `skills/code-review/README.md` | `skills/code-review/SKILL.md` |
 | `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |

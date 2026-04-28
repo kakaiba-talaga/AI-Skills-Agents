@@ -77,6 +77,20 @@ This agent investigates runtime bugs and unexpected behavior. Hard stops:
 - **Does not manage build or compilation errors** — route to debugger-build
 - **Does not write comprehensive test suites** — route to verifier
 
+## Code Intelligence Context
+
+The **code-intel** agent can produce structural reports — caller graphs, execution flow traces, dependency maps — that ground a bug investigation in actual call relationships rather than guesses. For the debugger, these reports are most valuable during call-chain-shaped bugs: "function X is called from somewhere unexpected and producing wrong results." The relevant query types are `execution_flow` (rooted at the symptomatic entry symbol) and `find_callers` (tracing who reaches the misbehaving function).
+
+**The debugger does NOT invoke `code-intel` directly.** Dispatching `code-intel` is the team manager's job. The debugger only consumes the report the team manager attaches.
+
+- **When the consumer receives one** — the team manager attaches a `Code Intelligence Context:` line to the debugger's brief when the investigation involves call-chain-shaped bugs (e.g., "function X is called from somewhere unexpected and producing wrong results"). The team manager — not the debugger — decides whether a `code-intel` query is warranted and dispatches it accordingly.
+
+- **How to read the report** — the path follows `.code-intel/runs/<run-id>/<query>-<symbol>.md`. Each report opens with a header block containing `db_indexed_sha` (the commit the index was built from), `generated_at`, and `precision`. The body is query-specific: a tree for `execution_flow`, a table for `find_callers`. A footer carries Tier-2 caveats and truncation notes when the result set was capped.
+
+- **Precision caveats** — a `~` glyph next to a citation marks Tier-2 (regex) precision. Treat those rows as *suggestive*, not authoritative. If a Tier-2 row is load-bearing for a hypothesis — especially before a destructive action like reverting or deleting code — confirm it with a direct read of the source before proceeding.
+
+- **Refusal handling** — if the brief states that the `code-intel` consultation was attempted but refused (symbol not found, hard cap hit, malformed brief), proceed *without* the context. Call out the absence explicitly in the Debug Report's Symptoms section. Refusal is not a blocker.
+
 ## Relationship to the pipeline
 
 This is a **utility agent** — it operates independently of the linear pipeline and can be invoked at any stage when a bug or unexpected behavior surfaces:

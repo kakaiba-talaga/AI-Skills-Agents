@@ -18,6 +18,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [security-reviewer](security-reviewer.md) | opus | Dedicated security auditor that analyzes implemented code for vulnerabilities, producing severity-rated findings with remediation guidance. Verdicts: SECURE / SECURE WITH FINDINGS / INSECURE. |
 | [code-reviewer](code-reviewer.md) | sonnet | Two-stage code review (spec compliance then quality) for pipeline and targeted module reviews. Severity-rated findings with verdicts. For standalone diff reviews, see `code-reviewer-diff` or use the `/code-review` slash command. |
 | [code-reviewer-diff](code-reviewer-diff.md) | sonnet | Standalone diff review variant. Full diff-gathering protocol, exclusion filters, cross-file impact analysis, language-specific checks. Used when `/code-review` skill is unavailable. |
+| [code-intel](code-intel.md) | opus | Indexes the project into a SQLite-backed symbol graph and answers structural queries (callers, dependencies, impact, implementations, execution flow) for other agents and orchestrators. Prevents silent breakage by replacing structural guessing with citable lookups. |
 | [documentor](documentor.md) | sonnet | Writes new documentation for implemented features, creates guides, documents architectural decisions, and updates project scoping after milestones. Writes in clear, natural language tailored to the audience. Delegates to `/doc-sync` for accuracy checks, or runs its own audit when the skill is unavailable. |
 | [debugger](debugger.md) | opus | Runtime bug investigation — hypothesis-driven root cause analysis, circuit breaker, similar pattern scan, regression verification. For build errors, see `debugger-build`. Available at any pipeline stage. |
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
@@ -30,7 +31,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, preflight, work-verifier, rollback, change-analyzer.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, preflight, work-verifier, rollback, change-analyzer.
 
 ### Overriding the default model
 
@@ -113,6 +114,14 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Review the data pipeline for performance bottlenecks"_
 - _"Do a release readiness review on the staged changes"_
 - _"Review `src/parser.py` for correctness"_
+
+### Code Intel
+
+- _"Index the project so the executor can check impact before editing `process_payment`"_
+- _"Who calls `validate_token`? Give me the full caller chain."_
+- _"Run an impact analysis on `UserRepository.save` before we refactor it"_
+- _"Trace the execution flow from `handle_request` down three levels"_
+- _"Find all concrete implementations of the `StorageBackend` interface"_
 
 ### Documentor
 
@@ -287,6 +296,15 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Targeted reviews for specific concerns (e.g., thread safety, performance, security)
 - Can be invoked outside the pipeline for ad-hoc reviews on any code
 
+**Code Intel:**
+
+- Indexes the project's source tree into a SQLite symbol graph at `.code-intel/index.sqlite`
+- Six query types via recursive CTEs: `find_definition`, `find_callers`, `find_dependencies`, `impact_analysis`, `find_implementations`, `execution_flow`
+- **Primary consumers:** executor (R1-A pre-edit impact analysis, the keystone `/ops` Phase 2.5b use case), code-reviewer (R1-C diff-scope verification), debugger (R1-B call-chain tracing), ad-hoc humans (R1-D exploratory queries)
+- **Brief format:** JSON-fenced block for orchestrators (required fields: `query_type`, `symbol`); labeled-prose (`Query:`, `Symbol:`, `Scope:`, `Depth:`) for humans; malformed input refused immediately with the usage card
+- **Output format:** JSON response for `/ops` Phase 2.5b orchestrator dispatches (summary + path); full inline rendered report for standalone human queries
+- Read-only on source code — writes only to `.code-intel/**`, `docs/code-intel/**`, and `_tmp_*`
+
 **Documentor:**
 
 - Write documentation for existing features that were never documented
@@ -385,6 +403,10 @@ No outbound handoffs. Work-verifier returns per-deliverable verdicts — the cal
 **Change Analyzer:**
 
 No outbound handoffs. Change-analyzer returns per-stage recommendations — the caller decides whether to run or skip each stage.
+
+**Code Intel:**
+
+No outbound handoffs. Code-intel returns citable query results (callers, impact, execution flow) to the caller — the executor, debugger, code-reviewer, or `/ops` Phase 2.5b orchestrator decides what to do with the data.
 
 ### Parallelization
 

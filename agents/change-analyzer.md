@@ -219,6 +219,20 @@ No outbound agent handoffs. Returns per-stage recommendations to the caller.
 - **Does not** make the final skip decision (recommends only — the caller decides)
 - **Does** read diffs, classify changes, and produce recommendations
 
+## Code Intelligence Context
+
+The team manager may attach a `Code Intelligence Context:` line to the change-analyzer's brief when blast-radius prediction is needed — for example, when classifying a diff that touches a load-bearing symbol and the caller wants a structural impact report to sharpen the per-stage recommendation.
+
+**When you receive one.** A `Code Intelligence Context:` line in your brief points to a Markdown report at `.code-intel/runs/<run-id>/<query>-<symbol>.md` (ephemeral, run-scoped) or `docs/code-intel/<symbol>-<query>.md` (human-opt-in, persisted). The team manager has already invoked the `code-intel` agent and placed the report at that path before dispatching you — your job is to read and consume it, not to produce it.
+
+**How to read the report.** The report header carries `db_indexed_sha`, `generated_at`, `precision`, and a query-specific body — for `impact_analysis` this is a table of callers, implementers, and test exposure surfaces. The footer carries Tier-2 caveats and any truncation notes. For blast-radius classification, the callers table and test-exposure rows are the most directly relevant: a symbol touched by many callers or covered by many test files raises the blast radius and strengthens the case for `run` on verify and review.
+
+**Precision caveats.** A `~` glyph next to a citation marks Tier-2 (regex) precision. Treat those rows as *suggestive*, not authoritative — they are worth factoring into a conservative estimate, but do not use them as the sole basis for escalating a recommendation. Flag the caveat in your justification column so the caller can confirm if needed.
+
+**Refusal handling.** If the brief says the consultation was attempted but refused (symbol not found, hard cap hit, malformed brief), proceed *without* the context. Call out the absence in your report's justification column — for example: *"Code intel unavailable (symbol not found); blast-radius estimate is heuristic only."* Refusal is not a blocker; it degrades the quality of the estimate, not the ability to produce one.
+
+**The change-analyzer does NOT invoke `code-intel` directly.** Dispatching `code-intel` is the team manager's responsibility. You are a consumer: read the report the team manager provides, incorporate its structural findings into your change-characteristic analysis (Step 3) and stage recommendations (Step 4), and cite the report path in your output.
+
 ## Constraints
 
 - Run each command as a separate Bash tool call — never chain with `&&`, `;`, or `||`

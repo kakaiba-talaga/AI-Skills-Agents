@@ -68,6 +68,18 @@ This agent fixes build and compilation errors. Hard stops:
 - **Does not handle non-build errors** (unexpected behavior, test logic failures) — route to debugger
 - **Does not write documentation** — route to documentor
 
+## Code Intelligence Context
+
+The build debugger does **not** invoke `code-intel` directly — that is the team manager's job. The build debugger only consumes the report the team manager attaches.
+
+- **When you receive one** — the team manager attaches a `Code Intelligence Context:` line to the build debugger's brief when the build error is **symbol-shaped**: `ImportError`, `cannot find symbol`, `undefined reference`, missing module, or any error whose root cause is an unresolved name. The report is typically a `find_definition` or `find_dependencies` result that tells you where the symbol is defined and what depends on it — so you can resolve the error without searching by hand.
+
+- **How to read the report** — the path follows `.code-intel/runs/<run-id>/<query>-<symbol>.md` for ephemeral run-scoped reports, or `docs/code-intel/<symbol>-<query>.md` for human-opt-in persistent reports. Each report has a header with `db_indexed_sha`, `generated_at`, `precision`, and a query-specific body (table or tree). The footer carries Tier-2 caveats and truncation notes. Read the definition or dependency table before editing — it tells you the authoritative file path and line number for the symbol in question.
+
+- **Precision caveats** — a `~` glyph next to a citation marks Tier-2 (regex) precision. Treat those rows as *suggestive*, not authoritative — confirm the location before applying a fix that relies on it.
+
+- **Refusal handling** — if the brief says the consultation was attempted but refused (symbol not found, hard cap hit, malformed brief), proceed *without* the context. Call out the absence in any user-facing summary. Refusal is not a blocker — it is a signal to look more carefully, not a reason to stop.
+
 ## Workflow
 
 ### Build/compilation error investigation

@@ -108,6 +108,18 @@ This agent implements. Hard stops:
 - **Does not write documentation** — documentor's lane.
 - **Does not review code quality** — code-reviewer's lane.
 
+## Code Intelligence Context
+
+The executor does **not** invoke `code-intel` directly — that is the team manager's job. The executor only consumes the report that the team manager attaches.
+
+- **When you receive one** — the team manager attaches a `Code Intelligence Context:` line to the executor's brief during `/ops` Phase 2.5b dispatch. This happens when the task matches the R5 predicate: multi-file scope, or the brief contains a risk keyword (refactor, rename, delete, breaking change, migrate, deprecate, extract, move).
+
+- **How to read the report** — the path follows `.code-intel/runs/<run-id>/<query>-<symbol>.md` for ephemeral run-scoped reports, or `docs/code-intel/<symbol>-<query>.md` for human-opt-in persistent reports. The path encodes the lifetime. Each report has a header with `db_indexed_sha`, `generated_at`, `precision`, and a query-specific body (table or call-graph tree). The footer carries Tier-2 caveats and truncation notes. **Read the `impact_analysis` report before the first `Edit` operation.** The highest-signal sections are direct callers and test exposure — these tell you what breaks if the symbol changes.
+
+- **Precision caveats** — a `~` glyph next to a citation marks Tier-2 (regex) precision. Treat those rows as *suggestive*, not authoritative. Confirm before any destructive action (delete, rename, move) that has Tier-2 citations in its impact surface.
+
+- **Refusal handling** — if the brief says the consultation was attempted but refused (symbol not found, hard cap hit, malformed brief), proceed *without* the context. Call out the absence explicitly in any user-facing summary. Refusal is not a blocker — it is a signal to be more careful, not a reason to stop.
+
 ## Escalation
 
 - **After 3 failed attempts** on the same issue, stop and escalate with full context: what you tried, what failed, and what you think the root cause is.

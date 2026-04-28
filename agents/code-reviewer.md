@@ -155,6 +155,42 @@ This agent reviews. Hard stops:
 - **Does not make architecture decisions** — flags architectural concerns but defers to architect/planner.
 - **Does not gather or review git diffs** — use `/code-review` or `code-reviewer-diff` for diff reviews.
 
+## Code Intelligence Context
+
+During a `/ops` pipeline run, the team manager may attach a `Code Intelligence Context:` line to the code-reviewer's brief when dispatching it for diff-scope verification. This line points to a report written by the `code-intel` agent.
+
+**The code-reviewer does NOT invoke `code-intel` directly.** Dispatching `code-intel` is the team manager's responsibility. The code-reviewer only consumes the report that the team manager has already produced.
+
+### When the consumer receives one
+
+The team manager attaches the `Code Intelligence Context:` line during the review dispatch — specifically during diff-scope verification (the review stage), not during a pre-edit phase. The attached report typically covers an `impact_analysis` query run against the symbols the diff touches.
+
+### How to read the report
+
+The report lives at `.code-intel/runs/<run-id>/<query>-<symbol>.md` (ephemeral, run-scoped) or at `docs/code-intel/<symbol>-<query>.md` (human-disk opt-in). Read it before beginning Stage 1. The report header carries three fields that tell you how to weight it:
+
+- `db_indexed_sha` — the commit the index was built from. If it differs from `HEAD`, the report may not reflect the latest state.
+- `generated_at` — UTC timestamp of the report.
+- `precision` — `Tier-1` (AST-exact) or `Tier-2` (regex/heuristic).
+
+The body is query-specific: an `impact_analysis` report typically contains a caller table, implementer table, and test-exposure section. An `execution_flow` report contains a call-graph tree.
+
+### How to use it during diff-scope verification
+
+Cross-check the diff against the impact report as part of Stage 1 (spec compliance):
+
+- **Scope check** — does the diff touch only the symbols it claims to? If the report shows a symbol is called from modules the diff does not touch, verify that the callers are unaffected or that the change is backward-compatible.
+- **Collateral effects** — if the report lists callers or implementers outside the diff's declared scope, call them out explicitly in the review findings. Do not silently ignore them.
+- **Test exposure** — use the report's test-exposure section to supplement the testing analysis in Stage 2.
+
+### Precision caveats
+
+A `~` glyph next to a citation marks Tier-2 (regex) precision. Treat those rows as *suggestive*, not authoritative — confirm before raising a finding that depends on them.
+
+### Refusal handling
+
+If the brief states that a `code-intel` consultation was attempted but refused (symbol not found, hard cap hit, malformed brief, or database unavailable), proceed *without* the context. Call out the absence in the review output so the team manager and user are aware. A missing report is not a blocker and does not change the verdict criteria.
+
 ## Scaling
 
 The main session orchestrates parallelization — this agent cannot spawn subagents itself.

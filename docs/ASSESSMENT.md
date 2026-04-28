@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-04-21 (ops decoupling and tooling expansion)
-**Previous assessment:** 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-04-26 (code-intel agent)
+**Previous assessment:** 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -11,7 +11,7 @@
 
 ### Agents (`agents/`)
 
-19 agent definitions + 1 README.
+20 agent definitions + 1 README.
 
 | File | Model | Role |
 |------|-------|------|
@@ -34,6 +34,7 @@
 | work-verifier.md | sonnet | Verifies whether prior agent work was completed, partial, or never started |
 | rollback.md | sonnet | Safely undoes agent-produced changes at configurable scope |
 | change-analyzer.md | sonnet | Classifies git diffs and recommends pipeline stages to run or skip |
+| code-intel.md | opus | Indexes the project into a SQLite symbol graph and answers structural queries (callers, dependencies, impact, execution flow) for other agents |
 
 ### Skills (`skills/`)
 
@@ -47,7 +48,7 @@
 | Deslop | `skills/deslop/` | 2 | ~669 | AI slop cleanup (dead code, redundant comments, over-abstraction) |
 | Doc Sync | `skills/doc-sync/` | 2 | ~83 | Documentation audit and sync against codebase |
 | Linter | `skills/linter/` | 2 | ~141 | Source file linting with auto-fix and incremental cache |
-| Ops | `skills/ops/` | 15 | ~846 (Claude), ~865 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
+| Ops | `skills/ops/` | 15 | ~935 (Claude), ~968 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
 | Deploy | `skills/deploy/` | 9 | ~412 (Claude), ~408 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
@@ -109,6 +110,48 @@
 | ralph-loop-skill-optimization-plan.md | Modularization plan for ralph-loop |
 | ssh-agent-plan.md | Plan for ssh-executor and ops/deploy integration |
 | unify-ops-state-management-plan.md | Plan to unify ops state management across Claude Code and Cursor |
+
+---
+
+## Changes Since Last Assessment (2026-04-26 — code-intel agent)
+
+### New agent: `code-intel`
+
+`agents/code-intel.md` (782 lines, model: opus) is a code-intelligence layer that indexes the project's source tree into a SQLite-backed symbol graph at `.code-intel/index.sqlite` and answers structural queries for other agents — callers, dependencies, impact, implementations, and execution flow — via six recursive-CTE query templates and a strict JSON brief schema. It replaces structural guessing with citable lookups that are traceable to rows in the index.
+
+The agent uses a three-tier indexing cascade: Tier 1 uses AST parsing (Python via `ast`, TypeScript/JavaScript via `@typescript-eslint/parser`), Tier 2 falls back to grep-heuristics for other languages, and Tier 3 escalates to interactive tree-sitter parsing (suppressed on the orchestrator path per constraint C-ADD-1 to avoid blocking automated dispatch).
+
+It is dispatched by `/ops` Phase 2.5b, not by the canonical pipeline. It is a sidecar utility, not a pipeline stage.
+
+### `/ops` Phase 2.5b — code-intel dispatch stage
+
+A new "Phase 2.5b — Code Intelligence" section was added to both `skills/ops/SKILL.md` and `skills/ops/SKILL.cursor.md` (~95 lines each). The stage fires when the R5 predicate is true: `files_touched > 1` OR the brief contains a risk keyword from the 8-keyword list (`auth`, `permission`, `secret`, `token`, `session`, `sql`, `query`, `inject`). The analysis is advisory — the executor proceeds whether or not code-intel responds — and the dispatch is logged in `docs/ops-dispatch-log.md`. State cache invalidation and Phase 4 cleanup of `.code-intel/runs/<run-id>/` are also specified.
+
+### Seven R7 Code Intelligence Context sections
+
+Seven consumer agents received a new `## Code Intelligence Context (R7)` section establishing how they consume code-intel output:
+
+| Agent | Integration |
+|-------|-------------|
+| `agents/executor.md` | R1-A keystone — reads `impact_analysis` from the Phase 2.5b brief before the first Edit |
+| `agents/code-reviewer.md` | R1-C diff-scope verification using `find_callers` and `impact_analysis` |
+| `agents/code-reviewer-diff.md` | Byte-equivalent copy of code-reviewer.md's CIC section (per C-PLAN-3, both files must stay in sync) |
+| `agents/debugger.md` | R1-B call-chain tracing via `execution_flow` and `find_callers` |
+| `agents/debugger-build.md` | Build-time symbol resolution — locates where a missing import is defined |
+| `agents/change-analyzer.md` | Blast-radius prediction — identifies which callers and implementations are touched |
+| `agents/security-reviewer.md` | CVE reachability — uses `find_callers` to trace whether vulnerable code is reachable from an entry point |
+
+### Supporting touchpoints
+
+| Change | Detail |
+|--------|--------|
+| **`.gitignore`** | Added `.code-intel/` to ensure the index database and run-scoped sidecar files are never committed |
+| **`agents/README.md`** | Added code-intel to the agent roster table, the Utility Agent section, and the handoffs entry |
+| **`CLAUDE.md` doc-sync row** | Added `agents/code-intel.md` row mapping to `skills/ops/SKILL.md` (Phase 2.5b) and `tooling/deploy-manifest.json` |
+| **`.cursor/rules/documentation-sync.mdc`** | Mirror row added; agent count corrected from stale "13" to 20 (resolves the active issue carried from the 2026-04-21 assessment) |
+| **`docs/code-intel/integration-test.md`** | 416-line walkthrough spec: ralph-loop → /ops → code-intel end-to-end integration test |
+| **`docs/code-intel/failure-mode-walkthrough.md`** | 125-line R10 walkthrough covering 13 failure-mode scenarios |
+| **`docs/code-intel/design-trace.md`** | 76-line R1-R11 + Q1-Q10 design trace table (21 rows, all DONE) |
 
 ---
 
@@ -347,9 +390,7 @@ Path references to `~/.claude/commands/` updated in 6 files:
 
 ### Active issues
 
-| File | Issue | Severity |
-|------|-------|----------|
-| .cursor/rules/documentation-sync.mdc | Doc-sync map references "13 agent definitions" — should be 19. Missing `timing-calibrator` entry. Drifted from `CLAUDE.md` mirror (which is correct at 19). | Low — cosmetic, does not affect agent behavior. Fix with `/doc-sync`. |
+None.
 
 ### Issues noted but not changed (carried from previous assessments)
 
@@ -367,11 +408,11 @@ Path references to `~/.claude/commands/` updated in 6 files:
 ### Strengths
 
 - **Unified skill structure:** All 10 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
-- **Consistent structure** across all 19 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
+- **Consistent structure** across all 20 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
 - **Clean separation of concerns:** The ops decoupling moved operational logic (preflight, rollback, work verification, change analysis, timing calibration) out of skill companion files and into standalone agents/skills where it belongs. This reduces ops context pressure and makes each capability independently dispatchable.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
 - **Shared constraints repeated verbatim** in all agents: no compound Bash commands, no `cd` prefix, relative paths only. No variations.
-- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer). No mismatches between frontmatter and README.
+- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer). No mismatches between frontmatter and README.
 - **Valid cross-references** between agents and skills — no broken path references. Former ops companion references removed.
 - **Deployment automation** expanded — deploy scripts support 4 categories (agents, skills, hooks, settings), 3 targets (claude-code, claude-code-wsl, cursor), dry-run, diff, per-target, per-category, and `--prune` mode. Cursor transform is fully automatic with dedicated transform scripts per skill.
 - **Portability documented** — format differences, tool gaps, and verified findings captured in `docs/portability-guide.md`.
@@ -382,13 +423,13 @@ Path references to `~/.claude/commands/` updated in 6 files:
 
 These are not defects — they are patterns worth monitoring.
 
-- **Large skill files:** `skills/ops/SKILL.cursor.md` (~865 lines) remains the largest single file, followed by `skills/ops/SKILL.md` (~846 lines), `skills/ops/SKILL.cursor.additions.md` (~754 lines), and `skills/deslop/SKILL.md` (~669 lines). The ops files grew by ~90 lines each due to `--brainstorm` and nested-skill handoff features, partially offsetting the 8-file companion reduction. Net context per ops invocation is still lower because companions are no longer loaded.
+- **Large skill files:** `skills/ops/SKILL.cursor.md` (~968 lines) is now the largest single file, followed by `skills/ops/SKILL.md` (~935 lines), `skills/ops/SKILL.cursor.additions.md` (~754 lines), and `skills/deslop/SKILL.md` (~669 lines). The ops files grew by a further ~90 lines each in this run due to the Phase 2.5b code-intel dispatch stage. Net context per ops invocation remains lower than before the companion extraction because companions are no longer loaded.
 - **No version identifiers** in any agent or skill file. If these files are shared across machines or updated frequently, a version field in frontmatter would aid change tracking.
 - **Planning docs mostly gitignored:** `docs/plan/` is in `.gitignore`, meaning most planning context is local-only. Exception: `ops-decoupling-plan.md` is now tracked in git, establishing a precedent for tracking significant architectural plans.
 - **Cursor transform is text-based:** The ops transform now uses a dedicated side-car file (`SKILL.cursor.additions.md`) with an anchor-and-patch format, which is more robust than pure text replacement. Ralph-loop still uses the simpler transform approach. No false-positive issues observed in current files.
 - **Three skills have Cursor-native versions:** ops, deploy, and ralph-loop all have `SKILL.cursor.md` files. State management (`.ops-state/` JSON files) is unified across both versions. Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
 - **Agent dispatch mechanism at parity:** Claude Code's `Agent` tool auto-registers all agent definition files at `~/.claude/agents/` as `subagent_type` values — matching Cursor's native coverage. Both platforms dispatch directly via `subagent_type="<agent_type>"`. The ops skill retains the self-read prompt pattern so agents load their full definition on startup. `SKILL.cursor.md` is still needed for Cursor-specific differences (TodoWrite, `Task` tool, `~/.cursor/` paths). See `docs/portability-guide.md` § Agent Dispatch Mechanism.
-- **Documentation drift:** `.cursor/rules/documentation-sync.mdc` has fallen behind `CLAUDE.md` (its declared mirror). See Active Issues.
+- **`code-intel` model assignment:** `code-intel` is assigned `opus`, consistent with other deep-reasoning agents (planner, critic, debugger, security-reviewer). The Logical model assignments bullet above should be read as: sonnet for execution-track agents, opus for analysis/reasoning agents — `code-intel` falls in the latter category.
 
 ---
 
@@ -419,7 +460,7 @@ Skills invoked within pipeline stages:
 
 | Category | Files | Total |
 |----------|-------|-------|
-| Agents | 19 definitions + 1 README | 20 |
+| Agents | 20 definitions + 1 README | 21 |
 | Skills (clickup) | 2 | 2 |
 | Skills (code-review) | 2 | 2 |
 | Skills (commit-message) | 2 | 2 |
@@ -431,14 +472,15 @@ Skills invoked within pipeline stages:
 | Skills (ralph-loop) | 16 (incl. SKILL.cursor.md, 5 templates + templates README) | 16 |
 | Skills (timing-calibrator) | 2 | 2 |
 | Documentation | 2 (ASSESSMENT.md, portability-guide.md) | 2 |
+| Documentation (code-intel) | 3 (integration-test.md, failure-mode-walkthrough.md, design-trace.md) | 3 |
 | Cursor Rules | 1 (documentation-sync.mdc) | 1 |
 | Tooling | 7 (manifest + 2 deploy scripts + 4 transform scripts) | 7 |
 | Hooks | 2 (post-compaction-context.sh, notify.sh) | 2 |
 | Planning (gitignored + 1 tracked) | 20 | 20 |
 | Config | 2 (.gitignore, .markdownlint.json) | 2 |
 | Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
-| **Total** | | **111** |
+| **Total** | | **115** |
 
 ---
 
-*Assessment updated 2026-04-21 (ops decoupling and tooling expansion). Files assessed: 19 agents, 10 skills (54 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md), 1 agents README, 2 docs, 1 cursor rule, 7 tooling, 2 hooks, 20 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 1. Carried from previous: 2.*
+*Assessment updated 2026-04-26 (code-intel agent). Files assessed: 20 agents, 10 skills (54 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md), 1 agents README, 5 docs (incl. 3 in docs/code-intel/), 1 cursor rule, 7 tooling, 2 hooks, 20 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2.*
