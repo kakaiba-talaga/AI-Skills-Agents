@@ -23,10 +23,10 @@ A **new run** is created only when the team manager enters Phase 1 with a new sp
 
 ## Storage location
 
-Each run gets its own subdirectory under `docs/plan/.handoffs/`:
+Each run gets its own subdirectory under `.agents/handoffs/`:
 
 ```
-docs/plan/.handoffs/
+.agents/handoffs/
   caching-layer-2026-04-09/
     handoff-001-implement-to-verify.md
     handoff-003-verify-to-review.md
@@ -73,7 +73,7 @@ This ensures multiple concurrent sessions (or sequential runs) never interfere w
 
 ## Writing handoffs
 
-After marking a task `completed` in the dispatch loop (Phase 3, Step 4), immediately write the handoff document to the run's subdirectory on disk. Store the handoff file path in the task's `handoff_file` field in the state file: `"handoff_file": "docs/plan/.handoffs/<run_id>/handoff-003-implement-to-verify.md"`. This allows `resume` to locate handoffs from the state file.
+After marking a task `completed` in the dispatch loop (Phase 3, Step 4), immediately write the handoff document to the run's subdirectory on disk. Store the handoff file path in the task's `handoff_file` field in the state file: `"handoff_file": ".agents/handoffs/<run_id>/handoff-003-implement-to-verify.md"`. This allows `resume` to locate handoffs from the state file.
 
 ## Reading handoffs for downstream briefs
 
@@ -90,4 +90,4 @@ Handoff files are scoped per run and cleaned up based on run lifecycle:
 1. **On successful completion (Phase 4):** Delete the run's handoff subdirectory. The run is done — `resume` won't be needed, and the deliverable artifacts (plan doc, committed code, documentation) are the permanent record.
 2. **On pause/cancel/abort:** Keep the run's handoff subdirectory intact. The user may `resume` later.
 3. **Never delete another run's subdirectory.** Each run only manages its own files. This prevents multi-session interference.
-4. **Stale run detection:** At the start of a new run (Phase 1), check `docs/plan/.handoffs/` for subdirectories older than 7 days that have no matching state file in `.ops-state/`. If found, warn the user: "Found stale handoffs from run `<run_id>` (7+ days old, no active run). Clean up?" Only delete on explicit user approval — never auto-delete.
+4. **Stale run detection:** At the start of a new run (Phase 1), check `.agents/handoffs/` for subdirectories older than 7 days that have no matching state file in `.ops-state/`. If found, warn the user: "Found stale handoffs from run `<run_id>` (7+ days old, no active run). Clean up?" Only delete on explicit user approval — never auto-delete.

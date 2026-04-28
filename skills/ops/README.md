@@ -96,7 +96,7 @@ For non-trivial tasks (>2 implementation tasks or multi-stage work), the team ma
 
 ### Handoff Documents
 
-Structured context summaries passed between pipeline stages, **persisted to disk** at `docs/plan/.handoffs/<run_id>/`. Each agent starts fresh, so handoff documents preserve what was done, key decisions, files changed, and guidance for the next agent.
+Structured context summaries passed between pipeline stages, **persisted to disk** at `.agents/handoffs/<run_id>/`. Each agent starts fresh, so handoff documents preserve what was done, key decisions, files changed, and guidance for the next agent.
 
 Handoff files are scoped per run — each run gets its own subdirectory (e.g., `caching-layer-2026-04-09/`). This prevents interference when multiple sessions use the team manager concurrently on the same project. On successful completion, the run's handoff directory is cleaned up. On pause/cancel, it's kept for `resume`.
 
@@ -360,7 +360,7 @@ You can interact with the team manager at any point between agent dispatches:
 | "pause" | Stops dispatching but keeps all task state |
 | "resume" | Recovers from state file, verifies in-progress tasks, continues |
 
-**Conversation recovery:** Three things survive session loss: the **state file** (`.ops-state/<run-id>-board.json`), the **plan document** on disk (`docs/plan/`), and the **handoff files** on disk (`docs/plan/.handoffs/<run_id>/`). Together they provide complete state recovery. `/ops resume` reads all three to rebuild the dispatch state — no reliance on conversation history.
+**Conversation recovery:** Three things survive session loss: the **state file** (`.ops-state/<run-id>-board.json`), the **plan document** on disk (`docs/plan/`), and the **handoff files** on disk (`.agents/handoffs/<run_id>/`). Together they provide complete state recovery. `/ops resume` reads all three to rebuild the dispatch state — no reliance on conversation history.
 
 ## Failure Handling
 

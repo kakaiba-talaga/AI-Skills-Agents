@@ -430,7 +430,7 @@ Code Intelligence Context: see .code-intel/runs/<run-id>/impact_analysis-<symbol
 
 #### Cleanup pointer
 
-Phase 4 step 9 cleans `.code-intel/runs/<run-id>/` (ephemeral, this run only — analogous to `docs/plan/.handoffs/<run_id>/`). Persistent infrastructure (`.code-intel/index.sqlite` and its WAL/SHM sidecars) is **not** Phase 4 cleaned per R11c. The Phase 4 cleanup edit for this pointer is captured in `task-implement-phase4-cleanup` (M3.2).
+Phase 4 step 9 cleans `.code-intel/runs/<run-id>/` (ephemeral, this run only — analogous to `.agents/handoffs/<run_id>/`). Persistent infrastructure (`.code-intel/index.sqlite` and its WAL/SHM sidecars) is **not** Phase 4 cleaned per R11c. The Phase 4 cleanup edit for this pointer is captured in `task-implement-phase4-cleanup` (M3.2).
 
 ### Phase 2.5 — Preflight Validation
 
@@ -575,7 +575,7 @@ When every task is `completed`:
 6. Display the final task board (with per-task durations).
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
-9. **Clean up temp files, handoffs, state, and code-intel run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`docs/plan/.handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs (R11c). **Do not delete** the parent `.code-intel/runs/` directory itself.
+9. **Clean up temp files, handoffs, state, and code-intel run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`.agents/handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs (R11c). **Do not delete** the parent `.code-intel/runs/` directory itself.
 10. Suggest natural next steps (e.g., "Ready for commit" or "Run the full test suite").
 
 ---
@@ -644,7 +644,7 @@ Enforce in every brief (in addition to the Shared Brief Constraints block):
 
 When a task completes and feeds into a downstream task, write a **handoff document** to persist context across stage transitions.
 
-- **Storage:** `docs/plan/.handoffs/<run_id>/` — each run gets its own subdirectory.
+- **Storage:** `.agents/handoffs/<run_id>/` — each run gets its own subdirectory.
 - **Naming:** `handoff-<task_number>-<from_stage>-to-<to_stage>.md` (e.g., `handoff-003-implement-to-verify.md`).
 - **Run ID:** `<plan-slug>-<ISO-date>` stored in the state file's root `run_id` field.
 - **Writing:** After marking a task completed, immediately write the handoff to disk. Store the path in the task's `handoff_file` field in the state file.

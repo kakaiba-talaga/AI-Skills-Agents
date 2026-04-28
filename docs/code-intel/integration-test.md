@@ -256,14 +256,14 @@ The `report_path` from boundary C is embedded in this handoff document. `ralph-l
 | 1 | `ralph-loop` | Creates history log | `.ralph-state/rl-refactor-process-data-2026-04-28.history.jsonl` |
 | 2 | `ralph-loop` | Writes pending_nested_skill (write-before) | `.ralph-state/rl-refactor-process-data-2026-04-28.json` (updated) |
 | 3 | `/ops` | Creates ops state file | `.ops-state/refactor-process-data-2026-04-28-board.json` |
-| 3 | `/ops` | Creates handoff directory | `docs/plan/.handoffs/refactor-process-data-2026-04-28/` |
+| 3 | `/ops` | Creates handoff directory | `.agents/handoffs/refactor-process-data-2026-04-28/` |
 | 6 | `code-intel` | Creates run directory | `.code-intel/runs/refactor-process-data-2026-04-28/` |
 | 6 | `code-intel` | Writes impact report (Markdown) | `.code-intel/runs/refactor-process-data-2026-04-28/impact_analysis-process_data.md` |
 | 6 | `code-intel` | Writes impact report (JSON sidecar) | `.code-intel/runs/refactor-process-data-2026-04-28/impact_analysis-process_data.json` |
 | 6 | `code-intel` | Persistent index (survives cleanup) | `.code-intel/index.sqlite` |
 | 6 | `code-intel` | WAL sidecar (survives cleanup) | `.code-intel/index.sqlite-wal` |
 | 6 | `code-intel` | SHM sidecar (survives cleanup) | `.code-intel/index.sqlite-shm` |
-| 7 | `/ops` Phase 4 | Writes executor handoff | `docs/plan/.handoffs/refactor-process-data-2026-04-28/handoff-002-implement-to-verify.md` |
+| 7 | `/ops` Phase 4 | Writes executor handoff | `.agents/handoffs/refactor-process-data-2026-04-28/handoff-002-implement-to-verify.md` |
 | 7 | `ralph-loop` | Clears pending_nested_skill (clear-after) | `.ralph-state/rl-refactor-process-data-2026-04-28.json` (updated) |
 
 ---
@@ -307,7 +307,7 @@ Cleanup occurs at `/ops` Phase 4 step 9, after all tasks complete. The rule is:
 - `.code-intel/runs/refactor-process-data-2026-04-28/` — the entire run subdirectory, including both artifacts:
   - `impact_analysis-process_data.md`
   - `impact_analysis-process_data.json`
-- `docs/plan/.handoffs/refactor-process-data-2026-04-28/` — ops handoff documents for this run
+- `.agents/handoffs/refactor-process-data-2026-04-28/` — ops handoff documents for this run
 - `.ops-state/refactor-process-data-2026-04-28-board.json` — ops state file
 - Any `_tmp_*` files at the repo root
 
@@ -396,7 +396,7 @@ Walk through these steps in order. Each step has a concrete check you can perfor
 - [ ] **CL2.** Confirm `.code-intel/index.sqlite` still exists (not cleaned — persistent infrastructure per R11c).
 - [ ] **CL3.** Confirm `.code-intel/runs/` (parent directory) still exists (only the run-scoped subdirectory was removed).
 - [ ] **CL4.** Confirm `.ops-state/<run-id>-board.json` no longer exists (cleaned by Phase 4 step 9).
-- [ ] **CL5.** Confirm `docs/plan/.handoffs/<run-id>/` no longer exists (cleaned by Phase 4 step 9).
+- [ ] **CL5.** Confirm `.agents/handoffs/<run-id>/` no longer exists (cleaned by Phase 4 step 9).
 
 ---
 

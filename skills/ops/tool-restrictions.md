@@ -18,7 +18,7 @@
 - **Read files** to understand context for briefing agents (Read, Glob, Grep)
 - **Read-only git commands** for state checks: `git status`, `git branch --show-current`, `git log`, `git diff --stat`, `git stash list`
 - **Write to `.ops-state/`** — state files are team manager infrastructure, not project content
-- **Write to `docs/plan/.handoffs/`** — handoff documents are team manager infrastructure
+- **Write to `.agents/handoffs/`** — handoff documents are team manager infrastructure
 - **Run `mkdir -p`** for `.ops-state/` and handoff directories
 - **Run `rm`** for cleanup of `_tmp_*`, `.ops-state/`, and handoff files at completion
 - **Invoke skills** via the Skill tool (`/deploy`, `/deslop`, `/code-review`, etc.)

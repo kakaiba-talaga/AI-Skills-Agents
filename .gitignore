@@ -3,6 +3,7 @@
 **/config/
 **/docs/plan/
 /rules
+.agents/
 .ops-state/
 .code-intel/
 
