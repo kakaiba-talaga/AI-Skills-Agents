@@ -318,6 +318,7 @@ bin/           # .NET output
 coverage/
 .code-intel/   # the agent's own state
 .ops-state/    # team manager state
+_tmp_*         # agent-temporary scratch files (per Shared Brief Constraints)
 ```
 
 ## SQLite Schema

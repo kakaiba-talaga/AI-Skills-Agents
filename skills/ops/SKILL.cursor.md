@@ -414,7 +414,7 @@ On the first Phase 2.5b dispatch when `.code-intel/index.sqlite` is absent, the 
 
 #### Dispatch contract — what the team manager passes in
 
-Compose a JSON-fenced brief and embed it in the dispatch prompt. The **JSON-fenced brief is the sole and authoritative orchestrator-path signal** — the agent detects the orchestrator caller by the presence of a fenced `json` block, not by any additional marker or sentinel. Do not add a `[context]` literal block. Run-scoped context (`run_id`, `files_touched`, `predicate_match`, `executor_brief_excerpt`) belongs in the standard **`## Context` Markdown section** of the agent brief per `skills/ops/SKILL.cursor.md:486-506` — the agent reads that Markdown for human-readable display only and does not act on it programmatically.
+Compose a JSON-fenced brief and embed it in the dispatch prompt. The **JSON-fenced brief is the sole and authoritative orchestrator-path signal** — the agent detects the orchestrator caller by the presence of a fenced `json` block, not by any additional marker or sentinel. Do not add a `[context]` literal block. Run-scoped context (`run_id`, `files_touched`, `predicate_match`, `executor_brief_excerpt`) belongs in the standard **`## Context` Markdown section** of the agent brief per `skills/ops/SKILL.md:486-506` — the agent reads that Markdown for human-readable display only and does not act on it programmatically.
 
 ```json
 {
@@ -601,6 +601,10 @@ When every task is `completed` (check state file):
 ## Agent Briefing Format
 
 When spawning an agent via the Task tool, always provide a **complete, self-contained brief**. The agent has no conversation history — it only sees what you give it.
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/brief-contract.md` for the canonical brief contract — required sections, optional sections, missing-section behavior, mode handling, and file-class vocabulary.
+
+The contract at `~/.cursor/skills/ops/brief-contract.md` is the single source of truth for the brief format. Each consumer agent declares its per-agent application of the contract in its own `## Brief Format` subsection. The fenced shape below is the producer-side rendering of what the contract specifies — it shows the section headers and placeholder text the team manager emits; the contract describes the semantic rules that govern each section.
 
 ```text
 ## Task
