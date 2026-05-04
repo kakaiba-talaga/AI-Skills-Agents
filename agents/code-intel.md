@@ -56,9 +56,17 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 ## Brief Format
 
+### Format precedence
+
+Briefs may technically present both formats — for example, a labeled-prose brief that contains an example ` ```json ``` ` block, or a JSON brief preceded by hand-written prose that mentions a `Query:` line. Resolve the collision deterministically:
+
+1. **JSON-fenced wins when present.** If the input contains a fenced `json` block whose decoded object matches the schema below, treat the JSON as the authoritative brief and ignore any `Query:`/`Symbol:`/etc. lines outside the fence (they are example prose, not signal).
+2. **Labeled-prose only when there is no schema-matching JSON.** If the input has a `Query:` line outside any code fence and no JSON-fenced object that satisfies the schema, treat it as a labeled-prose brief.
+3. **Refuse only when neither pattern matches**, *or* when both patterns appear in the input but the JSON-fenced object fails schema validation. A schema-failing JSON-fenced brief is never silently downgraded to labeled-prose — that would mask orchestrator bugs.
+
 ### JSON-fenced (orchestrator)
 
-The JSON brief is the **sole and authoritative orchestrator-path signal** per R3. A JSON-fenced brief comes only from orchestrators; labeled-prose comes only from humans. Do not look for any `[context]` block, marker, or sentinel — that pattern was retracted to avoid colliding with the standard `## Context` Markdown heading in `/ops`'s agent-briefing format.
+The JSON brief is the **sole and authoritative orchestrator-path signal**. A JSON-fenced brief comes only from orchestrators; labeled-prose comes only from humans. Do not look for any `[context]` block, marker, or sentinel — that pattern was retracted to avoid colliding with the standard `## Context` Markdown heading in `/ops`'s agent-briefing format.
 
 ```json
 {
@@ -100,7 +108,7 @@ if violations:
 # proceed
 ```
 
-Unknown fields, missing required fields, and type mismatches are all refused — not silently clamped. A request to set `max_files: 10000` is refused at validation time per R9.
+Unknown fields, missing required fields, and type mismatches are all refused — not silently clamped. A request to set `max_files: 10000` is refused at validation time (the schema's `maximum: 5000` is enforced strictly).
 
 ### Labeled-prose (human)
 
@@ -149,7 +157,7 @@ There is no sticky sentinel. A fresh run starts with a clean slate.
 
 - *Package installs:* `npm install`, `pip install`, `cargo install`, `gem install`, `apt`, `brew`, etc.
 - *Network calls:* `curl`, `wget`, `nc`, `ssh`, `scp`, `rsync`.
-- *Code-modifying shell:* `sed -i`, `awk` writing back to project files, redirects to project files (`> file`, `>> file`).
+- *Code-modifying shell:* `sed -i`, `awk` writing back to project files, and any shell redirect (`>`, `>>`, `tee`, etc.) — all writes must go through the `Write` tool so the glob-allowlist enforcement runs. Use `Bash` only for read-side output that flows back through stdout. This includes redirects that *would* land in a `_tmp_*` path: even though `_tmp_*` is allow-listed for `Write`, a Bash redirect bypasses the enforcement layer and is forbidden regardless of target.
 - *Process management:* `kill`, `pkill`, `systemctl`, `service`.
 - *Git write operations:* `git commit`, `git push`, `git checkout` (modifying), `git stash`, `git reset`.
 
@@ -157,7 +165,7 @@ Refuse-and-halt per Lane Boundaries applies uniformly to any forbidden invocatio
 
 ## Lifecycle
 
-### Build trigger (R11a)
+### Build trigger
 
 Three triggers coexist:
 
@@ -165,15 +173,16 @@ Three triggers coexist:
 - **Orchestrator preflight:** `/ops` Phase 2.5b checks index existence and triggers a build if missing. The executor never sees a missing index — only a valid report or an explicit indexer failure.
 - **Escape hatch:** `query_type: "reindex"` forces a full rebuild on demand, bypassing staleness logic.
 
-### Staleness check (R11b)
+### Staleness check
 
-On every dispatch:
+On every dispatch, in this exact order:
 
+0. **Existence check first.** If `.code-intel/index.sqlite` does not exist, treat this dispatch as the ad-hoc trigger from the Build trigger section above — build the index transparently, then proceed to step 1 with the freshly-stamped DB. Skipping this step would attempt `git rev-parse HEAD` against a non-existent `metadata` table and surface a SQLite "no such table" error instead of the intended ad-hoc build.
 1. Run `git rev-parse HEAD` and compare against `db_indexed_sha` in the DB `metadata` table.
-2. If the SHAs differ, drop and rebuild the index before answering, bounded by R9 caps.
+2. If the SHAs differ, drop and rebuild the index before answering, bounded by the wall-clock caps in the Performance Enforcement section below (60s soft / 600s hard) and the 5,000-file hard cap.
 3. If the SHAs match, answer from the existing index.
 
-### Cleanup (R11c)
+### Cleanup
 
 - `query_type: "clean"` drops `index.sqlite` and its WAL sidecars. Close the SQLite connection before deleting (WAL sidecars can be locked on Windows).
 - `/ops` Phase 4 does **not** clean the index — it is persistent infrastructure.
@@ -181,11 +190,11 @@ On every dispatch:
 
 ## Indexer Pipeline
 
-Five phases, all single-threaded (per Q2 decision):
+Five phases, all single-threaded:
 
 | Phase | Purpose | Output |
 | :--- | :--- | :--- |
-| **1. Scan** | Walk the repo (`Glob`) honoring hardcoded excludes. Build the file list. | List of `(file_path, language)` tuples; file count for R9 hard-cap check. |
+| **1. Scan** | Walk the repo (`Glob`) honoring hardcoded excludes. Build the file list. | List of `(file_path, language)` tuples; file count for the 5,000-file hard-cap check. |
 | **2. Profile** | Manifest sniff + extension sweep (see Language Profile Detection). Probe Tier-1 runtimes via `which` / `--version`. | Language profile + runtime availability map. |
 | **3. Parse** | For each file, dispatch to Tier-1 (AST) or Tier-2 (Grep) per Tier Cascade Logic. Emit `nodes` and `edges` records. Skip-and-log unreadable files. | In-memory nodes and edges per file. |
 | **4. Cross-file resolve** | Resolve `IMPORTS` edges across files. Resolve `EXTENDS`/`IMPLEMENTS`/`OVERRIDES` where Tier-1 produced enough information. Unresolved edges are dropped and logged. | Updated edge records with `to_id` populated. |
@@ -195,7 +204,7 @@ Phase N+1 cannot start until Phase N completes for the whole repo. Wall-clock is
 
 **Failure modes per phase:**
 
-- Phase 1 — file count > 5,000 → refuse (R9 hard cap).
+- Phase 1 — file count > 5,000 → refuse (hard cap; see Performance Enforcement below).
 - Phase 2 — Tier-1 runtime missing → silent fallback to Tier-2 + caveat propagated to query responses.
 - Phase 3 — file unreadable → skip + log + continue.
 - Phase 4 — unresolved edge → drop + log + continue.
@@ -355,7 +364,7 @@ CREATE INDEX IF NOT EXISTS idx_edges_from      ON edges(from_id, edge_type);
 CREATE INDEX IF NOT EXISTS idx_edges_to        ON edges(to_id, edge_type);
 ```
 
-Required `metadata` keys after every successful indexer run: `schema_version`, `db_indexed_sha`, `generated_at`, `indexer_wall_clock_s`, `languages_seen`, `tier1_runtimes`, `file_count`.
+Required `metadata` keys after every successful indexer run: `schema_version`, `db_indexed_sha`, `generated_at`, `indexer_wall_clock_s`, `languages_seen`, `tier1_runtimes`, `file_count`. The `tier3_runtimes` key (comma-separated list of `tree-sitter-<language>` slots confirmed in this or a prior run; empty string if none) is written whenever a Tier-3 confirmation lands and is read back into the `runtimes` set on every indexer startup — see Tier Cascade Logic below.
 
 ## Query Handlers
 
@@ -541,7 +550,7 @@ Body: indented call tree, depth-bounded by `max_depth` (default 2, hard cap 5). 
 
 ## Output Dispatch
 
-**Format detection** (per R3 / R6b):
+**Format detection:**
 
 - JSON-fenced brief → orchestrator path (disk-mode default).
 - Labeled-prose brief → human path (inline-mode default).
@@ -566,9 +575,15 @@ Body: indented call tree, depth-bounded by `max_depth` (default 2, hard cap 5). 
 }
 ```
 
-**For `output_mode: "inline"`:** return the full rendered Markdown report inline. Omit `report_path` from the JSON response; include `report_inline` instead.
+**For `output_mode: "inline"`:** `report_inline` is a string containing the full rendered Markdown report; `report_path` is **omitted** from the response JSON. The full content lives only in the response.
 
-**For `output_mode: "both"`:** return summary plus path inline (not duplicated full content — `report_inline` carries only the summary). Both `report_path` and `report_inline` are populated in the response JSON.
+**For `output_mode: "both"`:** **both** `report_path` and `report_inline` are populated, but `report_inline` carries only the **summary plus the path on a separate line** — not duplicated full content. The path lets the consumer fetch the full content on demand without paying the context cost twice. Concretely, `report_inline` is a string of the form:
+
+```
+<one-paragraph summary>
+
+Full report: .code-intel/runs/<run-id>/<query>-<symbol>.md
+```
 
 **For human `output_mode: "disk"` opt-in:**
 
@@ -578,14 +593,28 @@ Body: indented call tree, depth-bounded by `max_depth` (default 2, hard cap 5). 
 
 The path encodes the lifetime: `.code-intel/runs/<run-id>/` artifacts are ephemeral (cleaned by `/ops` Phase 4); `docs/code-intel/` artifacts are durable and committable.
 
+**Filename-token order is deliberately reversed between the two trees.** Ephemeral run artifacts are *query-led* (`<query>-<symbol>.md`) so a human browsing `.code-intel/runs/<run-id>/` sees query types grouped together within a single run. Durable docs are *symbol-led* (`<symbol>-<query>.md`) so human authors browsing `docs/code-intel/` find every report about a given symbol grouped together across time. Do not normalize the two paths to the same order — the asymmetry is the design.
+
 Every artifact — Markdown or JSON, inline or on disk — carries `db_indexed_sha` and `generated_at` for drift detection.
 
 ## Tier Cascade Logic
+
+### `runtimes` data shape
+
+`runtimes` is a **single flat set of strings** that mixes two kinds of keys:
+
+- **Bare runtime names** populated by Phase 2 probes (`'python'`, `'node'`, `'tsc'`). These are present whenever `which <cmd>` succeeds during the indexer run.
+- **Tree-sitter slots** of the form `'tree-sitter-<language>'` (e.g., `'tree-sitter-java'`, `'tree-sitter-rust'`). A slot is present when, in this run or a prior run, the user has confirmed a Tier-3 install for that language via the Tier-3 escalation prompt below.
+
+Both kinds live in the same set so that `'python' in runtimes` and `'tree-sitter-rust' in runtimes` are uniform membership checks.
+
+**Persistence between dispatches.** Phase 2 re-probes bare runtime names on every indexer run (cheap; a few `which` calls), so they do not need to persist. Tier-3 confirmations *do* need to persist — re-prompting on every dispatch would be hostile. Persist confirmed tree-sitter slots via a sibling `metadata.tier3_runtimes` key (comma-separated, parallel to the existing `metadata.tier1_runtimes`). On indexer startup, the runtime map is reconstructed as `runtimes = set(probe_tier1()) | set(load_tier3_from_metadata())`.
 
 ```python
 def index_file(file_path, language, runtimes):
     """
     Returns (nodes, edges, precision_used) for the file, or raises if unreadable.
+    `runtimes` is the flat set described above.
     """
     # Tier 1 — precise AST.
     if language == 'python' and 'python' in runtimes:
@@ -607,14 +636,14 @@ def consider_tier3_escalation(query_type, language, results, runtimes, brief_for
     Returns True if Tier-3 should be offered to the user; False otherwise.
     """
     # Suppression in non-interactive contexts — JSON-fenced briefs come only
-    # from orchestrators per R3 (addresses C-ADD-1). Falling through to
-    # "proceed with current data + caveat" preserves prevention-first in
-    # interactive contexts while keeping orchestrator dispatches deterministic.
+    # from orchestrators. Falling through to "proceed with current data + caveat"
+    # preserves prevention-first in interactive contexts while keeping
+    # orchestrator dispatches deterministic.
     if brief_format == 'json-fenced':
         return False
 
-    # The lookup table from Q4 — query/language combinations where tree-sitter
-    # would meaningfully improve precision over Tier-2.
+    # Query/language combinations where tree-sitter would meaningfully improve
+    # precision over Tier-2.
     TIER3_BENEFICIAL = {
         ('find_implementations', 'java'),   ('find_implementations', 'csharp'),
         ('find_implementations', 'rust'),
@@ -623,7 +652,7 @@ def consider_tier3_escalation(query_type, language, results, runtimes, brief_for
     }
     if (query_type, language) not in TIER3_BENEFICIAL:
         return False
-    # Tree-sitter not yet installed for this language?
+    # Tree-sitter already installed for this language? (Slot from metadata.tier3_runtimes.)
     if f'tree-sitter-{language}' in runtimes:
         return False
     # Results were Tier-2 (regex precision)?
@@ -685,9 +714,9 @@ Per-run overrides (`max_results`, `max_depth`, `max_files`, `max_wall_clock_s`) 
 | DB corrupted | Query | Refuse + auto-recovery offer |
 | Query timeout (>30s recursive CTE) | Query | Refuse w/ narrow-scope hint |
 | Brief malformed | Pre-query | Refuse w/ usage card |
-| Lane violation | Any | Refuse-and-halt per R8a |
-| Bash violation | Any | Refuse-and-halt per R8b |
-| DB missing or stale | Query | See Lifecycle (R11) |
+| Lane violation | Any | Refuse-and-halt per Lane Boundaries above |
+| Bash violation | Any | Refuse-and-halt per Bash Scope above |
+| DB missing or stale | Query | See Lifecycle — Build trigger (DB missing) or Staleness check (SHA drift) |
 
 ## Output Format Examples
 
