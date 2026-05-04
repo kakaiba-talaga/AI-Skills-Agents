@@ -131,7 +131,10 @@ The JSON block above is the full brief shape the team manager passes. It conform
 
 ```python
 def consider_tier3_escalation(query_type, language, results, runtimes, brief_format):
-    # C-ADD-1 fix: JSON-fenced brief = orchestrator path → suppress Tier-3.
+    # Suppression in non-interactive contexts — JSON-fenced briefs come only
+    # from orchestrators. Falling through to "proceed with current data + caveat"
+    # preserves prevention-first in interactive contexts while keeping
+    # orchestrator dispatches deterministic.
     if brief_format == 'json-fenced':
         return False
     ...
@@ -282,7 +285,7 @@ Five events invalidate the cache during the standard dispatch loop:
 | **User mid-run command** | Not applicable in this chain (no interactive commands during dispatch) | — |
 | **Nested skill return** | Not applicable here — `code-intel` is a **subagent**, not a nested skill | See note below |
 
-**The code-intel-specific invalidation** (C-ADD-5 / Q2): after `code-intel` returns from a Phase 2.5b dispatch, the team manager invalidates its state cache before composing the executor brief. This is called out separately in `skills/ops/SKILL.md` → "State cache invalidation (Q2)":
+**The code-intel-specific invalidation** (C-ADD-5 / Q2): after `code-intel` returns from a Phase 2.5b dispatch, the team manager invalidates its state cache before composing the executor brief. This is called out separately in `skills/ops/SKILL.md` → "State cache invalidation":
 
 > `code-intel` is an agent rather than a nested skill, so the nested-skill-return rule at Phase 3 Step 1 does not strictly fire on its own — but because `code-intel` writes a report to disk that the executor must subsequently read, invalidation is required to keep the executor's view consistent.
 
@@ -320,7 +323,7 @@ Cleanup occurs at `/ops` Phase 4 step 9, after all tasks complete. The rule is:
 - `docs/plan/` documents (plan doc, scoping doc, etc.) — persistent deliverables, never touched by Phase 4 cleanup.
 - `docs/ops-dispatch-log.md` (if present) — persistent audit trail, never touched by Phase 4 cleanup.
 
-**Source:** `skills/ops/SKILL.md` → "Phase 4" → step 9; `agents/code-intel.md` → "Lifecycle" → "Cleanup (R11c)"; `docs/plan/code-intel-agent-requirements.md` → R11c.
+**Source:** `skills/ops/SKILL.md` → "Phase 4" → step 9; `agents/code-intel.md` → "Lifecycle" → "Cleanup"; `docs/plan/code-intel-agent-requirements.md` → R11c.
 
 **Verifying cleanup is correct:** after Phase 4 completes, run:
 
