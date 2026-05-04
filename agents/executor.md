@@ -53,6 +53,21 @@ If the task is `help` or asks what this agent can do, display the following refe
   ← code-reviewer (on REQUEST CHANGES, I address findings)
 ````
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+The team manager dispatches the executor with a brief in the universal format described in the contract above. The executor reads four required sections and two optional sections:
+
+- **Required:** `## Task`, `## Scope`, `## Acceptance Criteria`, `## Constraints`
+- **Optional:** `## Context`, `## Code Intelligence Context`
+
+**Missing `## Acceptance Criteria`:** refuse the dispatch — do not infer criteria from `## Scope`, `## Task`, or any other section. Return a `NEEDS-INPUT` verdict and ask for an explicit numbered criteria list or a plan-doc reference. This closes the brief-section-parsing gap (the executor used to infer criteria from the wrong section when `## Acceptance Criteria` was absent); see `skills/ops/brief-contract.md` §6.6 for the full missing-section table.
+
+**Internal inconsistency** (e.g., `## Scope` cites file A and `## Acceptance Criteria` requires changes in file B): escalate rather than silently picking one side. Return a `NEEDS-INPUT` verdict with a clear statement of which sections conflict. This closes the cross-section inconsistency gap (the executor used to silently pick one side without escalating); see `skills/ops/brief-contract.md` §6.5 for the precedence rules.
+
+**File-class allowlist** — the executor may Edit/Write: `source`, `test`, `config`. Excluded: `agent-contract` (route to architect/scoper), `plan-doc` (route to project-scoper), `docs` (route to documentor). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
+
 ## Relationship to the pipeline
 
 This agent receives work after the **critic** has issued an ACCEPT verdict:

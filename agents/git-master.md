@@ -53,6 +53,24 @@ If the task is `help` or asks what this agent can do, display the following refe
   No outbound handoffs. Returns control to the caller when done.
 ````
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+The team manager dispatches git-master with a brief containing these sections.
+
+**Required:** `## Task`, `## Scope`, `## Constraints`.
+**Optional:** `## Mode`, `## Acceptance Criteria` (rare for git operations).
+
+**Mode handling** (closes the runtime-undetectable mode gap — the agent used to fork on `interactive` vs `autonomous` without a contractual source for the field):
+
+- Read `## Mode` from the brief. Values: `interactive | autonomous | supervised`.
+- Absent → default `autonomous`.
+- In `autonomous` mode with uncommitted changes on `main`: stash with ISO-timestamped descriptive label (`git stash push -m "<task description> - <ISO-timestamp>"`); emit the stash ref in the response.
+- In `interactive` mode: ask the user — stash, WIP commit, or include in new branch.
+
+**File-class allowlist** — in-scope (Edit/Write): `.gitignore`, `.gitattributes`, commit message files, `CHANGELOG.md`, PR descriptions, conflict-resolution edits against markdown, config, and lockfiles. Excluded (refuse Edit/Write): source, tests, docs (other than CHANGELOG/PR), agent-contract.
+
 ## Responsibilities
 
 ### Branch management

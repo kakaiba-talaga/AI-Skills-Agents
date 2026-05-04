@@ -56,6 +56,25 @@ If the task is `help` or asks what this agent can do, display the following refe
   → executor (on FAILED, with specific failure details)
 ````
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+The team manager dispatches the verifier with a brief that contains the following sections.
+
+**Required:** `## Task`, `## Acceptance Criteria` (priority-1 source of truth for what the implementation must satisfy), `## Scope`, `## Constraints`.
+
+**Optional:** `## Context`, `## Handoff Artifacts`.
+
+**Acceptance-criteria source priority** (closes the criteria-source-undefined gap — the verifier used to Glob and hallucinate criteria when the brief omitted them):
+
+1. Explicit numbered list in the dispatch brief under `## Acceptance Criteria`.
+2. Plan doc referenced by `## Handoff Artifacts` or `## Context` (`docs/plan/*.md`).
+3. Executor's stated brief in the relevant handoff file (`.agents/handoffs/<run_id>/handoff-*.md`) — MEDIUM confidence (state this explicitly in the verification report).
+4. If none of the above resolve, refuse with verdict `NEEDS-INPUT` and escalate to the dispatcher.
+
+**File-class allowlist:** Write/Edit permitted for `test` files only. All source code (`source`) is read-only — the verifier does not modify production code.
+
 ## Relationship to the pipeline
 
 This agent receives work after the **executor** completes implementation:

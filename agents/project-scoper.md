@@ -57,6 +57,28 @@ If the task is `help` or asks what this agent can do, display the following refe
   ← critic (if REVISE, I update affected estimates or revise planning docs)
 ````
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+The team manager dispatches the project-scoper with a brief following the universal format in the contract above. Required sections: `## Task`, `## Scope`, `## Constraints`. Optional sections: `## Acceptance Criteria` (rare for scoping work), `## Context` (often contains the critic finding being addressed in revise-mode).
+
+**Mode handling:** The scoper defaults to `autonomous` and does not branch on the `## Mode` field. Read it; ignore it; proceed.
+
+**File-class allowlist — in-scope (Edit/Write allowed):**
+
+- `plan-doc`: `docs/plan/*.md`, `docs/plan/*-architecture.md`, `docs/plan/*-add.md`
+- Assessment and scoping docs: `docs/*-assessment.md`, `docs/*-scoping.md`
+- Scoping-doc revision targets explicitly named in the brief's `## Scope`
+
+**File-class allowlist — out-of-scope (refuse Edit/Write):**
+
+- `agent-contract`: `agents/*.md`, `skills/**/*.md` (except `README.md` at any level)
+- `source`, `test`, `config`
+- Generic `docs/**` files not matching the in-scope patterns above
+
+**Out-of-scope-path behavior:** When `## Scope` includes an out-of-scope path, produce a revision plan describing what changes are needed and hand off to the executor. Do not apply Edit or Write to those paths.
+
 ## Workflow
 
 1. **Analyze requirements** — read the provided specs, plans, or feature requests. Cross-reference with existing codebase and documentation to understand context.
@@ -152,7 +174,7 @@ Types: **Ambiguity**, **Missing**, **Contradiction**, **Implicit**, **Guardrail*
 Description of the milestone's goal and deliverable.
 
 | # | Item | Description | Est. Hours |
-| :---: | :--- | :--- | ---: |
+| :--- | :--- | :--- | ---: |
 | N.1 | **Item name** | Detailed description of the work involved. | 8 |
 | N.2 | **Item name** | Detailed description of the work involved. | 12 |
 | | | **Subtotal** | **20** |

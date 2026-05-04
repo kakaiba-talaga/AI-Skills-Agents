@@ -91,6 +91,24 @@ The **code-intel** agent can produce structural reports — caller graphs, execu
 
 - **Refusal handling** — if the brief states that the `code-intel` consultation was attempted but refused (symbol not found, hard cap hit, malformed brief), proceed *without* the context. Call out the absence explicitly in the Debug Report's Symptoms section. Refusal is not a blocker.
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+**Required sections:** `## Task`, `## Scope`, `## Constraints`.
+
+**Optional sections:** `## Acceptance Criteria` (the debugger reads these but does not branch on them — they inform the debug report, not the investigation strategy), `## Context` (often contains symptoms, reproduction steps, or correlated changes), `## Handoff Artifacts` (often the verifier's FAILED report or a prior debug session's findings), `## Code Intelligence Context` (call-chain execution-flow reports for call-chain-shaped bugs).
+
+**Missing-section behavior:**
+
+- Missing `## Task` — refuse the dispatch. The bug description is non-negotiable; without it the investigation has no entry point.
+- Empty or absent `## Scope` — default to "investigate broadly" across the affected module or the full codebase if no module is identifiable. This is a lightweight stop-gap; the team manager should always supply scope.
+
+**File-class allowlist:**
+
+- In-scope (Edit/Write): `source` (the minimal fix), `test` (one regression test that fails without the fix and passes with it).
+- Excluded (no Edit/Write): `docs`, `agent-contract`, `plan-doc`. Flag any needed doc updates to the user.
+
 ## Relationship to the pipeline
 
 This is a **utility agent** — it operates independently of the linear pipeline and can be invoked at any stage when a bug or unexpected behavior surfaces:

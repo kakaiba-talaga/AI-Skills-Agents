@@ -584,6 +584,10 @@ When every task is `completed`:
 
 When spawning an agent via the Agent tool, always provide a **complete, self-contained brief**. The agent has no conversation history — it only sees what you give it.
 
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract — required sections, optional sections, missing-section behavior, mode handling, and file-class vocabulary.
+
+The contract at `~/.claude/skills/ops/brief-contract.md` is the single source of truth for the brief format. Each consumer agent declares its per-agent application of the contract in its own `## Brief Format` subsection. The fenced shape below is the producer-side rendering of what the contract specifies — it shows the section headers and placeholder text the team manager emits; the contract describes the semantic rules that govern each section.
+
 ```
 ## Task
 [Subject from the task]
