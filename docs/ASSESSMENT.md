@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-04-26 (code-intel agent)
-**Previous assessment:** 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-05-04 (agent-contract hardening + brief contract)
+**Previous assessment:** 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -48,7 +48,7 @@
 | Deslop | `skills/deslop/` | 2 | ~669 | AI slop cleanup (dead code, redundant comments, over-abstraction) |
 | Doc Sync | `skills/doc-sync/` | 2 | ~83 | Documentation audit and sync against codebase |
 | Linter | `skills/linter/` | 2 | ~141 | Source file linting with auto-fix and incremental cache |
-| Ops | `skills/ops/` | 15 | ~935 (Claude), ~968 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
+| Ops | `skills/ops/` | 17 | 939 (Claude), 968 (Cursor) | Multi-agent task orchestration, dispatch, and tracking |
 | Deploy | `skills/deploy/` | 9 | ~412 (Claude), ~408 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
@@ -58,8 +58,23 @@
 
 | File | Purpose |
 |------|---------|
-| ASSESSMENT.md | This file |
-| portability-guide.md | Format differences and tool gaps between Claude Code and Cursor |
+| `docs/ASSESSMENT.md` | This file — periodic repo health snapshots |
+| `docs/portability-guide.md` | Format differences and tool gaps between Claude Code and Cursor |
+| `docs/ops-dispatch-log.md` | Append-only audit trail of `/ops` dispatch decisions (opt-in via `--dispatch-log`; 18 lines — seed header only until populated) |
+
+### Documentation (`docs/agent-audits/`)
+
+| File | Purpose |
+|------|---------|
+| `docs/agent-audits/tier-a-opus-4-7-audit.md` | Tier A Opus 4.7 explicitness audit — 5 core agents reviewed, 4 BLOCKERs + 27 MAJORs + 19 MINORs found; BLOCKERs resolved via brief-contract spec |
+
+### Documentation (`docs/code-intel/`)
+
+| File | Purpose |
+|------|---------|
+| `docs/code-intel/integration-test.md` | 418-line walkthrough spec for ralph-loop → /ops → code-intel end-to-end integration test |
+| `docs/code-intel/failure-mode-walkthrough.md` | 85-line R10 walkthrough covering 13 failure-mode scenarios |
+| `docs/code-intel/design-trace.md` | 76-line R1–R11 + Q1–Q10 design trace table (21 rows, all DONE) |
 
 ### Hooks (`hooks/`)
 
@@ -86,17 +101,26 @@
 | transform-cursor-ralph-loop.ps1 | PowerShell transform: generates `skills/ralph-loop/SKILL.cursor.md` from `SKILL.md`. |
 | transform-cursor-ralph-loop.sh | Bash version of the ralph-loop Cursor transform. |
 
-### Planning Documents (`docs/plan/` — gitignored, except `ops-decoupling-plan.md` which is tracked)
+### Planning Documents (`docs/plan/` — 29 files, gitignored except `ops-decoupling-plan.md`)
 
 | File | Purpose |
 |------|---------|
 | agent-health-monitoring-gaps-plan.md | Plan to close agent health monitoring gaps in dispatch and recovery |
 | agent-roster-expansion-architecture.md | Architecture doc for agent roster expansion (architect and security-reviewer additions) |
 | agent-splitting-plan.md | Plan to split large agents into smaller definitions |
+| brief-contract-spec-add.md | Implementation additions spec for the brief-contract rollout |
+| brief-contract-spec-plan.md | Plan for the ops agent-dispatch brief contract specification |
+| code-intel-agent-critique-final.md | Final critic findings for code-intel agent (BLOCKER + 6 MAJORs) |
+| code-intel-agent-critique.md | Initial critic pass on the code-intel agent design |
+| code-intel-agent-design.md | Design document for code-intel agent architecture |
+| code-intel-agent-plan.md | Implementation plan for code-intel agent |
+| code-intel-agent-requirements.md | Requirements document for code-intel agent |
+| code-intel-agent-scoping.md | Scoping document for code-intel agent |
 | cursor-portability-gaps.md | Plan for Cursor-native adaptations of ops and deploy (completed) |
 | deploy-prune-mode-plan.md | Plan for deploy `--prune` mode implementation |
 | deploy-skill-interface-contract.md | Interface spec for `/deploy` ↔ `ssh-executor` briefs |
 | deploy-skill-plan.md | Implementation plan for deploy skill |
+| kickoff-skill-plan.md | Plan for the kickoff skill |
 | next-steps-roadmap.md | Roadmap for restructure, portability, and deployment automation |
 | ops-claude-code-features-plan.md | Plan for Claude Code–specific ops features (--brainstorm, nested-skill handoff) |
 | ops-decoupling-plan.md | Plan for extracting ops companion files into standalone agents/skills (**tracked in git**) |
@@ -110,6 +134,62 @@
 | ralph-loop-skill-optimization-plan.md | Modularization plan for ralph-loop |
 | ssh-agent-plan.md | Plan for ssh-executor and ops/deploy integration |
 | unify-ops-state-management-plan.md | Plan to unify ops state management across Claude Code and Cursor |
+
+---
+
+## Changes Since Last Assessment (2026-05-04 — agent-contract hardening + brief contract)
+
+### Merge 1 — `63f49be`: code-intel critic revision
+
+`agents/code-intel.md` received a critic-driven revision round that addressed 1 BLOCKER and 6 MAJORs surfaced during review. The agent grew from 782 → 811 lines. A JSON-with-prose-noise fixture was added as regression coverage for the M5 verification task.
+
+### Merge 2 — `3903442`: Tier A Opus 4.7 explicitness audit
+
+`docs/agent-audits/tier-a-opus-4-7-audit.md` (262 lines) landed as the first entry in the new `docs/agent-audits/` subdirectory. The audit covered 5 Tier A agents — executor, verifier, debugger, git-master, and project-scoper — and produced:
+
+- 4 BLOCKERs (all resolved by the brief-contract spec; see Merge 3 below)
+- 27 MAJORs (deferred to backlog — see Deferred Backlog section under Issues Found)
+- 19 MINORs (deferred to backlog)
+
+### Merge 3 — `2c5017c`: brief-contract spec
+
+`skills/ops/brief-contract.md` (281 lines) establishes the shared brief format that every `/ops` agent dispatch must follow. Required sections: Task, Scope, Acceptance Criteria, Constraints. Optional sections: Context, Mode, Handoff Artifacts, Code Intelligence Context.
+
+Five Tier A consumer agents gained a new `## Brief Format` subsection linking them to the contract and listing their required brief inputs:
+
+| Agent | File |
+|-------|------|
+| Executor | `agents/executor.md` (194 lines) |
+| Verifier | `agents/verifier.md` (237 lines) |
+| Debugger | `agents/debugger.md` (306 lines) |
+| Git Master | `agents/git-master.md` (299 lines) |
+| Project Scoper | `agents/project-scoper.md` (299 lines) |
+
+This resolves all 4 BLOCKERs from the Tier A audit.
+
+### Merge 4 — `a771ac4`: ops SKILL.md token cleanup
+
+11 opaque audit tokens ("R/Q/C-ADD/G/M" style) were removed from `skills/ops/SKILL.md` and its Cursor mirror `skills/ops/SKILL.cursor.md` and replaced with self-contained prose. SKILL.md is now 939 lines (was 935). SKILL.cursor.md remains at 968 lines.
+
+### Merge 5 — `85d1dd9`: doc-sync integration-test citation patch
+
+Three stale citations in `docs/code-intel/integration-test.md` were patched (commit `c6ebbb7`) after the SKILL.md token cleanup (Merge 4) invalidated the original citation anchors. The integration-test spec is now 418 lines (was 416).
+
+### Inventory corrections
+
+The prior assessment (2026-04-26) reported `skills/ops/` at 15 files. A tree inspection of the prior assessment commit (`d73c088`) shows 16 files were present at that time — `dispatch-log.md` (added 2026-04-24 in commit `21f0c7d`) was not counted. With `brief-contract.md` now added, the correct current count is **17 files**. The Inventory and File Counts tables above and below reflect the corrected 17.
+
+### Supporting touchpoints
+
+| Change | Detail |
+|--------|--------|
+| **`docs/agent-audits/`** | New subdirectory established. `tier-a-opus-4-7-audit.md` is the first entry. |
+| **`skills/ops/brief-contract.md`** | New companion file (281 lines). Not deployed to Cursor — Claude Code only. |
+| **`3f0ef61`** | Handoff storage moved from `docs/plan/.handoffs/` to `.agents/handoffs/` (refactor between assessment commits; no tracked files changed). |
+
+### Carried-issue re-evaluation
+
+Both carried issues were re-evaluated. The `git-master.md` Co-Authored-By override and the `agents/README.md` `/schedule` reference remain valid. See Issues Found.
 
 ---
 
@@ -392,6 +472,10 @@ Path references to `~/.claude/commands/` updated in 6 files:
 
 None.
 
+### Deferred backlog (not active issues — tracked separately)
+
+The Tier A Opus 4.7 audit (`docs/agent-audits/tier-a-opus-4-7-audit.md`) produced 27 MAJORs and 19 MINORs that were deferred and are not active issues. They represent explicitness and contract-completeness improvements across executor, verifier, debugger, git-master, and project-scoper. No structural or correctness defects were found — all deferred items are enhancement-class findings. The 4 BLOCKERs from that audit were resolved in Merge 3 (brief-contract spec).
+
 ### Issues noted but not changed (carried from previous assessments)
 
 | File | Issue | Reason Not Changed |
@@ -467,20 +551,22 @@ Skills invoked within pipeline stages:
 | Skills (deslop) | 2 | 2 |
 | Skills (doc-sync) | 2 | 2 |
 | Skills (linter) | 2 | 2 |
-| Skills (ops) | 15 (incl. SKILL.cursor.md, SKILL.cursor.additions.md) | 15 |
+| Skills (ops) | 17 (incl. SKILL.cursor.md, SKILL.cursor.additions.md, brief-contract.md, dispatch-log.md) | 17 |
 | Skills (deploy) | 9 (incl. SKILL.cursor.md) | 9 |
 | Skills (ralph-loop) | 16 (incl. SKILL.cursor.md, 5 templates + templates README) | 16 |
 | Skills (timing-calibrator) | 2 | 2 |
-| Documentation | 2 (ASSESSMENT.md, portability-guide.md) | 2 |
-| Documentation (code-intel) | 3 (integration-test.md, failure-mode-walkthrough.md, design-trace.md) | 3 |
+| Skills (kickoff) | 7 (incl. project-template/ scaffold with /next command) | 7 |
+| Documentation (docs/) | 3 (ASSESSMENT.md, portability-guide.md, ops-dispatch-log.md) | 3 |
+| Documentation (docs/agent-audits/) | 1 (tier-a-opus-4-7-audit.md) | 1 |
+| Documentation (docs/code-intel/) | 3 (integration-test.md, failure-mode-walkthrough.md, design-trace.md) | 3 |
 | Cursor Rules | 1 (documentation-sync.mdc) | 1 |
 | Tooling | 7 (manifest + 2 deploy scripts + 4 transform scripts) | 7 |
 | Hooks | 2 (post-compaction-context.sh, notify.sh) | 2 |
-| Planning (gitignored + 1 tracked) | 20 | 20 |
+| Planning (gitignored + 1 tracked) | 29 | 29 |
 | Config | 2 (.gitignore, .markdownlint.json) | 2 |
 | Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
-| **Total** | | **115** |
+| **Total** | | **135** |
 
 ---
 
-*Assessment updated 2026-04-26 (code-intel agent). Files assessed: 20 agents, 10 skills (54 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md), 1 agents README, 5 docs (incl. 3 in docs/code-intel/), 1 cursor rule, 7 tooling, 2 hooks, 20 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2.*
+*Assessment updated 2026-05-04 (agent-contract hardening + brief contract). Files assessed: 20 agents, 11 skills (63 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md + 1 brief-contract.md + 5 kickoff templates), 1 agents README, 7 docs (3 top-level docs/, 1 docs/agent-audits/, 3 docs/code-intel/), 1 cursor rule, 7 tooling, 2 hooks, 29 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*
