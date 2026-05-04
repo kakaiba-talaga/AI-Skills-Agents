@@ -29,6 +29,7 @@ alwaysApply: false
 | `skills/kickoff/README.md` | `skills/kickoff/SKILL.md`, `skills/kickoff/project-template/**` |
 | `skills/doc-sync/README.md` | `skills/doc-sync/SKILL.md` |
 | `skills/linter/README.md` | `skills/linter/SKILL.md` |
+| `skills/ops/brief-contract.md` | `skills/ops/SKILL.md` (Agent Briefing Format), `agents/{executor,verifier,debugger,git-master,project-scoper}.md` (`## Brief Format` subsections) |
 | `skills/ops/README.md` | `skills/ops/SKILL.md`, `skills/ops/SKILL.cursor.md`, `skills/ops/*.md` |
 | `skills/ops/SKILL.cursor.md` | `skills/ops/SKILL.md`, `tooling/transform-cursor-ops.{ps1,sh}` |
 | `skills/ralph-loop/README.md` | `skills/ralph-loop/SKILL.md`, `skills/ralph-loop/*.md` |
