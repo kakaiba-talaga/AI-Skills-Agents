@@ -44,6 +44,21 @@ Record the classification verdict before proceeding to Phase 3.
 
 ---
 
+## Dispatch Brief Format
+
+Every agent dispatch in Phases 2–5.5 (interviewer, architect, planner, critic, project-scoper) must compose a brief that conforms to the four-section structure defined in `~/.claude/skills/ops/brief-contract.md`:
+
+- `## Task` — one imperative sentence stating what the agent must produce.
+- `## Context` — what was decided or produced before this dispatch (cite file paths and section headings).
+- `## Acceptance Criteria` — testable assertions copied verbatim from the source artifact (typically `docs/kickoff-requirements.md` or a critic verdict). When the dispatched agent's output IS the requirements/criteria (e.g., interviewer), this section names the format expected of that output instead.
+- `## Constraints` — the Shared Brief Constraints block from `brief-contract.md` plus any task-specific scope boundaries.
+
+**Section requirement:** all four headings must be present in every brief composed by this skill. Do not omit a section even when its content is short — empty sections are a smell that triggers downstream improvisation, which the audit at `docs/agent-audits/tier-a-opus-4-7-audit.md` (CC-1) identified as systemic risk.
+
+**Brief composition is producer-side only.** This rule binds the kickoff skill when it composes briefs; the agents themselves declare per-agent application of the contract in their own `## Brief Format` subsections.
+
+---
+
 ## Phase 1 — Scaffold
 
 **Goal:** Copy template files into the target directory so all subsequent phases have a home for their output.
@@ -85,6 +100,12 @@ The interviewer writes a requirements document to `docs/kickoff-requirements.md`
 After the interviewer agent returns, verify that `docs/kickoff-requirements.md` exists in the target directory. If it is missing, apply the error handling rules below.
 
 The requirements document feeds the Scope Classification Gate and Phases 3–6.
+
+**Acceptance criteria pass-through contract:**
+
+The `## Acceptance Criteria` section of `docs/kickoff-requirements.md` must contain a numbered list of testable assertions, one assertion per line. The interviewer's brief specifies this format explicitly. When Phase 4 (Plan) dispatches the `planner`, the planner's brief must pass this numbered list through **verbatim** — copied character-for-character into the planner brief's `## Acceptance Criteria` section. The planner does not paraphrase, restructure, or summarize the assertions. Whatever ACs ultimately land in `plan/INDEX.md` (via the `<!-- KICKOFF:ACCEPTANCE_CRITERIA -->` marker in Phase 6) trace deterministically back to the requirements interview.
+
+If the interviewer produces an `## Acceptance Criteria` section that is not a numbered list of assertions (e.g., free-form prose), Phase 2 verification (the post-interviewer check that `docs/kickoff-requirements.md` exists) must additionally fail the requirements doc with: "Acceptance criteria must be a numbered list of testable assertions. Re-dispatch the interviewer with that format constraint." This converts AC malformation from a silent-pass-through into an early failure.
 
 ---
 
@@ -142,6 +163,17 @@ Dispatch the `critic` agent to review the planner's output. The critic evaluates
 
 Track the revision count. After 2 failed rounds, do not loop again — proceed and note the risk.
 
+**Re-entry semantics for revision rounds:**
+
+When a REVISE or REJECT verdict triggers a re-dispatch of the `planner`:
+
+1. The re-dispatch brief must include all original inputs unchanged (`docs/kickoff-requirements.md` and, if Phase 3 ran, `docs/kickoff-architecture.md`).
+2. Append the critic's revision notes as a new `## Revision Notes` section to the planner brief, with the round number marked (e.g., `## Revision Notes (Round 2 of 2)`).
+3. On round 2, the planner brief must include the explicit notice: "This is the final revision round. A further REVISE or REJECT verdict on round 2 output will be treated as ACCEPT-with-risk per the verdict-routing table — there is no round 3."
+4. The planner re-reads the full plan inputs each round and produces a complete plan document set, not a diff against the prior round. Round-2 output replaces round-1 output on disk.
+
+The revision-count circuit-breaker (max 2 rounds) is enforced by the kickoff skill, not the planner. The planner's brief never instructs the planner to "loop until accepted" — looping is a kickoff-side responsibility.
+
 ---
 
 ## Phase 5.5 — Scope (optional)
@@ -153,6 +185,8 @@ The scoper's output is **informational, not blocking**. It adds estimates to the
 Before dispatching, ask the user: "Would you like effort estimates and a gap analysis from the project-scoper? This adds a short analysis pass but does not block the workflow. [Y/n]"
 
 If the user opts out, skip this phase and proceed to Phase 6.
+
+**Output persistence (mandatory when Phase 5.5 runs):** the scoper must write its estimates and gap findings to `docs/kickoff-scoping.md` in the target directory. Do not accept inline-chat-only output. After the scoper returns, verify that `docs/kickoff-scoping.md` exists and is non-empty by reading it back. If the file is missing or empty, log "Scope estimates unavailable — scoper produced no on-disk artifact" and proceed to Phase 6 without blocking. Phase 7 (Handoff) must include `docs/kickoff-scoping.md` in its summary when the file exists.
 
 If the scoper fails or produces no output, log a note ("Scope estimates unavailable — proceeding without them") and proceed to Phase 6 without blocking.
 
@@ -409,7 +443,7 @@ Per-phase failure modes and recovery:
 | Phase | Failure | Recovery |
 | :---- | :------ | :------- |
 | **Phase 1 — Scaffold** | A template file fails to copy or cannot be verified | Report which files are missing. Stop — do not proceed to interview on a partial scaffold. |
-| **Phase 2 — Interview** | Interviewer fails or `docs/kickoff-requirements.md` is not written | Present whatever was gathered from the conversation so far. Ask the user: "The interviewer did not complete successfully. Retry the interview, or proceed with partial requirements?" Do not auto-proceed. |
+| **Phase 2 — Interview** | Interviewer fails or `docs/kickoff-requirements.md` is not written | Present whatever was gathered from the conversation so far. Ask the user: "The interviewer did not complete successfully. Retry the interview, or proceed with partial requirements?" If the user opts to proceed, verify that `docs/kickoff-requirements.md` contains AT MINIMUM: a non-empty project name, at least one milestone heading, and at least one acceptance criterion. If any of these three minimum elements is absent, present a targeted prompt naming exactly which element is missing and gather it inline; do not pass an underdetermined requirements doc to Phase 4 (Plan). Do not auto-proceed. |
 | **Phase 3 — Architecture** | Architect fails or `docs/kickoff-architecture.md` is not written | Log "Architecture phase failed — skipping ADD." Proceed to Phase 4 with requirements only, noting the absence of an ADD in the planner brief. |
 | **Phase 4 — Plan** | Planner fails or no plan files are written to disk | Escalate to the user. Do not attempt Phase 5 or 6 without plan output on disk. |
 | **Phase 5 — Critique** | Critic issues REVISE or REJECT twice | Proceed to Phase 5.5 with a warning: "Plan was not approved after 2 revision rounds. Proceeding with risk noted." |

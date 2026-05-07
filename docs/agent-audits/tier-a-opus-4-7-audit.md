@@ -260,3 +260,46 @@ Full critic reports (per-agent raw output, "Why Opus 4.7 might struggle" analysi
 Agents read-only during this audit: `agents/executor.md`, `agents/verifier.md`, `agents/debugger.md`, `agents/git-master.md`, `agents/project-scoper.md`, `agents/critic.md`, `agents/debugger-build.md`, `agents/code-intel.md`, `skills/ops/SKILL.md`, `docs/code-intel/design-trace.md`, `docs/plan/code-intel-agent-requirements.md`, project and global `CLAUDE.md`, user memory `feedback_agent_contracts_are_code.md`.
 
 No source files were modified during the audit.
+
+---
+
+## Kickoff Skill Alignment (2026-05-07)
+
+### Summary
+
+On 2026-05-07, a code-reviewer agent audited `skills/kickoff/SKILL.md` and `skills/kickoff/project-template/.claude/commands/next.md` against the findings in this document. Seven priorities (P1–P7) were derived from applicable cross-cutting and per-agent findings. Parallel executors applied all seven, and the verifier returned PASS on each. The work was bounded by three explicit design constraints (see below); findings that conflicted with those constraints were either adapted (P5, adapted to P5′) or marked N/A by design.
+
+### Design constraints applied
+
+- **Portability and lightweight scaffolding.** The kickoff skill optimizes for producing projects that work in any Claude Code installation. Templates must not assume this repo's sibling skills or agents are available.
+- **`next.md` is intentionally agent-installation-agnostic.** It uses role names in prose and does not set `subagent_type` on Agent dispatches. As a consequence, `next.md` must be fully self-contained — no outbound references to repo-siblings like `skills/ops/brief-contract.md`. This is why P5 was adapted to P5′: the brief grammar is inlined in `next.md` rather than referencing the central `brief-contract.md`.
+- **Kickoff does not scaffold agent definitions.** Target projects' `.claude/agents/` directories are not populated by kickoff. Agent registration remains at the user's installation level.
+
+### Priorities applied
+
+| Priority | File:Lines | Source audit finding(s) | Description |
+| :--- | :--- | :--- | :--- |
+| P1 | `skills/kickoff/SKILL.md:47-60` | CC-1, executor MAJOR-1 | New `## Dispatch Brief Format` section between the Scope Classification Gate and Phase 1. Names the five expected sections (`## Task / ## Context / ## Scope / ## Acceptance Criteria / ## Constraints`), specifies escalation on missing or malformed sections, and references `~/.claude/skills/ops/brief-contract.md` and audit CC-1. |
+| P2 | `skills/kickoff/project-template/.claude/commands/next.md:101-120` | project-scoper BLOCKER-1, CC-2 | Inline file-class allowlist for the implementor subagent. Source files, test files, and config files are permitted; plan documents, `.claude/`, `.cursor/`, and workflow marker files are prohibited. Closes the lane-boundary ambiguity that BLOCKER-1 identified for `project-scoper`. |
+| P3 | `skills/kickoff/SKILL.md:189` | CC-6 | `project-scoper` must persist its output to `docs/kickoff-scoping.md`; a read-back verification step is specified. Addresses the output-persistence inconsistency flagged in CC-6. |
+| P4 | `skills/kickoff/SKILL.md:446` | executor MAJOR-1 | Minimum requirements schema gate (project name + at least one milestone + acceptance criteria) added to the Phase 2 error-handling table row for partial-requirements recovery. Prevents non-deterministic improvisation on a malformed or incomplete brief. |
+| P5′ | `skills/kickoff/project-template/.claude/commands/next.md:79-86` | CC-1 | Self-contained subagent brief grammar (`Task / Scope / Acceptance Criteria / Constraints`) inlined directly in `next.md`. Adapted from CC-1's recommendation to use a shared brief contract; the portability constraint prohibits an outbound reference to `skills/ops/brief-contract.md` from a scaffolded template. |
+| P6 | `skills/kickoff/SKILL.md:166-175` | CC-4, executor MAJOR-3 | Re-entry semantics for the Phase 5 critic/planner revision loop. Specifies what is re-checked on each iteration, how feedback is reconciled with original criteria, and when the loop escalates. Addresses the under-specified fix-loop semantics flagged in CC-4. |
+| P7 | `skills/kickoff/SKILL.md:104-109` | executor MAJOR-1, verifier BLOCKER-1 | Acceptance-criteria pass-through contract from `interviewer` → `planner` → `INDEX.md`. Verbatim copy required; specifies escalation when the chain breaks. Closes the AC-source ambiguity that verifier BLOCKER-1 identified at the fleet level. |
+
+### Findings marked N/A by design
+
+- **verifier BLOCKER-2** (`verifier.md:118-124,200`, PASS/FAIL verdict collision) — kickoff is not a verifier; it does not issue PASS/FAIL verdicts on test runs.
+- **git-master BLOCKER-1** (`git-master.md:77-81`, interactive-vs-autonomous mode) — kickoff is user-interactive by design; the interactive/autonomous distinction does not apply.
+- **git-master MAJOR-1–MAJOR-8** — kickoff prohibits issuing git commands; lane separation from git-master is intentional and pre-existing.
+- **debugger MAJOR-1–MAJOR-5** — kickoff is a planning orchestrator, not a bug investigator; none of the debugger's fix-vs-report or regression-check predicates have an analogue.
+- **executor MAJOR-4** (`executor.md:85`, test-modification contradiction) — kickoff does not modify tests; it delegates to the executor lane.
+- **executor MAJOR-5** (`executor.md:115`, `R5` opaque token) — localized documentation drift in `executor.md`; kickoff carries no equivalent token.
+- **project-scoper MAJOR-1** (`project-scoper.md:243`, forward reference written as "above") — no equivalent structural error exists in kickoff's document.
+- **project-scoper MAJOR-3–MAJOR-7** — estimation methodology, gap-analysis precedence, revise-vs-create logic, revision-scope bounds, and hand-back triggers govern the scoper agent itself, not its caller.
+- **verifier MAJOR-3** (`verifier.md:74,108-112,139`, test discovery in polyglot repos) — kickoff does not run tests.
+- **git-master MINOR-4** (`git-master.md:3`, `model: sonnet` in frontmatter) — kickoff is a skill, not an agent definition with frontmatter; the frontmatter convention does not apply.
+
+### Open coherence note
+
+P3's obligation — that `project-scoper` must persist output to `docs/kickoff-scoping.md` with a read-back verification step — is stated in the body of Phase 5.5 (`skills/kickoff/SKILL.md:189`) rather than as a bullet inside Phase 7's own list. A reader scanning Phase 7 in isolation will not see `docs/kickoff-scoping.md` called out there. This satisfies the original acceptance criterion as written, but creates a minor symmetry gap: the two phases that produce durable artifacts (Phase 5.5 and Phase 7) are not stated in the same location. A future editor may want to add a cross-reference bullet in Phase 7 pointing to the Phase 5.5 obligation. This is a polish item, not a regression.
