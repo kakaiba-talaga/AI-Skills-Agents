@@ -69,6 +69,7 @@ After a full kickoff run, your project directory contains:
 docs/
   kickoff-requirements.md       # Interview output — project requirements
   kickoff-architecture.md       # Architect output (complex only)
+  kickoff-scoping.md            # Project-scoper output (Phase 5.5, opt-in only)
 
 plan/
   INDEX.md                      # Master plan index — vision, milestones, acceptance criteria
@@ -171,7 +172,7 @@ Stub files are named `plan/<NN>-<kebab-case-name>.md` — for example, `plan/01-
 | Phase | What happens on failure |
 |---|---|
 | **Scaffold** | Reports which files failed to copy. Stops — does not proceed to interview on a partial scaffold. |
-| **Interview** | Prompts you to retry or proceed with partial requirements. Does not auto-continue. |
+| **Interview** | Prompts you to retry or proceed with partial requirements. Proceeding still requires a minimum set (project name, ≥1 milestone, ≥1 acceptance criterion) before the planner runs. |
 | **Architecture** | Logs the failure, proceeds to planning with requirements only. Not a hard stop. |
 | **Plan** | Escalates to you. Does not attempt populate without plan files on disk. |
 | **Critique** | After 2 failed revision rounds, proceeds with a risk warning. |
