@@ -19,6 +19,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [code-reviewer](code-reviewer.md) | sonnet | Two-stage code review (spec compliance then quality) for pipeline and targeted module reviews. Severity-rated findings with verdicts. For standalone diff reviews, see `code-reviewer-diff` or use the `/code-review` slash command. |
 | [code-reviewer-diff](code-reviewer-diff.md) | sonnet | Standalone diff review variant. Full diff-gathering protocol, exclusion filters, cross-file impact analysis, language-specific checks. Used when `/code-review` skill is unavailable. |
 | [code-intel](code-intel.md) | opus | Indexes the project into a SQLite-backed symbol graph and answers structural queries (callers, dependencies, impact, implementations, execution flow) for other agents and orchestrators. Prevents silent breakage by replacing structural guessing with citable lookups. |
+| [cross-memory](cross-memory.md) | opus | Synthesizes curated context blocks from the cross-memory store (User preferences / Project context / Harness rules / Notes) and audits the store for staleness, duplicates, contradictions, and redaction misses. Dispatched by `/ops`, `/kickoff`, and peer agents for `synthesize`; by `/cross-memory audit` for `audit`. |
 | [documentor](documentor.md) | sonnet | Writes new documentation for implemented features, creates guides, documents architectural decisions, and updates project scoping after milestones. Writes in clear, natural language tailored to the audience. Delegates to `/doc-sync` for accuracy checks, or runs its own audit when the skill is unavailable. |
 | [debugger](debugger.md) | opus | Runtime bug investigation — hypothesis-driven root cause analysis, circuit breaker, similar pattern scan, regression verification. For build errors, see `debugger-build`. Available at any pipeline stage. |
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
@@ -31,7 +32,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, preflight, work-verifier, rollback, change-analyzer.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, cross-memory. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, preflight, work-verifier, rollback, change-analyzer.
 
 ### Overriding the default model
 
@@ -122,6 +123,12 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Run an impact analysis on `UserRepository.save` before we refactor it"_
 - _"Trace the execution flow from `handle_request` down three levels"_
 - _"Find all concrete implementations of the `StorageBackend` interface"_
+
+### Cross-Memory
+
+- _"Dispatch cross-memory with intent: synthesize, query: 'Python testing preferences and security rules' before writing pytest fixtures for the auth module."_
+- _"/cross-memory audit → dispatches the cross-memory agent for a chat-only structured report on staleness, duplicates, contradictions, and redaction misses."_
+- _"When /ops needs background context for a planning agent, it dispatches cross-memory with intent: synthesize and current_project_slug from the run state."_
 
 ### Documentor
 

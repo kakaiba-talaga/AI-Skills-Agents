@@ -96,23 +96,24 @@ There is no sticky sentinel between dispatches. A fresh run starts with a clean 
 ## Bash Scope
 
 Permitted:
-  - File inspection: ls, cat, head, tail, file, stat, wc (read-only).
-  - Path resolution: realpath, readlink, dirname, basename.
-  - Existence checks: test -e, test -d, test -f.
-  - Copy to staging: cp <source> _tmp_<staging>  (target MUST match the _tmp_* allowlist).
-  - Read-only diff: diff -u <a> <b>  (no -i, no in-place edits).
+
+- File inspection: ls, cat, head, tail, file, stat, wc (read-only).
+- Path resolution: realpath, readlink, dirname, basename.
+- Existence checks: test -e, test -d, test -f.
+- Copy to staging: `cp <source> _tmp_<staging>`  (target MUST match the `_tmp_*` allowlist).
+- Read-only diff: `diff -u <a> <b>`  (no -i, no in-place edits).
 
 Forbidden:
-  - Network: curl, wget, nc, ssh, scp, rsync, ftp.
-  - Package installs: npm install, pip install, cargo, gem, apt, brew, winget, choco, etc.
-  - Code-modifying shell: sed -i, awk writing back to files, any shell redirect (>, >>, tee)
-    — all writes must go through the Write tool so the glob-allowlist enforcement runs.
-    This applies even for _tmp_* targets: a Bash redirect bypasses the enforcement layer.
-  - Process management: kill, pkill, systemctl, service, taskkill.
-  - Git mutations: git commit, git push, git checkout (modifying), git stash, git reset,
-    git rebase, git merge.
-  - Filesystem mutations: rm, rmdir, mv (except as the Write tool's atomic-move
-    implementation), chmod, chown, ln.
+- Network: curl, wget, nc, ssh, scp, rsync, ftp.
+- Package installs: npm install, pip install, cargo, gem, apt, brew, winget, choco, etc.
+- Code-modifying shell: sed -i, awk writing back to files, any shell redirect (>, >>, tee)
+  — all writes must go through the Write tool so the glob-allowlist enforcement runs.
+  This applies even for `_tmp_*` targets: a Bash redirect bypasses the enforcement layer.
+- Process management: kill, pkill, systemctl, service, taskkill.
+- Git mutations: git commit, git push, git checkout (modifying), git stash, git reset,
+  git rebase, git merge.
+- Filesystem mutations: rm, rmdir, mv (except as the Write tool's atomic-move
+  implementation), chmod, chown, ln.
 
 Refuse-and-halt per Lane Boundaries applies uniformly to any forbidden invocation.
 

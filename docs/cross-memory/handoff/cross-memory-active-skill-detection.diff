@@ -1,0 +1,10 @@
+--- a/.claude/CLAUDE.md
++++ b/.claude/CLAUDE.md
+@@ -44,6 +44,7 @@
+ | `/linter` | **`Linter`** | Lint runs, auto-fix results |
+ | `/clickup` | **`ClickUp`** | ClickUp task operations |
+ | `/commit-message` | **`Commit`** | Commit message generation |
++| `/cross-memory` | **`Cross-Memory`** | Subcommand activity (save/recall/list/forget/search/audit), confirmation gates, audit reports, supersede flow |
+ | `/doc-sync` | **`Doc Sync`** | Documentation audit, staleness checks |
+ | `/kickoff` | **`Kickoff`** | Scaffold progress, interview questions, plan generation, plan population |
+

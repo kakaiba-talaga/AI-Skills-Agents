@@ -23,7 +23,7 @@ Additional commands:
 ## Deployment patterns
 
 | Pattern | Description |
-|---|---|
+| :--- | :--- |
 | **Simple push** | Deploys to one host with a single ssh-executor dispatch. Expect brief downtime during the service restart. |
 | **Rolling** | Deploys to N hosts sequentially. Each host's health check must pass before the next host is deployed. |
 | **Blue-green** | Deploys to the inactive environment first, then switches traffic. The active environment is untouched until the switch, giving zero-downtime deployment. |
@@ -51,7 +51,7 @@ Host staging
 ## Flags
 
 | Flag | Default | Description |
-|---|---|---|
+| :--- | :--- | :--- |
 | `--pattern <type>` | auto | `simple`, `rolling`, `blue-green`, or `canary` |
 | `--on-failure <policy>` | `halt` | `halt` stops at the first failure; `continue` logs it and proceeds |
 | `--dry-run` | off | Construct and display the brief without dispatching ssh-executor |
@@ -64,7 +64,7 @@ Host staging
 The skill distinguishes between failure types and responds accordingly:
 
 | Failure type | Response |
-|---|---|
+| :--- | :--- |
 | Command failure | Automatic rollback — no user confirmation required |
 | Health check failure after successful commands | Asks user: rollback or investigate? |
 | Post-switch failure (blue-green) | Escalates to user — traffic already switched, automated rollback is not safe |
@@ -100,7 +100,7 @@ When ops invokes deploy, the **`Deploy`** badge appears on turns where the deplo
 ## File structure
 
 | File | Purpose |
-|---|---|
+| :--- | :--- |
 | `SKILL.md` | Main skill — argument parsing, workflow phases, constraints |
 | `README.md` | This file — user-facing documentation |
 | `help-card.md` | Quick reference displayed by `/deploy help` |

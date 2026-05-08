@@ -23,7 +23,10 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `agents/README.md` | `agents/*.md` (20 agent definitions) |
 | `agents/code-intel.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
 | `docs/code-intel/integration-test.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b, Phase 3 state cache, Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
+| `agents/cross-memory.md` | `agents/cross-memory.md`, `skills/cross-memory/SKILL.md` (audit subcommand brief shape), `skills/cross-memory/README.md` (Audit section) |
+| `docs/cross-memory/v1-shipped.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/*.md`, `agents/cross-memory.md` (v1 traceability — shipped surface, deferred items, SC verification map) |
 | `skills/clickup/README.md` | `skills/clickup/SKILL.md` |
+| `skills/cross-memory/README.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/redaction.md`, `skills/cross-memory/indexing.md`, `skills/cross-memory/adapter-claude-code.md`, `skills/cross-memory/adapter-cursor.md`, `skills/cross-memory/adapter-generic.md`, `agents/cross-memory.md` |
 | `skills/code-review/README.md` | `skills/code-review/SKILL.md` |
 | `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |
 | `skills/deploy/README.md` | `skills/deploy/SKILL.md`, `skills/deploy/SKILL.cursor.md`, `skills/deploy/*.md` |
