@@ -2,6 +2,8 @@
 
 This document is the closing artifact of the cross-memory v1 build. It records what shipped, what was deferred, and which verifier task confirmed each Success Criterion. It is not a restatement of the plan — for full context see `docs/cross-memory/requirements.md`, `docs/cross-memory/architecture-decision.md`, and `docs/plan/cross-memory-plan.md`.
 
+> **v1.1 update.** Cross-memory v1.1 (init + doctor) shipped on the same branch. See `docs/cross-memory/v1.1-shipped.md` for full v1.1 surface traceability. Sections below have been updated to reflect v1.1 closures: the deferred init row is split, doctor is acknowledged, and the seven contract-only-verified SCs (SC-1 through SC-5, SC-15, SC-16) are reclassified as closed by v1.1.
+
 ---
 
 ## Shipped
@@ -33,7 +35,7 @@ Cross-memory v1 delivers a `/cross-memory` skill, a `cross-memory` agent, and a 
 
 | Item | Where deferred | When to revisit |
 | :--- | :--- | :--- |
-| `/cross-memory init` codebase-fact distillation | requirements.md OQ-3, ADD §17 | post-v1 |
+| `/cross-memory init` `--discover` flag (codebase-fact distillation) | requirements.md OQ-3, ADD §17 | Deferred post-v1.1 — init shipped at v1.1 (bootstrap + sentinel write, no LLM calls); distillation requires a future `--discover` flag |
 | Per-bullet confidence scoring in `[CROSS-MEMORY]` block | ADD §4 (Decision 15 note) | post-v1 alongside indexing |
 | Embedding / keyword indexing for filtered auto-inject | ADD §10 (Decision 16 note) | post-v1 (perf / scale) |
 | Aggregate `MEMORY.md` index across scopes | scoping.md gap list | post-v1 alongside indexing |
@@ -54,32 +56,43 @@ The cross-session reflection placeholder above intentionally defers three design
 
 ---
 
+## Closed by v1.1
+
+Items below were outside v1's scope or left contract-only verified at v1. Cross-memory v1.1 (init + doctor) closed them. Full traceability for the v1.1 surface lives in `docs/cross-memory/v1.1-shipped.md`.
+
+| Item | v1.1 closure |
+| :--- | :--- |
+| `/cross-memory init` subcommand | Shipped at v1.1. Bootstrap-only: provisions `~/.cross-memory/`, detects harness, writes sentinel block with always-on filter output, prints structured summary. Zero LLM calls. Additive only — no `--repair`, no `--force`. |
+| `/cross-memory doctor` subcommand | Shipped at v1.1. Read-only structural and integration health check: five check groups (A–E), `--pre-deploy` / `--post-deploy` / `--check` modes, `sc-behavioral-walk` and `cross-harness-roundtrip` checks. Never writes, repairs, or auto-corrects. |
+
+---
+
 ## Verified Success Criteria
 
 All 21 SCs were verified at the contract level against the shipped `SKILL.md` and supporting files during the corresponding verifier pass.
 
-| SC | Description | Verified by |
-| :--- | :--- | :--- |
-| SC-1 | User-global preference surfaces in a different project | M3.verify.1 |
-| SC-2 | Project memory persists across harness switch | M3.verify.2 |
-| SC-3 | Auto-propose flow runs end-to-end | M2.verify.1 |
-| SC-4 | Canonical write produces mirror in adapter target | M3.verify.3 |
-| SC-5 | Forget removes entry from canonical store and mirror | M3.verify.4 |
-| SC-6 | Denylist auto-redacts an API key before write | M1.verify.2 + M2.verify.2 |
-| SC-7 | Explicit save warns when a secret is detected | M2.verify.2 |
-| SC-8 | Audit flags a memory unverified for more than 91 days | M4.verify.1 |
-| SC-9 | Stale memory still loads (no silent drop on age) | M3.verify.5 |
-| SC-10 | Supersede archives the predecessor entry | M2.verify.3 |
-| SC-11 | Synthesis returns a relevant, tier-filtered block | M4.verify.2 |
-| SC-12 | Audit detects contradictions without auto-resolving | M4.verify.3 |
-| SC-13 | Agent write is restricted to the canonical store | M4.verify.4 |
-| SC-14 | Pre-existing per-project files are left byte-identical | M3.verify.6 |
-| SC-15 | `<private>` markup is honored (content withheld from store) | M2.verify.4 |
-| SC-16 | `[CROSS-MEMORY]` injection block format is correct | M3.verify.7 |
-| SC-17 | `category` field round-trips through save and recall | M2.verify.5 |
-| SC-18 | Project-fact distillation reaches the injection block | M3.verify.8 |
-| SC-19 | Sentinel markers in `MEMORY.md` survive a write pass | M3.verify.9 |
-| SC-20 | Slug derivation is checked against the live filesystem | M3.verify.10 |
-| SC-21 | Cross-memory agent refuses writes outside the allowlist | M4.verify.5 |
+| SC | Description | Verified by | Behavioral coverage |
+| :--- | :--- | :--- | :--- |
+| SC-1 | User-global preference surfaces in a different project | M3.verify.1 | **Closed by v1.1** — walked behaviorally under Claude Code via `sc-behavioral-walk`; `not-applicable` under Cursor (injection surface is a documented v1 no-op) |
+| SC-2 | Project memory persists across harness switch | M3.verify.2 | **Closed by v1.1** — walked behaviorally via `cross-harness-roundtrip` across both harnesses |
+| SC-3 | Auto-propose flow runs end-to-end | M2.verify.1 | **Closed by v1.1** — walked behaviorally under both harnesses via `sc-behavioral-walk` |
+| SC-4 | Canonical write produces mirror in adapter target | M3.verify.3 | **Closed by v1.1** — walked behaviorally under both harnesses via `sc-behavioral-walk` |
+| SC-5 | Forget removes entry from canonical store and mirror | M3.verify.4 | **Closed by v1.1** — walked behaviorally under both harnesses via `sc-behavioral-walk` |
+| SC-6 | Denylist auto-redacts an API key before write | M1.verify.2 + M2.verify.2 | Contract-level (v1) |
+| SC-7 | Explicit save warns when a secret is detected | M2.verify.2 | Contract-level (v1) |
+| SC-8 | Audit flags a memory unverified for more than 91 days | M4.verify.1 | Contract-level (v1) |
+| SC-9 | Stale memory still loads (no silent drop on age) | M3.verify.5 | Contract-level (v1) |
+| SC-10 | Supersede archives the predecessor entry | M2.verify.3 | Contract-level (v1) |
+| SC-11 | Synthesis returns a relevant, tier-filtered block | M4.verify.2 | Contract-level (v1) |
+| SC-12 | Audit detects contradictions without auto-resolving | M4.verify.3 | Contract-level (v1) |
+| SC-13 | Agent write is restricted to the canonical store | M4.verify.4 | Contract-level (v1) |
+| SC-14 | Pre-existing per-project files are left byte-identical | M3.verify.6 | Contract-level (v1) |
+| SC-15 | `<private>` markup is honored (content withheld from store) | M2.verify.4 | **Closed by v1.1** — walked behaviorally under Claude Code (redacted content absent from populated `[CROSS-MEMORY]` block); `not-applicable` under Cursor (injection surface is a documented v1 no-op; redaction itself remains contract-verified via `redaction-sampling-scan`) |
+| SC-16 | `[CROSS-MEMORY]` injection block format is correct | M3.verify.7 | **Closed by v1.1** — walked behaviorally under Claude Code via `sentinel-region-content-parses`; `not-applicable` under Cursor (same reason as SC-1) |
+| SC-17 | `category` field round-trips through save and recall | M2.verify.5 | Contract-level (v1) |
+| SC-18 | Project-fact distillation reaches the injection block | M3.verify.8 | Contract-level (v1) |
+| SC-19 | Sentinel markers in `MEMORY.md` survive a write pass | M3.verify.9 | Contract-level (v1) |
+| SC-20 | Slug derivation is checked against the live filesystem | M3.verify.10 | Contract-level (v1) |
+| SC-21 | Cross-memory agent refuses writes outside the allowlist | M4.verify.5 | Contract-level (v1) |
 
-**Contract-level vs. behavioral coverage.** SC-1, SC-2, SC-3, SC-4, SC-5, SC-15, and SC-16 describe integration behaviors that span harness boundaries (cross-harness round-trip, auto-injection pickup, end-to-end proposal flow). These were verified through static walks against the adapter contracts as documented in `SKILL.md` and the three adapter files. Behavioral end-to-end coverage for these seven SCs requires deploying via `tooling/deploy.ps1` and running a fresh-session regression pass across at least two harness configurations.
+**Contract-level vs. behavioral coverage.** All 21 SCs were verified at the contract level against the shipped `SKILL.md` and supporting files during the v1 verifier pass. SC-1, SC-2, SC-3, SC-4, SC-5, SC-15, and SC-16 described integration behaviors that span harness boundaries — these were left contract-only at v1 pending deployment and fresh-session regression across at least two harness configurations. **v1.1 closes the behavioral gap** for all seven via the `doctor` subcommand's `sc-behavioral-walk` check (SC-1 through SC-5, SC-15, SC-16 walked in-place under Claude Code; SC-2 additionally walked via `cross-harness-roundtrip` from a second harness). SC-1, SC-15, and SC-16 return `not-applicable` rather than `pass` under Cursor at v1.1 because Cursor's `update_sentinel_block` is a documented v1 no-op; full behavioral parity for those three SCs under Cursor is deferred post-v1.1.

@@ -2,26 +2,85 @@
 
 ## Overview
 
-A harness-portable memory layer with six subcommands (`save`, `recall`, `list`, `forget`, `search`, `audit`), an always-on injection tier that surfaces key memories at session start, and an opus-class agent for synthesis and audit. Memories live in the canonical store at `~/.cross-memory/` and are available across three scopes: `user-global` (cross-project, cross-harness), `project:<slug>` (current project only), and `harness:<name>` (current harness only). Harness adapters mirror canonical memories into Claude Code and Cursor native locations so they surface in every session without manual recall.
+A harness-portable memory layer with eight subcommands (`init`, `save`, `recall`, `list`, `forget`, `search`, `audit`, `doctor`), an always-on injection tier that surfaces key memories at session start, and an opus-class agent for synthesis and audit. Memories live in the canonical store at `~/.cross-memory/` and are available across three scopes: `user-global` (cross-project, cross-harness), `project:<slug>` (current project only), and `harness:<name>` (current harness only). Harness adapters mirror canonical memories into Claude Code and Cursor native locations so they surface in every session without manual recall.
 
 ## Subcommands
 
 | Subcommand | Purpose | Common flags |
 | :--- | :--- | :--- |
+| `init` | Bootstrap `~/.cross-memory/` and the harness sentinel block. | `--harness`, `--scope`, `--json`, `--verbose` |
 | `save` | Persist a new memory to the canonical store. Runs parse → redact → confirm → write gates. Auto-propose fires on cue phrases like "from now on" or "remember that". | `--scope`, `--type`, `--no-redact` |
 | `recall` | Retrieve memories by topic using case-insensitive substring matching across name, description, tags, and body. Results ordered by `updated_at` descending. | `--scope`, `--type`, `--tag` |
 | `list` | Enumerate all memories with one-line summaries; no body rendering. Use to survey what is stored or find stale entries. | `--scope`, `--type`, `--stale-only` |
 | `forget` | Archive the named memory and remove its index entry. The memory moves to `~/.cross-memory/archive/`; no hard delete at v1. | `--scope` (default `user-global`) |
 | `search` | Grep-style full-text search over memory body content. Returns `<path>:<line>: <match>` triples; no rendering or synthesis. | `--scope`, `--type` |
 | `audit` | Dispatch the cross-memory agent to scan for staleness, duplicates, contradictions, redaction misses, and uncategorized memories. Output renders to chat only — no on-disk artifact. | `--staleness-days` |
+| `doctor` | Read-only structural and integration health check across the canonical store, sentinel blocks, mirrors, and redaction surface. | `--pre-deploy`, `--post-deploy`, `--check`, `--harness`, `--json`, `--verbose` |
 
 For the full flag list and gate semantics of each subcommand, see:
+- [Subcommand: init](SKILL.md#subcommand-init)
 - [Subcommand: save](SKILL.md#subcommand-save)
 - [Subcommand: recall](SKILL.md#subcommand-recall)
 - [Subcommand: list](SKILL.md#subcommand-list)
 - [Subcommand: forget](SKILL.md#subcommand-forget)
 - [Subcommand: search](SKILL.md#subcommand-search)
 - [Subcommand: audit](SKILL.md#subcommand-audit)
+- [Subcommand: doctor](SKILL.md#subcommand-doctor)
+
+## Bare invocation
+
+Running `/cross-memory` with no subcommand prints the structured usage block (same as `/cross-memory help`). On fresh installs — when `~/.cross-memory/` is absent, or when the active harness's sentinel block is missing or empty — a first-run hint is appended:
+
+```
+Tip: run /cross-memory init to bootstrap this project.
+```
+
+The hint is harness-aware. Under Cursor and generic harnesses (where the sentinel block is a documented v1 no-op), the hint fires only when `~/.cross-memory/` itself is absent, not on every post-init invocation. The skill never auto-runs `init` from bare invocation — state changes always require an explicit subcommand.
+
+See [SKILL.md → Bare-invocation sequence](SKILL.md#bare-invocation-sequence) for the full predicate.
+
+## Init
+
+`/cross-memory init` provisions the canonical store and populates the harness sentinel block. Run it once after installing cross-memory; it is safe to re-run at any time.
+
+**What init does (in order):**
+
+1. Provisions `~/.cross-memory/` via the lazy-provisioning sequence (creates the directory tree and `config.yaml` with defaults). If the directory already exists, this step is a no-op.
+2. Detects the active harness via the five-step adapter-selection chain.
+3. Probes the harness-native `MEMORY.md` for reachability and verifies sentinel markers are present.
+4. Runs the always-on tier filter, formats the `[CROSS-MEMORY]` injection block, and writes it between the sentinel markers in the harness-native `MEMORY.md`.
+5. Prints a one-line summary.
+
+**Flags:**
+
+| Flag | Description |
+| :--- | :--- |
+| `--harness <name>` | Override harness auto-detection (`claude-code`, `cursor`, `generic`). |
+| `--scope <spec>` | Restrict the always-on filter to a single scope. |
+| `--json` | Emit a machine-readable JSON object (schema version 1) instead of the summary line. |
+| `--verbose` | Print per-step trace lines before the summary. |
+
+There is no `--repair`, `--force`, or `--reset` flag. Init is additive only — it provisions what is absent and leaves existing files untouched.
+
+**Success summary line shape:**
+
+```
+cross-memory initialized: harness=<name>, store=<state>, sentinel=<state> (<bytes>), <count> always-on entries
+```
+
+Example on a fresh install:
+
+```
+cross-memory initialized: harness=claude-code, store=provisioned, sentinel=updated (0 bytes), 0 always-on entries
+```
+
+**Empty-write note.** A fresh store with no user-global memories produces `sentinel=updated (0 bytes), 0 always-on entries`. This is a successful pass — the sentinel markers are written; the region between them is intentionally empty because the always-on filter found no entries to inject. It is not a failure or warning condition.
+
+**Idempotency.** Init is safe to run repeatedly. If the store already exists and the sentinel content would be byte-identical, the summary reports `store=already-present, sentinel=already-current (no change)`.
+
+**Cursor / generic harnesses.** `update_sentinel_block` is a documented v1 no-op on Cursor and generic harnesses. Init still runs all five steps, but the sentinel write is skipped and the summary reports `sentinel=skipped (cursor adapter no-op at v1)` or `sentinel=skipped (not-applicable)`. This is correct behavior.
+
+See [SKILL.md → Subcommand: init](SKILL.md#subcommand-init) for full step definitions, per-harness behavior tables, JSON schema, and the idempotency contract.
 
 ## Storage Layout
 
@@ -123,6 +182,47 @@ Every action goes through the standard write-path confirmation gate before any c
 
 See [agents/cross-memory.md](../../agents/cross-memory.md) and [SKILL.md — Subcommand: audit](SKILL.md#subcommand-audit).
 
+## Doctor
+
+`/cross-memory doctor` runs a read-only health check across the canonical store, sentinel blocks, mirror files, and redaction surface. It never writes, repairs, or auto-corrects — it reports what it finds and leaves the decision to the operator.
+
+**Four invocation modes:**
+
+| Mode | How to invoke | What runs |
+| :--- | :--- | :--- |
+| Default | `/cross-memory doctor` | Groups A, B, C, D in full; `adapter-detection` from Group E |
+| Pre-deploy | `/cross-memory doctor --pre-deploy` | Six checks validating local state before a deploy run |
+| Post-deploy | `/cross-memory doctor --post-deploy` | Five checks validating a deployed state across harnesses |
+| Targeted | `/cross-memory doctor --check <name>` | Exactly the named check(s) or group(s); repeatable |
+
+`--pre-deploy` and `--post-deploy` are mutually exclusive. `--check` cannot be combined with either mode flag.
+
+**Five check groups:**
+
+| Group | Identifier | Checks | What it covers |
+| :--- | :--- | :--- | :--- |
+| A | `canonical-integrity` | 5 | Frontmatter parse, slug derivation, index/file consistency, duplicate slugs, archive not indexed |
+| B | `mirror-consistency` | 3 | Mirror sidecar agreement, canonical source existence, collision classification |
+| C | `sentinel-markers` | 3 | Marker count, bytes fingerprint, region parse (Claude Code only; `not-applicable` on Cursor/generic at v1) |
+| D | `redaction-surface` | 3 | Denylist parse, sampling scan, override-flag audit |
+| E | `deploy-target-prep` + `cross-harness-validation` | 2 + 3 | Manifest coverage, stale artifacts; cross-harness round-trip, adapter detection, SC behavioral walk |
+
+**JSON output.** Pass `--json` for a machine-readable report (schema version 1) with `overall`, per-section verdicts, and per-check findings. The top-level `harness` and `harness_selection_step` fields use the same shape as init's JSON output.
+
+**Exit codes** (meaningful only when `--json` is set):
+
+| Verdict | Exit code |
+| :--- | :--- |
+| `pass` | 0 |
+| `not-applicable` | 0 |
+| `warn` | 1 |
+| `fail` | 2 |
+| `error` | 3 |
+
+Under the human-readable report the skill always exits 0 — chat output is the feedback channel.
+
+See [SKILL.md → Subcommand: doctor](SKILL.md#subcommand-doctor) for full check definitions, finding shapes, PASS/WARN/FAIL criteria, the post-deploy walk procedures, and the verdict aggregation rule.
+
 ## Configuration
 
 `~/.cross-memory/config.yaml` — created automatically on first use with the defaults below.
@@ -178,6 +278,13 @@ The cross-memory agent uses these for read-only path resolution and existence ch
 ```
 
 ```bash
+# Bootstrap the store on a new machine
+/cross-memory init
+# → cross-memory initialized: harness=claude-code, store=provisioned, sentinel=updated (0 bytes), 0 always-on entries
+
+# Bootstrap with verbose output
+/cross-memory init --verbose
+
 # Recall memories by topic
 /cross-memory recall "python testing"
 # → returns matching memories ordered by scope + updated_at, with staleness banners if applicable
@@ -198,6 +305,18 @@ The cross-memory agent uses these for read-only path resolution and existence ch
 
 # Audit with a tighter staleness window
 /cross-memory audit --staleness-days 60
+
+# Run the default health check
+/cross-memory doctor
+
+# Run a targeted check
+/cross-memory doctor --check sentinel-markers
+
+# Run the pre-deploy check set (for CI / before deploying)
+/cross-memory doctor --pre-deploy
+
+# Get a machine-readable doctor report
+/cross-memory doctor --json
 ```
 
 ## FAQ
