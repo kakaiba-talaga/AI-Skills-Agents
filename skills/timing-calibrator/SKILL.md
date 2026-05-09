@@ -119,10 +119,12 @@ If the memory file already exists:
 
 1. Read it
 2. Use rolling averages to incorporate new data:
+
    ```
    new_avg = (old_avg × old_count + new_value) / (old_count + 1)
    new_count = old_count + 1
    ```
+
 3. Cap history at 10 runs per agent type. Beyond 10, use a sliding window.
 4. Exclude outlier tasks (> 3x estimate) from averages but note them. Keep at most the 5 most recent outliers.
 5. Update model escalation patterns cumulatively.
