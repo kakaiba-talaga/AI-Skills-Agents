@@ -40,6 +40,7 @@ Cross-memory v1 delivers a `/cross-memory` skill, a `cross-memory` agent, and a 
 | Boundary policy on memories referencing repo paths | scoping.md OQ-B | v1.x patch — single-question planner re-engagement |
 | Team-shared scope identifier | requirements.md OQ-6, ADD §16 | post-v1 |
 | `/cross-memory profile` subcommand | not in requirements | post-v1 |
+| Cross-session reflection: observe accumulated session record, curate memories, surface unknown patterns | conversation 2026-05-09; composes auto-propose gate, `/cross-memory audit`, `/timing-calibrator capture` | post-v1.1 (after init+doctor ship) — requires `--brainstorm` gate before scoping |
 | Preemptive compaction integration | not in requirements | post-v1 |
 | OpenCode / Cline / Aider adapters beyond generic fallback | scoping.md gap list | post-v1 |
 | `/cross-memory export` and `/cross-memory import` | not in requirements | post-v1 |
@@ -48,6 +49,8 @@ Cross-memory v1 delivers a `/cross-memory` skill, a `cross-memory` agent, and a 
 | `intent: apply` for audit (auto-applying findings) | ADD §8 (Decision 20 note) | post-v1 |
 | Inverse opt-out tag (`never-on`) | ADD §12 | post-v1 |
 | Codebase indexing integration with code-intel | not planned (separate lanes) | not planned |
+
+The cross-session reflection placeholder above intentionally defers three design questions before any scoping run can produce a useful spec: (1) **input data source** — on-disk artifacts only (handoff files, dispatch logs, cross-memory state), git history, harness-native session transcripts, or composed; (2) **cadence** — on-demand subcommand, periodic schedule, or end-of-session per ops/ralph-loop run; (3) **pattern taxonomy** — the explicit list of pattern categories the reflection agent is allowed to surface (behavioral regularities, stale-memory candidates, implicit conventions, workflow shortcuts), since reflection without precise pattern definitions degenerates into hallucination. This work also has a natural composition relationship with the deferred `Relevant Memories:` sub-section ranking (`SKILL.md:1184`) — both depend on a relevance-or-pattern signal over the canonical store. Sequence the brainstorm gate (interviewer → architect → scoping → critic) for this only after v1.1 (init + doctor) has shipped and the v1 surface is behaviorally validated.
 
 ---
 
