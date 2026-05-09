@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-05-04 (agent-contract hardening + brief contract)
-**Previous assessment:** 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-05-09 (cross-memory v1 ship)
+**Previous assessment:** 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -11,7 +11,7 @@
 
 ### Agents (`agents/`)
 
-20 agent definitions + 1 README.
+21 agent definitions + 1 README.
 
 | File | Model | Role |
 |------|-------|------|
@@ -35,10 +35,11 @@
 | rollback.md | sonnet | Safely undoes agent-produced changes at configurable scope |
 | change-analyzer.md | sonnet | Classifies git diffs and recommends pipeline stages to run or skip |
 | code-intel.md | opus | Indexes the project into a SQLite symbol graph and answers structural queries (callers, dependencies, impact, execution flow) for other agents |
+| cross-memory.md | opus | Synthesizes curated context blocks from the cross-memory store and audits the store for staleness, duplicates, contradictions, and redaction misses |
 
 ### Skills (`skills/`)
 
-11 multi-file skills. 6 converted from single-file commands in the initial restructure; 1 added in the ops decoupling; 1 added as the kickoff skill.
+12 multi-file skills. 6 converted from single-file commands in the initial restructure; 1 added in the ops decoupling; 1 added as the kickoff skill; 1 added in the cross-memory v1 ship.
 
 | Skill | Directory | Files | SKILL.md Lines | Purpose |
 |-------|-----------|-------|----------------|---------|
@@ -53,6 +54,7 @@
 | Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
 | Kickoff | `skills/kickoff/` | 7 | 1250 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
+| Cross-memory | `skills/cross-memory/` | 6 | 1292 | Harness-portable memory layer with six subcommands and an opus-class agent for synthesis and audit |
 
 ### Documentation (`docs/`)
 
@@ -491,12 +493,12 @@ The Tier A Opus 4.7 audit (`docs/agent-audits/tier-a-opus-4-7-audit.md`) produce
 
 ### Strengths
 
-- **Unified skill structure:** All 10 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
-- **Consistent structure** across all 20 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
+- **Unified skill structure:** All 12 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
+- **Consistent structure** across all 21 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
 - **Clean separation of concerns:** The ops decoupling moved operational logic (preflight, rollback, work verification, change analysis, timing calibration) out of skill companion files and into standalone agents/skills where it belongs. This reduces ops context pressure and makes each capability independently dispatchable.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
 - **Shared constraints repeated verbatim** in all agents: no compound Bash commands, no `cd` prefix, relative paths only. No variations.
-- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer). No mismatches between frontmatter and README.
+- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, cross-memory); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer). No mismatches between frontmatter and README.
 - **Valid cross-references** between agents and skills — no broken path references. Former ops companion references removed.
 - **Deployment automation** expanded — deploy scripts support 4 categories (agents, skills, hooks, settings), 3 targets (claude-code, claude-code-wsl, cursor), dry-run, diff, per-target, per-category, and `--prune` mode. Cursor transform is fully automatic with dedicated transform scripts per skill.
 - **Portability documented** — format differences, tool gaps, and verified findings captured in `docs/portability-guide.md`.
@@ -544,7 +546,7 @@ Skills invoked within pipeline stages:
 
 | Category | Files | Total |
 |----------|-------|-------|
-| Agents | 20 definitions + 1 README | 21 |
+| Agents | 21 definitions + 1 README | 22 |
 | Skills (clickup) | 2 | 2 |
 | Skills (code-review) | 2 | 2 |
 | Skills (commit-message) | 2 | 2 |
@@ -556,6 +558,7 @@ Skills invoked within pipeline stages:
 | Skills (ralph-loop) | 16 (incl. SKILL.cursor.md, 5 templates + templates README) | 16 |
 | Skills (timing-calibrator) | 2 | 2 |
 | Skills (kickoff) | 7 (incl. project-template/ scaffold with /next command) | 7 |
+| Skills (cross-memory) | 6 (SKILL.md + 5 companions) | 6 |
 | Documentation (docs/) | 3 (ASSESSMENT.md, portability-guide.md, ops-dispatch-log.md) | 3 |
 | Documentation (docs/agent-audits/) | 1 (tier-a-opus-4-7-audit.md) | 1 |
 | Documentation (docs/code-intel/) | 3 (integration-test.md, failure-mode-walkthrough.md, design-trace.md) | 3 |
@@ -565,8 +568,8 @@ Skills invoked within pipeline stages:
 | Planning (gitignored + 1 tracked) | 29 | 29 |
 | Config | 2 (.gitignore, .markdownlint.json) | 2 |
 | Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
-| **Total** | | **135** |
+| **Total** | | **142** |
 
 ---
 
-*Assessment updated 2026-05-04 (agent-contract hardening + brief contract). Files assessed: 20 agents, 11 skills (63 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md + 1 brief-contract.md + 5 kickoff templates), 1 agents README, 7 docs (3 top-level docs/, 1 docs/agent-audits/, 3 docs/code-intel/), 1 cursor rule, 7 tooling, 2 hooks, 29 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*
+*Assessment updated 2026-05-09 (cross-memory v1 ship). Files assessed: 21 agents, 12 skills (69 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md + 1 brief-contract.md + 5 kickoff templates + 6 cross-memory files), 1 agents README, 7 docs (3 top-level docs/, 1 docs/agent-audits/, 3 docs/code-intel/), 1 cursor rule, 7 tooling, 2 hooks, 29 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*

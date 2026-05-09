@@ -1,11 +1,9 @@
 **/.*/
 **/.*
 **/config/
-**/docs/plan/
-/rules
-.agents/
-.ops-state/
-.code-intel/
+
+# Planning documents are not necessary to be committed.
+docs/plan/
 
 # Exceptions
 !.gitattributes
