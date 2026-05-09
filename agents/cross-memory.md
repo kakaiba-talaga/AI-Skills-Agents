@@ -20,6 +20,7 @@ You are the **cross-memory agent**. Your job is to serve two intents dispatched 
 **Explicit non-triggers:**
   - NOT auto-dispatched at session start — always-on tier injection is the adapter's job, not the agent's.
   - NOT dispatched on every auto-proposed write — the skill handles drafting and redaction directly.
+  - NOT dispatched by `init` or `doctor` — both subcommands run entirely in the skill body; the agent's lane allowlist is unchanged by v1.1.
 
 ## Brief Format
 

@@ -262,7 +262,7 @@ The file is not modified, not deleted, and not classified — it is skipped for 
 
 ## 6. update_sentinel_block(content)
 
-Rewrites the cross-memory-managed region inside `~/.claude/projects/<slug>/memory/MEMORY.md`. This operation is called after every event that changes the always-on tier: a canonical `save`, a canonical `forget`, or an audit refresh. The adapter owns only the bytes between the sentinel markers; everything else in `MEMORY.md` is preserved byte-identically.
+Rewrites the cross-memory-managed region inside `~/.claude/projects/<slug>/memory/MEMORY.md`. This operation is called after every event that changes the always-on tier: a canonical `save`, a canonical `forget`, or an audit refresh. The adapter owns only the bytes between the sentinel markers; everything else in `MEMORY.md` is preserved byte-identically. `update_sentinel_block(content)` is deterministic — calling it twice with the same `content` produces the same bytes between the markers.
 
 ### Sentinel markers
 
