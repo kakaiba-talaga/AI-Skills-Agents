@@ -2,7 +2,7 @@
 
 ## Overview
 
-A harness-portable memory layer with eight subcommands (`init`, `save`, `recall`, `list`, `forget`, `search`, `audit`, `doctor`), an always-on injection tier that surfaces key memories at session start, and an opus-class agent for synthesis and audit. Memories live in the canonical store at `~/.cross-memory/` and are available across three scopes: `user-global` (cross-project, cross-harness), `project:<slug>` (current project only), and `harness:<name>` (current harness only). Harness adapters mirror canonical memories into Claude Code and Cursor native locations so they surface in every session without manual recall.
+A harness-portable memory layer with nine subcommands (`init`, `save`, `recall`, `list`, `forget`, `search`, `audit`, `doctor`, `reflect`), an always-on injection tier that surfaces key memories at session start, and an opus-class agent for synthesis, audit, and candidate distillation. Memories live in the canonical store at `~/.cross-memory/` and are available across three scopes: `user-global` (cross-project, cross-harness), `project:<slug>` (current project only), and `harness:<name>` (current harness only). Harness adapters mirror canonical memories into Claude Code and Cursor native locations so they surface in every session without manual recall.
 
 ## Subcommands
 
@@ -16,6 +16,7 @@ A harness-portable memory layer with eight subcommands (`init`, `save`, `recall`
 | `search` | Grep-style full-text search over memory body content. Returns `<path>:<line>: <match>` triples; no rendering or synthesis. | `--scope`, `--type` |
 | `audit` | Dispatch the cross-memory agent to scan for staleness, duplicates, contradictions, redaction misses, and uncategorized memories. Output renders to chat only — no on-disk artifact. | `--staleness-days` |
 | `doctor` | Read-only structural and integration health check across the canonical store, sentinel blocks, mirrors, and redaction surface. | `--pre-deploy`, `--post-deploy`, `--check`, `--harness`, `--json`, `--verbose` |
+| `reflect` | Propose memory candidates distilled from git history, plan docs, handoffs, and (Claude Code only) session transcripts. Renders an interactive candidate report; nothing is saved without explicit confirmation. | `--from-session`, `--since-last-reflect`, `--from`, `--scope`, `--staleness-days`, `--verbose` |
 
 For the full flag list and gate semantics of each subcommand, see:
 - [Subcommand: init](SKILL.md#subcommand-init)
@@ -26,6 +27,7 @@ For the full flag list and gate semantics of each subcommand, see:
 - [Subcommand: search](SKILL.md#subcommand-search)
 - [Subcommand: audit](SKILL.md#subcommand-audit)
 - [Subcommand: doctor](SKILL.md#subcommand-doctor)
+- [Subcommand: reflect](SKILL.md#subcommand-reflect)
 
 ## Bare invocation
 
@@ -223,15 +225,171 @@ Under the human-readable report the skill always exits 0 — chat output is the 
 
 See [SKILL.md → Subcommand: doctor](SKILL.md#subcommand-doctor) for full check definitions, finding shapes, PASS/WARN/FAIL criteria, the post-deploy walk procedures, and the verdict aggregation rule.
 
+## Reflect
+
+`/cross-memory reflect` proposes memory candidates distilled from artifacts you have already created — git history, plan docs, handoffs, and (under Claude Code) session transcripts. The skill ingests those sources, dispatches the cross-memory agent with `intent: distill`, renders an interactive candidate table, and lets you decide what to save, decline, or edit. Nothing is written to the canonical store without explicit confirmation.
+
+### Command syntax
+
+```
+/cross-memory reflect \
+  [--from-session <session-id>] \
+  [--since-last-reflect] \
+  [--from <path>] \
+  [--scope <user-global|project:<slug>|harness:<name>>] \
+  [--staleness-days <N>] \
+  [--verbose]
+```
+
+### Source pipeline
+
+Reflect ingests up to four source types per run. Sources 3, 4, and 5 are available on every harness. Source 1 requires Claude Code.
+
+| Source | What it reads | How to activate | Harness |
+| :--- | :--- | :--- | :--- |
+| Source 1 — session transcripts | `.jsonl` session files from `~/.claude/projects/<active-slug>/` | `--from-session <id>` or `--since-last-reflect` | Claude Code only |
+| Source 3 — git history + working tree | `git log`, `git diff --stat`, documentation-convention log, directory layout probe; working-tree config files (`pyproject.toml`, `package.json`, etc.) | Always active | All harnesses |
+| Source 4 — plan docs, handoffs, dispatch logs | Globs `docs/plan/**/*.md`, `docs/cross-memory/handoff*`, `docs/ops-dispatch-log*`; bounded to 50 files per glob | Always active | All harnesses |
+| Source 5 — explicit seed | File or directory passed via `--from <path>`; multiple `--from` flags union into one set | `--from <path>` | All harnesses |
+
+When no flags are passed, reflect ingests Sources 3 and 4 only. Passing `--from-session` or `--since-last-reflect` adds Source 1; passing `--from` adds Source 5.
+
+**Source 1 flags under non-Claude-Code harnesses.** Under Cursor or generic, `--from-session` and `--since-last-reflect` produce an immediate parse-time error before any agent dispatch:
+
+```
+error: --from-session and --since-last-reflect are Claude-Code-only flags; current harness is <name>
+```
+
+**Source 5 redaction note.** Source 5 content is read at distill time and may surface in the body-preview column of the candidate report before any redaction pass. Curate `--from` paths carefully — do not pass a path that contains secrets or proprietary information unless you intend it to appear in candidate previews.
+
+### Report shape
+
+The candidate report has two parts rendered to chat.
+
+**Environment header** — six fields printed before the table:
+
+1. Active harness.
+2. Active project slug.
+3. Sources scanned this run.
+4. Raw candidates generated (before filtering).
+5. Candidates dropped by filter (with per-reference-set breakdown).
+6. Candidates surfaced (raw minus dropped).
+
+**Candidate table** — eight columns:
+
+| Column | Description |
+| :--- | :--- |
+| `id` | Run-local identifier (e.g., `c1`). Does not persist across runs. |
+| `type` | Memory type proposed by the agent (e.g., `preference`, `rule`). |
+| `category` | One of four locked taxonomy categories: `architectural-decisions`, `conventions-implicit-in-code`, `workflow-patterns-from-successful-runs`, `user-preferences-from-feedback-patterns`. |
+| `scope` | Proposed memory scope: `user-global`, `project:<slug>`, or `harness:<name>`. |
+| `proposed-name` | Slug for the would-be memory file name. |
+| `body-preview` | Up to 160 characters of the candidate body. |
+| `source-evidence` | Pointer to the evidence that produced this candidate. |
+| `flags` | `would-supersede` when the proposed name matches an existing canonical memory; empty otherwise. |
+
+Candidates are sorted by `category` lexicographically, then by `proposed-name` within each category.
+
+### Interactive loop
+
+After the report renders, the skill enters a command loop. Every action requires a confirmation prompt with default N.
+
+| Command | What it does |
+| :--- | :--- |
+| `save <id>` | Routes the candidate through the v1 save pipeline (Gate 3 redact → Gate 4 write). If the candidate carries `would-supersede`, the v1.1 supersede flow fires first. |
+| `decline <id>` | Appends an entry to the per-project decline ledger at `~/.cross-memory/projects/<slug>/reflect_declined.md`. Created lazily on first decline. |
+| `edit <id>` | Opens a field-tweak surface for `proposed-name`, `body`, `tags`, and `scope`. On confirmation, the edited candidate re-enters Gate 3 before write. |
+| `done` | Exits the loop, writes `state.toml` with `reflect.last_reflect_at` and a run summary, and emits candidate counts (surfaced / saved / declined / unactioned). |
+
+Candidates neither saved nor declined before `done` are not written anywhere and receive no special treatment on subsequent runs.
+
+### Anti-redundancy filter
+
+Before surfacing candidates, the skill applies a deterministic post-generation filter. The filter measures three overlap signals between each candidate and each reference entry. A candidate is dropped when **any one** signal crosses its threshold against **any one** reference entry.
+
+| Signal | How it is measured | Default threshold | Config field |
+| :--- | :--- | :--- | :--- |
+| Slug overlap | Character-level similarity between the candidate slug and the reference slug, normalized to `[0.0, 1.0]`. | `0.85` | `reflect.slug_overlap_threshold` |
+| Tag overlap | Jaccard similarity: `\|A ∩ B\| / \|A ∪ B\|` over the candidate and reference tag sets. | `0.8` | `reflect.tag_overlap_threshold` |
+| Body-token Jaccard | Jaccard over the first 200 lowercased, stopword-filtered tokens of each body. | `0.7` | `reflect.body_token_jaccard_threshold` |
+
+The filter runs against **three deterministic reference sets** and applies **one LLM-prompt-applied exclusion corpus** at a separate stage before deterministic scoring begins.
+
+- **Set A — canonical store.** Memories in `~/.cross-memory/` relevant to the candidate's scope. Filter-reason tag: `canonical-redundancy`.
+- **Set B — archive.** Retired memories in `~/.cross-memory/archive/`. Filter-reason tag: `archive-redundancy`.
+- **Set C — decline ledger.** Entries in `~/.cross-memory/projects/<slug>/reflect_declined.md`. Filter-reason tag: `declined-redundancy`. Decline-ledger precedence: a candidate matched by Set C is dropped before the supersede check ever runs.
+- **Set D — exclusion corpus (LLM-prompt-applied, not signal-scored).** The `## What NOT to save in memory` section of `~/.claude/CLAUDE.md`. This free-text rule corpus has no slug, tag set, or body tokens suitable for Jaccard comparison, so the three deterministic signals do not apply to it. Instead, Set D is supplied to the agent as a system-prompt input during raw-candidate generation. The agent uses it to suppress candidates before they enter the pool the deterministic filter sees. If the section is missing or unreadable, the skill emits a structured warning and the filter proceeds with Sets A, B, and C only; the reflect run does not abort.
+
+The filter is fully deterministic: given identical inputs and reference sets, two consecutive reflect runs produce byte-identical candidate sets in the same order.
+
+Pass `--verbose` to see per-candidate filter decisions, including the signal that tripped, the raw score, the reference entry matched, and the filter-reason tag.
+
+### Supersede flag
+
+When the agent detects that a candidate closely overlaps an existing canonical entry, it sets `would-supersede` in the `flags` column. Typing `save <id>` on a flagged candidate routes through the v1.1 supersede flow (diff rendering + archive + Gate 3 confirmation) before writing. A candidate can pass the filter and still carry `would-supersede`, because the supersede check uses a stricter overlap threshold than the drop threshold. No memory is silently replaced — the flag in the report and the supersede confirmation prompt are both required.
+
+### Decline ledger and state file
+
+| File | Path | Created |
+| :--- | :--- | :--- |
+| Decline ledger | `~/.cross-memory/projects/<slug>/reflect_declined.md` | Lazily on the first `decline <id>` action |
+| Per-project state | `~/.cross-memory/projects/<slug>/state.toml` | At the end of the first successful reflect run |
+
+The decline ledger stores: `declined_at`, `candidate_id`, `proposed_name`, `category`, `scope`, `tags`, `body_preview`, `source_evidence`, `run_id`. It is append-only; no pruning mechanism exists at v1.2.
+
+The state file stores `reflect.last_reflect_at`, `reflect.last_reflect_candidate_count`, and `reflect.last_reflect_run_id`. Both `init` (Step 4.5) and `doctor` (footer) read `last_reflect_at` to decide whether to emit a staleness hint.
+
+### Staleness hint in init and doctor
+
+Both `init` and `doctor` emit a suggestive nudge when `last_reflect_at` in `state.toml` is older than `reflect_staleness_threshold_days` (default 30 days):
+
+```
+Tip: it is been N days since reflect ran — run /cross-memory reflect to surface candidates.
+```
+
+The hint suppresses when `state.toml` is absent, unparseable, or `last_reflect_at` is unset (including first-ever invocations). Neither `init` nor `doctor` ever auto-invokes reflect — the nudge is informational only. The staleness threshold can be overridden for a single reflect run with `--staleness-days <N>`.
+
+### Cross-harness applicability
+
+| Capability | Claude Code | Cursor | Generic |
+| :--- | :--- | :--- | :--- |
+| `reflect` subcommand | Full | Full (Sources 3+4+5 only) | Full (Sources 3+4+5 only) |
+| `--from-session`, `--since-last-reflect` | Available | Parse-time error | Parse-time error |
+| `--from <path>` | Available | Available | Available |
+| Report loop, ledger, supersede, filter | Full | Full | Full |
+| Staleness hint in `init` and `doctor` | Full | Full | Full |
+| `state.toml` write | Full | Full | Full |
+
+The only Claude-Code-only surface is Source 1 (transcript ingestion via `--from-session` and `--since-last-reflect`). All other reflect behavior is harness-agnostic.
+
+> **v1.3 deferral.** The `--non-interactive` flag, structured `--json` output, `--context` injection, and an external-trigger / post-run-hook contract (for integration with `/ops` or CI) are deferred to v1.3. The flag grammar is intentionally extensible — `--non-interactive` can be added without restructuring the routing flow.
+
+See [SKILL.md → Subcommand: reflect](SKILL.md#subcommand-reflect) for full flag definitions, source-pipeline staging details, the interactive-loop gate semantics, filter tokenization rules, and the cross-harness matrix.
+
 ## Configuration
 
 `~/.cross-memory/config.yaml` — created automatically on first use with the defaults below.
+
+> **Note:** `~/.cross-memory/config.yaml` is user-installed and is **not** part of the deploy manifest. Deploying cross-memory does not write or overwrite this file. If your existing `config.yaml` does not define the `reflect:` namespace, the skill uses the documented defaults for all `reflect.*` fields at runtime — no migration or manual edit is required.
+
+**Core fields:**
 
 | Field | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `staleness_threshold_days` | integer | `90` | Memories with `verified_at` older than this many days are flagged stale by `recall`, the always-on tier, and `audit`. |
 | `max_inject_chars` | integer | `2048` | Maximum bytes for the `[CROSS-MEMORY]` injection block. |
 | `adapter` | string | (auto-detected) | Override harness auto-detection. Accepted values: `claude-code`, `cursor`, `generic`. |
+
+**reflect: namespace** — groups the three anti-redundancy filter thresholds and the staleness-hint threshold used by the `reflect` subcommand:
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `reflect.slug_overlap_threshold` | float | `0.85` | Normalized slug similarity threshold. A candidate is dropped when its slug similarity to any reference entry meets or exceeds this value. |
+| `reflect.tag_overlap_threshold` | float | `0.8` | Jaccard similarity threshold over tag sets. A candidate is dropped when its tag overlap with any reference entry meets or exceeds this value. |
+| `reflect.body_token_jaccard_threshold` | float | `0.7` | Jaccard similarity over the first 200 lowercased, stopword-filtered body tokens. A candidate is dropped when its body similarity to any reference entry meets or exceeds this value. |
+| `reflect_staleness_threshold_days` | integer | `30` | Days since the last reflect run before `init` and `doctor` emit a staleness hint. Override for a single run with `--staleness-days <N>`. |
+
+The filter applies the three `reflect.*` signals as a disjunction — one trip is enough to drop a candidate. Configure per-machine in `~/.cross-memory/config.yaml` under the `reflect:` key if different thresholds fit your workflow.
 
 **Note:** When running cross-memory inside a project that doesn't already have global Bash permissions for `file`, `readlink`, `stat`, and `test`, you may receive interactive permission prompts on first use. To suppress these, add the following to your project's `.claude/settings.json` (or your user-global `~/.claude/settings.json`):
 
@@ -317,6 +475,24 @@ The cross-memory agent uses these for read-only path resolution and existence ch
 
 # Get a machine-readable doctor report
 /cross-memory doctor --json
+
+# Reflect using git history and plan docs (default — Sources 3 + 4)
+/cross-memory reflect
+
+# Reflect from a single session transcript (Claude Code only)
+/cross-memory reflect --from-session <session-id>
+
+# Reflect from all sessions since the last reflect run (Claude Code only)
+/cross-memory reflect --since-last-reflect
+
+# Reflect and seed an additional explicit path
+/cross-memory reflect --from docs/cross-memory/v1.2-reflection-architecture.md
+
+# Reflect with a tighter staleness window (affects which sessions --since-last-reflect scans)
+/cross-memory reflect --staleness-days 14
+
+# Reflect with per-candidate filter trace
+/cross-memory reflect --verbose
 ```
 
 ## FAQ

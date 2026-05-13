@@ -54,7 +54,7 @@
 | Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
 | Kickoff | `skills/kickoff/` | 7 | 1250 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
-| Cross-memory | `skills/cross-memory/` | 6 | 1292 | Harness-portable memory layer with six subcommands and an opus-class agent for synthesis and audit |
+| Cross-memory | `skills/cross-memory/` | 7 | 2155 | Harness-portable memory layer with eight subcommands and an opus-class agent for synthesis and audit |
 
 ### Documentation (`docs/`)
 
@@ -558,7 +558,7 @@ Skills invoked within pipeline stages:
 | Skills (ralph-loop) | 16 (incl. SKILL.cursor.md, 5 templates + templates README) | 16 |
 | Skills (timing-calibrator) | 2 | 2 |
 | Skills (kickoff) | 7 (incl. project-template/ scaffold with /next command) | 7 |
-| Skills (cross-memory) | 6 (SKILL.md + 5 companions) | 6 |
+| Skills (cross-memory) | 7 (SKILL.md + 5 companions + README.md) | 7 |
 | Documentation (docs/) | 3 (ASSESSMENT.md, portability-guide.md, ops-dispatch-log.md) | 3 |
 | Documentation (docs/agent-audits/) | 1 (tier-a-opus-4-7-audit.md) | 1 |
 | Documentation (docs/code-intel/) | 3 (integration-test.md, failure-mode-walkthrough.md, design-trace.md) | 3 |
@@ -568,8 +568,8 @@ Skills invoked within pipeline stages:
 | Planning (gitignored + 1 tracked) | 29 | 29 |
 | Config | 2 (.gitignore, .markdownlint.json) | 2 |
 | Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
-| **Total** | | **142** |
+| **Total** | | **143** |
 
 ---
 
-*Assessment updated 2026-05-09 (cross-memory v1 ship). Files assessed: 21 agents, 12 skills (69 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md + 1 brief-contract.md + 5 kickoff templates + 6 cross-memory files), 1 agents README, 7 docs (3 top-level docs/, 1 docs/agent-audits/, 3 docs/code-intel/), 1 cursor rule, 7 tooling, 2 hooks, 29 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*
+*Assessment updated 2026-05-09 (cross-memory v1 ship). Files assessed: 21 agents, 12 skills (70 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md + 1 brief-contract.md + 5 kickoff templates + 7 cross-memory files), 1 agents README, 7 docs (3 top-level docs/, 1 docs/agent-audits/, 3 docs/code-intel/), 1 cursor rule, 7 tooling, 2 hooks, 29 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*

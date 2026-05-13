@@ -249,6 +249,72 @@ the team manager can extract the criteria.
 
 The verifier does not guess, does not Glob for a plan doc, and does not infer criteria from `## Scope`. It refuses and returns control to the team manager.
 
+### Example 3 — cross-memory `distill` intent brief
+
+When the `/cross-memory reflect` subcommand needs to surface candidate memories, it composes a brief like the following for the cross-memory agent:
+
+```
+## Task
+Distill candidate memories from the provided source set against the four reference sets
+and the pattern taxonomy. Return a deterministic, filtered candidate list.
+
+## Scope
+- ~/.cross-memory/** (read — for Reference Sets A and B)
+- ~/.claude/projects/<active-project-slug>/memory/MEMORY.md (read — confirm mirror state only)
+- ~/.cross-memory/projects/<active-project-slug>/reflect_declined.md (read — Reference Set C)
+- ~/.claude/CLAUDE.md (read — Reference Set D, "What NOT to save in memory" section)
+- <source-set paths listed under sources: below> (read)
+- _tmp_* (write — filter computation staging only)
+
+## Acceptance Criteria
+1. A fenced markdown block containing exactly one `## Cross-Memory Distill Candidates — <UTC timestamp>`
+   header and a per-candidate table with columns: id, type, category, scope, proposed-name,
+   body-preview, source-evidence, flags.
+2. Candidates listed in deterministic order: sorted by category lexicographically, then by
+   proposed-name lexicographically within each category.
+3. Every candidate carries a stable id (e.g., c1, c2, ... within a single run — IDs do not
+   persist across runs).
+4. Every candidate is one of the four taxonomy categories — no project-goal candidates.
+5. No candidate survives whose slug/tag/body-Jaccard against any of the four reference sets
+   exceeds the configured thresholds.
+
+## Mode
+autonomous
+
+## Constraints
+[Shared Brief Constraints — see skills/ops/SKILL.md#shared-brief-constraints]
+- intent: distill
+- active_project_slug: <active-project-slug>
+- active_harness: claude-code
+- sources:
+    source_1_transcripts: []
+    source_3_git_history: true
+    source_3_working_tree: true
+    source_4_plan_docs_glob: docs/plan/**
+    source_4_handoffs_glob: docs/cross-memory/handoff*
+    source_4_dispatch_log_glob: docs/ops-dispatch-log*
+    source_5_explicit_paths: []
+- thresholds:
+    slug_overlap: 0.85
+    tag_overlap: 0.8
+    body_token_jaccard: 0.7
+- reference_sets:
+    set_a_canonical_store: ~/.cross-memory/{user-global,projects/<active-project-slug>,harnesses/claude-code}/
+    set_b_archive: ~/.cross-memory/archive/
+    set_c_declined: ~/.cross-memory/projects/<active-project-slug>/reflect_declined.md
+    set_d_excluded_rule: ~/.claude/CLAUDE.md ("What NOT to save in memory" section — LLM-prompt exclusion corpus)
+- taxonomy:
+    - architectural-decisions
+    - conventions-implicit-in-code
+    - workflow-patterns-from-successful-runs
+    - user-preferences-from-feedback-patterns
+- size_budget: 8000
+```
+
+**Read-only-scope note:** The `## Scope` section above lists only read paths (`~/.cross-memory/**` and the source inputs) plus `_tmp_*` for filter computation staging. There are no new write paths. The agent does not write `reflect_declined.md` — the skill does, after the user types `decline <id>` in the interactive loop.
+
+The distill intent's filter consumes Sets A, B, and C deterministically against the three threshold signals (`slug_overlap: 0.85`, `tag_overlap: 0.8`, `body_token_jaccard: 0.7`); Set D is applied at the LLM-prompt layer during raw-candidate generation and is not part of the deterministic filter. The agent receives all four reference sets via the `reference_sets:` constraint block and the three threshold values via the `thresholds:` block.
+
 ---
 
 ## Versioning and Change Protocol
