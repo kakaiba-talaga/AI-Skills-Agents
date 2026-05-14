@@ -113,7 +113,6 @@
       ],
       "defaultMode": "default"
     },
-    "model": "claude-opus-4-6[1m]",
     "hooks": {
       "SessionStart": [
         {
@@ -140,5 +139,6 @@
     },
     "effortLevel": "xhigh",
     "autoUpdatesChannel": "latest",
-    "skipDangerousModePermissionPrompt": true
+    "skipDangerousModePermissionPrompt": true,
+    "model": "opus[1m]"
 }
