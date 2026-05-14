@@ -1,0 +1,345 @@
+﻿<#
+.SYNOPSIS
+    Transform skills/deploy/SKILL.md into the Cursor-compatible SKILL.cursor.md.
+
+.DESCRIPTION
+    Default behavior: drift-check. If the target SKILL.cursor.md already
+    exists and matches what this transform would produce, print "in sync"
+    and exit 0. If the target differs, print a drift summary and prompt
+    for regeneration (when stdin is a tty) or exit 3 (when stdin is not a
+    tty — CI-friendly).
+
+    Both this script and the .sh wrapper invoke the same embedded Python
+    logic (byte-identical body), so sh↔ps1 parity is guaranteed by
+    construction. Output uses LF line endings.
+
+.PARAMETER In
+    Source SKILL.md. Default: skills/deploy/SKILL.md
+
+.PARAMETER Out
+    Destination path, or "-" for stdout.
+    Default: sibling SKILL.cursor.md of -In when -In ends in /SKILL.md;
+    otherwise "-".
+
+.PARAMETER Force
+    Skip drift-check; always regenerate and write.
+
+.PARAMETER WhatIf
+    Preview only — print line count and SHA256 of what would be written.
+    Takes precedence over -Force if both are set.
+
+.EXAMPLE
+    .\tooling\transform-cursor-deploy.ps1
+    Default: drift-check. Prompts for regeneration on drift, exits 3 on
+    non-tty drift (CI-friendly).
+
+.EXAMPLE
+    .\tooling\transform-cursor-deploy.ps1 -Force
+    Force regenerate, no drift-check.
+
+.EXAMPLE
+    .\tooling\transform-cursor-deploy.ps1 -WhatIf
+    Preview SHA256 + line count.
+
+.NOTES
+    Exit codes:
+      0  Success (in-sync, wrote, what-if preview, stdout)
+      1  Input error (bad args, source not found)
+      3  Drift detected; non-tty stdin (CI-friendly: no prompt shown)
+      4  User declined regeneration at interactive prompt
+#>
+
+[CmdletBinding()]
+param(
+    [string]$In   = "skills/deploy/SKILL.md",
+    [string]$Out  = "",
+    [switch]$Force,
+    [switch]$WhatIf,
+    [switch]$Help
+)
+
+$ErrorActionPreference = "Stop"
+
+if ($Help) {
+    Get-Help $MyInvocation.MyCommand.Definition -Detailed
+    exit 0
+}
+
+if (-not (Test-Path $In)) {
+    Write-Error "Source file not found: $In"
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
+# Derive default Out: sibling SKILL.cursor.md of In when In ends in
+# /SKILL.md; otherwise default to stdout ("-").
+# ---------------------------------------------------------------------------
+if ([string]::IsNullOrEmpty($Out)) {
+    $normIn = $In -replace '\\', '/'
+    if ($normIn.EndsWith("/SKILL.md")) {
+        $Out = $normIn.Substring(0, $normIn.Length - "/SKILL.md".Length) + "/SKILL.cursor.md"
+    } else {
+        $Out = "-"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Locate Python (validate each candidate actually runs; Windows Store stubs
+# report as found but exit non-zero when invoked without the Store installed)
+# ---------------------------------------------------------------------------
+$python = $null
+$candidates = @(
+    "python3", "python",
+    "C:\Python311\python.exe", "C:\Python312\python.exe", "C:\Python313\python.exe",
+    "C:\Python310\python.exe", "C:\Python39\python.exe"
+)
+foreach ($candidate in $candidates) {
+    $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
+    if ($cmd) {
+        try {
+            & $candidate -c "import sys; assert sys.version_info >= (3,6)" 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $python = $candidate
+                break
+            }
+        } catch {
+            # skip
+        }
+    }
+}
+if (-not $python) {
+    Write-Error "Python 3.6+ is required but not found."
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
+# Embedded Python script — byte-identical to the body in transform-cursor-deploy.sh.
+# ---------------------------------------------------------------------------
+$pyScript = @'
+import sys
+import hashlib
+import os
+import difflib
+
+in_path   = sys.argv[1]
+out_path  = sys.argv[2]
+what_if   = sys.argv[3] == "true"
+force     = sys.argv[4] == "true"
+
+with open(in_path, "rb") as f:
+    raw = f.read()
+
+# Normalise to LF internally
+text = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n").decode("utf-8")
+
+# ---------------------------------------------------------------------------
+# Helper: replace first occurrence of old with new
+# ---------------------------------------------------------------------------
+def rep(old, new):
+    global text
+    idx = text.find(old)
+    if idx < 0:
+        first = old.split("\n")[0][:80]
+        print(f"WARNING: PATCH NOT FOUND: {first}...", file=sys.stderr)
+        return
+    text = text[:idx] + new + text[idx + len(old):]
+
+# ---------------------------------------------------------------------------
+# PATCH 1 — Prepend YAML frontmatter
+# ---------------------------------------------------------------------------
+first_line = text.split("\n")[0]
+rep(first_line, "---\nname: deploy\ndescription: Orchestrate deployments to remote servers via ssh-executor.\n---\n" + first_line)
+
+# ---------------------------------------------------------------------------
+# PATCH 2 — Remove /deploy slash reference in argument-parsing prose
+# ---------------------------------------------------------------------------
+rep(
+    "Free-form text after `/deploy` is the deployment description",
+    "Free-form text is the deployment description",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 3 — Replace the multi-line ssh-executor Dispatch Procedure block with
+# the Task-tool one-liner (must precede global ~/.claude/ substitution so the
+# ~/.claude/agents/ssh-executor.md reference is deleted, not translated)
+# ---------------------------------------------------------------------------
+rep(
+    "Dispatch the ssh-executor via the Agent tool. The Agent tool's `subagent_type` parameter does not accept custom agent types — `ssh-executor` is not a built-in type. You must read the agent file and include its instructions in the prompt.\n\n**ssh-executor Dispatch Procedure** (applies to ALL ssh-executor dispatches in this skill — deployment, rollback, state-check, and monitoring):\n\n1. **Read** `~/.claude/agents/ssh-executor.md`. Extract the `model` from YAML frontmatter and the full instruction body (everything after the closing `---`).\n2. **`description`**: Set to `\"ssh-executor(<target_host>: <action>)\"` — e.g., `\"ssh-executor(prod-web-01: deploy v1.4.2)\"` or `\"ssh-executor(prod-web-01: rollback)\"`. Always include the host and action so the user can identify which dispatch targets which server.\n3. **`model`**: Set from the agent's frontmatter `model` field.\n4. **`subagent_type`**: **Omit** — `ssh-executor` is not a built-in type.\n5. **`prompt`**: Concatenate the agent definition body + `\\n\\n---\\n\\n` + the deployment brief (JSON). The agent has no conversation history — the prompt must be fully self-contained.\n\nThe dispatch pattern depends on the deployment pattern selected in Phase 1.",
+    "Dispatch the ssh-executor via the Task tool with `subagent_type: \"ssh-executor\"`. Pass the brief as the task prompt. The dispatch pattern depends on the deployment pattern selected in Phase 1.",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 4 — Core Concept paragraph: Agent tool -> Task tool
+# ---------------------------------------------------------------------------
+rep(
+    "dispatch it via the Agent tool, interpret its responses",
+    "dispatch it via the Task tool, interpret its responses",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 5 — JSON config-file shape: replace placeholders with empty containers
+# ---------------------------------------------------------------------------
+rep(
+    '  "commands": [...],\n  "rollback_commands": {...},\n  "health_check": {...},\n  "sudo_authorization": ["stop_service", "start_service"],\n  "pre_hooks": [...],\n  "pre_hook_rollback": {...},\n  "post_hooks": [...]',
+    '  "commands": [],\n  "rollback_commands": {},\n  "health_check": {},\n  "sudo_authorization": ["stop_service", "start_service"],\n  "pre_hooks": [],\n  "pre_hook_rollback": {},\n  "post_hooks": []',
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 6 — Simple-push bullet: Agent tool call -> explicit Task(...) call
+# ---------------------------------------------------------------------------
+rep(
+    "Make a single Agent tool call to ssh-executor with the brief.",
+    "Make a single `Task(subagent_type=\"ssh-executor\", prompt=<brief>)` call.",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 7 — Rolling bullet: Agent tool call -> explicit Task(...) call
+# ---------------------------------------------------------------------------
+rep(
+    "Dispatch the first host's brief via Agent tool call.",
+    "Dispatch the first host's brief via `Task(subagent_type=\"ssh-executor\", prompt=<brief>)`.",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 8 — Rollback step 6: Agent tool -> explicit Task(...) call
+# ---------------------------------------------------------------------------
+rep(
+    "Dispatch the rollback ssh-executor via the Agent tool.",
+    "Dispatch the rollback ssh-executor via `Task(subagent_type=\"ssh-executor\", prompt=<rollback brief>)`.",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 9 — Opening fence for single-host report code block: add text language tag
+# ---------------------------------------------------------------------------
+rep(
+    "```\n## Deploy Result",
+    "```text\n## Deploy Result",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 10 — Parallel-dispatch sentence: insert explicit Task(...) directive
+# ---------------------------------------------------------------------------
+rep(
+    "multiple ssh-executor dispatches can run simultaneously when hosts are independent. Never dispatch two ssh-executors targeting the same host in parallel.",
+    "multiple ssh-executor dispatches can run simultaneously when hosts are independent. Issue multiple `Task(subagent_type=\"ssh-executor\")` calls in a single message to dispatch in parallel. Never dispatch two ssh-executors targeting the same host in parallel.",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 11 — Ops Integration section: replace entire block
+# ---------------------------------------------------------------------------
+rep(
+    "**When invoked from `/ops`:**\n- The team manager dispatches the deploy skill as part of a larger workflow and manages the task board.\n- The deploy skill constructs briefs, dispatches ssh-executors via the Agent tool, handles rollback, and reports results back to the team manager.\n- The deploy skill does not manage the task board — that is the team manager's responsibility.\n- Report completion back to the team manager with: deployment status, per-host summary, rollback status (if applicable), total duration.\n- When ops invokes deploy as a task, the deploy skill's Phase 7 report becomes the task's output. The team manager reads this output to update the task board and determine whether to proceed to the next stage.\n\n**When invoked standalone (direct `/deploy` invocation):**\n- The deploy skill handles its own dispatch loop via the Agent tool.\n- It manages its own rollback decisions and reporting directly to the user.\n- No task board. Progress is communicated through inline status updates and the Phase 7 report.\n\n**Badge behavior under ops:**\nWhen `/ops` invokes `/deploy`, the **`Deploy`** badge appears on turns where the deploy skill is actively doing work (constructing the brief, dispatching, reporting results). When the deploy skill finishes and control returns to `/ops`, the **`Team Manager`** badge resumes. This is expected — the badge reflects the currently active skill context, not the outermost caller.",
+    "**When invoked from ops:**\n- The ops skill dispatches the deploy skill as part of a larger workflow and manages the task board.\n- The deploy skill constructs briefs, dispatches ssh-executors via the Task tool, handles rollback, and reports results back to ops.\n- The deploy skill does not manage the task board — that is ops's responsibility.\n- Report completion back to ops with: deployment status, per-host summary, rollback status (if applicable), total duration.\n\n**When invoked standalone:**\n- The deploy skill handles its own dispatch loop via the Task tool.\n- It manages its own rollback decisions and reporting directly to the user.\n- Progress is communicated through inline status updates and the Phase 7 report.",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 12 — Constraints bullet: Bash -> Shell
+# ---------------------------------------------------------------------------
+rep(
+    "No compound Bash commands — never use `&&`, `;`, or `||`. Make separate tool calls instead.",
+    "No compound Shell commands — never use `&&`, `;`, or `||`. Make separate tool calls instead.",
+)
+
+# ---------------------------------------------------------------------------
+# PATCH 13 — Deploy-specific bullet: Agent tool -> explicit Task tool description
+# ---------------------------------------------------------------------------
+rep(
+    "**Never SSH directly** — always dispatch the ssh-executor via the Agent tool. Do not run `ssh` or `scp` commands yourself.",
+    "**Never SSH directly** — always dispatch the ssh-executor via the Task tool with `subagent_type: \"ssh-executor\"`. Do not run `ssh` or `scp` commands yourself.",
+)
+
+# ---------------------------------------------------------------------------
+# APPEND — Cursor-Specific Notes section (does not exist in SKILL.md)
+# ---------------------------------------------------------------------------
+text = text + "\n## Cursor-Specific Notes\n\n- The ssh-executor is dispatched via `Task(subagent_type=\"ssh-executor\", prompt=<brief>)`. Cursor's Task tool does not support custom model selection or tool restrictions for the dispatched agent.\n- For parallel dispatch (blue-green, independent hosts), issue multiple Task calls in a single message.\n- The `Task(run_in_background=true)` option is available for long-running deployments but is generally not needed since deployments are sequential and gated.\n"
+
+# ---------------------------------------------------------------------------
+# Global substitution: any remaining ~/.claude/ -> ~/.cursor/
+# ---------------------------------------------------------------------------
+text = text.replace("~/.claude/", "~/.cursor/")
+
+# ---------------------------------------------------------------------------
+# Output / drift-check decision
+# ---------------------------------------------------------------------------
+result_bytes = text.encode("utf-8")
+new_sha = hashlib.sha256(result_bytes).hexdigest()
+new_lines = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
+
+if what_if:
+    print(f"[WhatIf] Lines: {new_lines} | SHA256: {new_sha}")
+    sys.exit(0)
+
+if out_path == "-":
+    sys.stdout.buffer.write(result_bytes)
+    sys.exit(0)
+
+target_exists = os.path.exists(out_path)
+
+if force or not target_exists:
+    with open(out_path, "wb") as f:
+        f.write(result_bytes)
+    print(f"Written: {out_path}")
+    print(f"SHA256:  {new_sha}")
+    print(f"Lines:   {new_lines}")
+    sys.exit(0)
+
+# drift-check path: target exists, not forced
+with open(out_path, "rb") as f:
+    existing_bytes = f.read()
+existing_sha = hashlib.sha256(existing_bytes).hexdigest()
+existing_lines = existing_bytes.decode("utf-8", errors="replace").count("\n") + (1 if existing_bytes and not existing_bytes.endswith(b"\n") else 0)
+
+if existing_sha == new_sha:
+    print(f"No drift — {out_path} is in sync.")
+    sys.exit(0)
+
+# drift detected
+print(f"Drift detected: {out_path}", file=sys.stderr)
+print(f"  Old SHA: {existing_sha} ({existing_lines} lines)", file=sys.stderr)
+print(f"  New SHA: {new_sha} ({new_lines} lines)", file=sys.stderr)
+existing_text = existing_bytes.decode("utf-8", errors="replace").splitlines(keepends=True)
+new_text = text.splitlines(keepends=True)
+diff_lines = list(difflib.unified_diff(existing_text, new_text, fromfile="existing", tofile="new", n=2))
+if diff_lines:
+    print("  First differences:", file=sys.stderr)
+    for line in diff_lines[:20]:
+        print(f"    {line.rstrip()}", file=sys.stderr)
+
+sys.exit(3)
+'@
+
+# ---------------------------------------------------------------------------
+# Invoke Python. Write the embedded script to a temp file as UTF-8 (no BOM)
+# to avoid PowerShell stdin pipeline re-encoding corrupting non-ASCII bytes.
+# ---------------------------------------------------------------------------
+$whatIfArg = if ($WhatIf) { "true" } else { "false" }
+$forceArg  = if ($Force)  { "true" } else { "false" }
+
+$tmpPy = Join-Path $PWD.Path "_tmp_transform-cursor-deploy.py"
+$code = 1
+try {
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($tmpPy, $pyScript, $utf8NoBom)
+    & $python $tmpPy $In $Out $whatIfArg $forceArg
+    $code = $LASTEXITCODE
+
+    # -----------------------------------------------------------------------
+    # Wrapper drift-check prompt: on exit 3 with stdin tty, offer regeneration.
+    # Non-tty stdin → propagate 3 (CI-friendly).
+    # -----------------------------------------------------------------------
+    if ($code -eq 3 -and -not $Force) {
+        if (-not [Console]::IsInputRedirected) {
+            $response = Read-Host -Prompt "Regenerate $Out? [y/N]"
+            if ($response -match '^(y|Y|yes|Yes|YES)$') {
+                & $python $tmpPy $In $Out $whatIfArg "true"
+                $code = $LASTEXITCODE
+            } else {
+                [Console]::Error.WriteLine("Aborted — no changes written.")
+                $code = 4
+            }
+        }
+    }
+} finally {
+    if (Test-Path $tmpPy) { Remove-Item $tmpPy -Force }
+}
+exit $code
