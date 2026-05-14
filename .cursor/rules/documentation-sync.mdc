@@ -32,6 +32,7 @@ alwaysApply: false
 | `skills/code-review/README.md` | `skills/code-review/SKILL.md` |
 | `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |
 | `skills/deploy/README.md` | `skills/deploy/SKILL.md`, `skills/deploy/SKILL.cursor.md`, `skills/deploy/*.md` |
+| `skills/deploy/SKILL.cursor.md` | `skills/deploy/SKILL.md`, `tooling/transform-cursor-deploy.{ps1,sh}` |
 | `skills/deslop/README.md` | `skills/deslop/SKILL.md` |
 | `skills/kickoff/README.md` | `skills/kickoff/SKILL.md`, `skills/kickoff/project-template/**` |
 | `skills/doc-sync/README.md` | `skills/doc-sync/SKILL.md` |

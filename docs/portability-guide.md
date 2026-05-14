@@ -99,10 +99,11 @@ The deploy script detects `SKILL.cursor.md` and uses it instead of transforming 
 
 Currently, three skills have Cursor-native versions: `skills/ops/SKILL.cursor.md`, `skills/deploy/SKILL.cursor.md`, and `skills/ralph-loop/SKILL.cursor.md`.
 
+- **deploy** — 13-patch + append transform (YAML frontmatter + Agent-to-Task semantic rewrite + multi-line ssh-executor dispatch-block collapse + JSON brief placeholder normalization (`[...]`→`[]`, `{...}`→`{}`) + Bash→Shell in one constraints bullet + ops-integration section rewrite + `~/.claude/`→`~/.cursor/` + append of `## Cursor-Specific Notes` section). Transform: `tooling/transform-cursor-deploy.{sh,ps1}`.
 - **ops** — multi-patch transform (YAML frontmatter + Bash→Shell + `~/.claude/`→`~/.cursor/` + dispatch adaptations). Transform: `tooling/transform-cursor-ops.{sh,ps1}`.
 - **ralph-loop** — 4-patch transform (YAML frontmatter + Bash→Shell + `~/.claude/`→`~/.cursor/` + `/deslop` flag note). No Agent/TodoWrite/Skill dependencies. Transform: `tooling/transform-cursor-ralph-loop.{sh,ps1}`.
 
-Both transform pairs run in **drift-check mode by default**: they compare the transform output against the checked-in `SKILL.cursor.md` and either report "in sync" (exit 0), prompt interactively on drift, or exit 3 in non-interactive contexts (CI-friendly). Pass `-f` / `--force` to bypass the check and regenerate unconditionally.
+All three transform pairs run in **drift-check mode by default**: they compare the transform output against the checked-in `SKILL.cursor.md` and either report "in sync" (exit 0), prompt interactively on drift, or exit 3 in non-interactive contexts (CI-friendly). Pass `-f` / `--force` to bypass the check and regenerate unconditionally.
 
 ### Agent Tool-Restriction Hardening
 

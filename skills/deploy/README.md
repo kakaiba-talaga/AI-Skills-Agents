@@ -102,6 +102,7 @@ When ops invokes deploy, the **`Deploy`** badge appears on turns where the deplo
 | File | Purpose |
 | :--- | :--- |
 | `SKILL.md` | Main skill — argument parsing, workflow phases, constraints |
+| `SKILL.cursor.md` | Cursor-native version (drift baseline); used for Cursor deployments instead of transforming `SKILL.md` |
 | `README.md` | This file — user-facing documentation |
 | `help-card.md` | Quick reference displayed by `/deploy help` |
 | `brief-construction.md` | Field-by-field brief construction guidance and examples |

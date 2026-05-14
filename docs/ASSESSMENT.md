@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-05-09 (cross-memory v1 ship)
-**Previous assessment:** 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-05-14 (cross-memory v1.1 + v1.2 + skill optimization)
+**Previous assessment:** 2026-05-09 (cross-memory v1 ship), 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -53,8 +53,8 @@
 | Deploy | `skills/deploy/` | 9 | ~412 (Claude), ~408 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
-| Kickoff | `skills/kickoff/` | 7 | 1250 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
-| Cross-memory | `skills/cross-memory/` | 7 | 2155 | Harness-portable memory layer with eight subcommands and an opus-class agent for synthesis and audit |
+| Kickoff | `skills/kickoff/` | 7 | 451 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
+| Cross-memory | `skills/cross-memory/` | 19 | 381 | Harness-portable memory layer with nine subcommands (init, save, recall, list, forget, search, audit, doctor, reflect) and an opus-class agent for synthesis, audit, and distill |
 
 ### Documentation (`docs/`)
 
@@ -102,8 +102,12 @@
 | transform-cursor-ops.sh | Bash version of the ops Cursor transform. |
 | transform-cursor-ralph-loop.ps1 | PowerShell transform: generates `skills/ralph-loop/SKILL.cursor.md` from `SKILL.md`. |
 | transform-cursor-ralph-loop.sh | Bash version of the ralph-loop Cursor transform. |
+| transform-cursor-deploy.ps1 | PowerShell transform: generates `skills/deploy/SKILL.cursor.md` from `SKILL.md`. |
+| transform-cursor-deploy.sh | Bash version of the deploy Cursor transform. |
 
-### Planning Documents (`docs/plan/` — 29 files, gitignored except `ops-decoupling-plan.md`)
+### Planning Documents (`docs/plan/` — 33 files: 7 tracked at root + 26 archived at `docs/plan/archive/`, all gitignored except the 7 tracked plans)
+
+The seven tracked plans (`code-intel-agent-{requirements,scoping,design,plan,critique,critique-final}.md` and `ops-decoupling-plan.md`) remain at `docs/plan/` root as first-class historical references. The remaining 26 plans were moved to `docs/plan/archive/` as part of the 2026-05-14 cleanup pass — they map to shipped work in the repo and are kept locally for chronology, not for active consumption.
 
 | File | Purpose |
 |------|---------|
@@ -136,6 +140,47 @@
 | ralph-loop-skill-optimization-plan.md | Modularization plan for ralph-loop |
 | ssh-agent-plan.md | Plan for ssh-executor and ops/deploy integration |
 | unify-ops-state-management-plan.md | Plan to unify ops state management across Claude Code and Cursor |
+
+---
+
+## Changes Since Last Assessment (2026-05-09 — cross-memory v1 ship)
+
+Five ships landed between 2026-05-09 and 2026-05-14. The cross-memory skill expanded from a v1 save/recall/list/forget/search/audit surface to a v1.2 surface that includes `init`, `doctor`, and `reflect`, and was then optimized to extract twelve major sections from `SKILL.md` into dedicated sub-files. A small settings tweak and a planning-docs reorganization landed alongside.
+
+### Merge 1 — `da262ed`: cross-memory v1.1 (init + doctor)
+
+`/cross-memory init` and `/cross-memory doctor` shipped on 2026-05-09. The init subcommand provisions `~/.cross-memory/`, runs the five-step adapter precedence chain, probes the harness-native `MEMORY.md`, and writes the always-on injection block between sentinel markers. It is additive only — never deletes, overwrites, or repairs. The doctor subcommand runs read-only structural and integration health checks across the canonical store, sentinel blocks, mirrors, and redaction surface, with check sets grouped A through E. Bare invocation of `/cross-memory` gained a first-run hint that fires when the store is absent or sentinel block is missing. The check-name vocabulary and shared flag parsing landed as shared substrate for both subcommands. Full surface traceability: `docs/cross-memory/v1.1-shipped.md`.
+
+### Merge 2 — `25c291a`: cross-memory v1.1 documentation
+
+The v1.1 traceability doc (`docs/cross-memory/v1.1-shipped.md`) and supporting scoping/critic-review artifacts (`v1.1-scoping.md`, `v1.1-critic-review.md`, `v1.1-critic-review-r2.md`) landed in `docs/cross-memory/`. The CLAUDE.md doc-sync map gained a row mapping v1.1-shipped to the skill surface and agent.
+
+### Merge 3 — `e5896a1`: cross-memory v1.2 reflect subcommand + distill intent
+
+`/cross-memory reflect` proposes memory candidates distilled from git history, plan docs, handoffs, and (Claude Code only) session transcripts; it renders an interactive candidate report with nothing saved without explicit confirmation. The cross-memory agent gained a third intent, `distill`, which produces candidate memories from these sources. Two new per-project files joined the substrate: `state.toml` (tracking `last_reflect_at` and `reflect_count`) and `reflect_declined.md` (append-only decline ledger). A staleness nudge surfaces a reminder when the reflect cadence lapses. The doc-gap prerequisite — a `## What NOT to save in memory` section in `~/.claude/CLAUDE.md` — was installed at execute time so the reflect filter can reference it as a categorical exclusion corpus. Full surface traceability: `docs/cross-memory/v1.2-shipped.md`.
+
+### Merge 4 — `177e462`: cross-memory skill optimization (12-section extraction)
+
+`skills/cross-memory/SKILL.md` reduced from 2,778 lines (205 KB) to 381 lines (86.3% reduction) by extracting twelve subsections into dedicated sub-files with thin pointer blocks. Twelve new files joined `skills/cross-memory/`: `subcommand-{init,doctor,reflect,save,recall-list-search,forget,audit}.md` (nine subcommand definitions consolidated into seven files via the merged recall/list/search trio), plus `schema-validator.md`, `adapter-selection.md`, `reflect-decline-ledger.md`, `always-on-tier.md`, and `injection-block.md`. The directory now contains nineteen markdown files. Companion doc updates: the doc-sync map, `skills/cross-memory/README.md`, and the v1, v1.1, v1.2 traceability docs all gained references to the new sub-file layout. The mirror at `.cursor/rules/documentation-sync.mdc` stays byte-for-byte consistent with `CLAUDE.md`.
+
+### Merge 5 — `9796c75`: settings model key tweak
+
+`settings.json` switched the default `model` field from `claude-opus-4-6[1m]` to `opus[1m]` and moved the field to the end of the JSON object for consistency with the surrounding key ordering.
+
+### Planning-docs reorganization (2026-05-14, working-tree only)
+
+The 33 documents under `docs/plan/` were partitioned. The seven git-tracked plans (`code-intel-agent-{requirements,scoping,design,plan,critique,critique-final}.md` and `ops-decoupling-plan.md`) stay at `docs/plan/` root. The remaining 26 plans — all mapping to shipped work — were moved to `docs/plan/archive/`, which remains gitignored. This split keeps the directory navigable without losing chronology.
+
+### Net effect
+
+| Surface | Before (2026-05-09) | After (2026-05-14) |
+|---|---|---|
+| `skills/cross-memory/` SKILL.md lines | 2,155 | 381 |
+| `skills/cross-memory/` total `.md` files | 7 | 19 |
+| Cross-memory subcommands | 6 | 9 |
+| Cross-memory agent intents | 2 | 3 |
+| Planning docs at `docs/plan/` root | 29 | 7 |
+| Planning docs at `docs/plan/archive/` | 0 | 26 |
 
 ---
 
@@ -558,17 +603,17 @@ Skills invoked within pipeline stages:
 | Skills (ralph-loop) | 16 (incl. SKILL.cursor.md, 5 templates + templates README) | 16 |
 | Skills (timing-calibrator) | 2 | 2 |
 | Skills (kickoff) | 7 (incl. project-template/ scaffold with /next command) | 7 |
-| Skills (cross-memory) | 7 (SKILL.md + 5 companions + README.md) | 7 |
+| Skills (cross-memory) | 19 (SKILL.md + README.md + 17 companions: 9 subcommand definitions in 7 files, plus adapter/redaction/indexing/schema/always-on/injection/decline-ledger references) | 19 |
 | Documentation (docs/) | 3 (ASSESSMENT.md, portability-guide.md, ops-dispatch-log.md) | 3 |
 | Documentation (docs/agent-audits/) | 1 (tier-a-opus-4-7-audit.md) | 1 |
 | Documentation (docs/code-intel/) | 3 (integration-test.md, failure-mode-walkthrough.md, design-trace.md) | 3 |
 | Cursor Rules | 1 (documentation-sync.mdc) | 1 |
-| Tooling | 7 (manifest + 2 deploy scripts + 4 transform scripts) | 7 |
+| Tooling | 9 (manifest + 2 deploy scripts + 6 transform scripts) | 9 |
 | Hooks | 2 (post-compaction-context.sh, notify.sh) | 2 |
-| Planning (gitignored + 1 tracked) | 29 | 29 |
+| Planning (`docs/plan/` 7 tracked + `docs/plan/archive/` 26 gitignored) | 33 | 33 |
 | Config | 2 (.gitignore, .markdownlint.json) | 2 |
 | Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
-| **Total** | | **143** |
+| **Total** | | **161** |
 
 ---
 
