@@ -12,7 +12,7 @@ Cross-memory v1 delivers a `/cross-memory` skill, a `cross-memory` agent, and a 
 
 **Skill files** (`skills/cross-memory/`)
 
-- `SKILL.md` — subcommand router (save / recall / list / forget / search / audit), redaction pipeline, supersede flow, auto-propose gate, always-on tier filter, `[CROSS-MEMORY]` injection block formatter, adapter selection, mirror-failure handling. See `skills/cross-memory/README.md` for usage.
+- `SKILL.md` — subcommand router (save / recall / list / forget / search / audit) — full subcommand bodies extracted to `subcommand-<name>.md`; SKILL.md retains the dispatch surface, configuration, mirror-failure handling, check-name vocabulary, and shared flag parsing. See `skills/cross-memory/README.md` for usage.
 - `redaction.md` — denylist patterns and `<private>` markup parser; consumed by `SKILL.md` before any write reaches the user confirmation prompt.
 - `indexing.md` — `MEMORY.md` line-format conventions and slug derivation rule; implements Decision 19 (ADD §19).
 - `adapter-claude-code.md` — mirror logic for Claude Code (`~/.claude/projects/<slug>/memory/MEMORY.md`), including sentinel-bounded region and collision detection.

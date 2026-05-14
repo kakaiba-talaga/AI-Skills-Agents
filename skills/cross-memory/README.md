@@ -19,15 +19,15 @@ A harness-portable memory layer with nine subcommands (`init`, `save`, `recall`,
 | `reflect` | Propose memory candidates distilled from git history, plan docs, handoffs, and (Claude Code only) session transcripts. Renders an interactive candidate report; nothing is saved without explicit confirmation. | `--from-session`, `--since-last-reflect`, `--from`, `--scope`, `--staleness-days`, `--verbose` |
 
 For the full flag list and gate semantics of each subcommand, see:
-- [Subcommand: init](SKILL.md#subcommand-init)
-- [Subcommand: save](SKILL.md#subcommand-save)
-- [Subcommand: recall](SKILL.md#subcommand-recall)
-- [Subcommand: list](SKILL.md#subcommand-list)
-- [Subcommand: forget](SKILL.md#subcommand-forget)
-- [Subcommand: search](SKILL.md#subcommand-search)
-- [Subcommand: audit](SKILL.md#subcommand-audit)
-- [Subcommand: doctor](SKILL.md#subcommand-doctor)
-- [Subcommand: reflect](SKILL.md#subcommand-reflect)
+- [Subcommand: init](subcommand-init.md)
+- [Subcommand: save](subcommand-save.md)
+- [Subcommand: recall](subcommand-recall-list-search.md)
+- [Subcommand: list](subcommand-recall-list-search.md)
+- [Subcommand: forget](subcommand-forget.md)
+- [Subcommand: search](subcommand-recall-list-search.md)
+- [Subcommand: audit](subcommand-audit.md)
+- [Subcommand: doctor](subcommand-doctor.md)
+- [Subcommand: reflect](subcommand-reflect.md)
 
 ## Bare invocation
 
@@ -82,7 +82,7 @@ cross-memory initialized: harness=claude-code, store=provisioned, sentinel=updat
 
 **Cursor / generic harnesses.** `update_sentinel_block` is a documented v1 no-op on Cursor and generic harnesses. Init still runs all five steps, but the sentinel write is skipped and the summary reports `sentinel=skipped (cursor adapter no-op at v1)` or `sentinel=skipped (not-applicable)`. This is correct behavior.
 
-See [SKILL.md → Subcommand: init](SKILL.md#subcommand-init) for full step definitions, per-harness behavior tables, JSON schema, and the idempotency contract.
+See [subcommand-init.md](subcommand-init.md) for full step definitions, per-harness behavior tables, JSON schema, and the idempotency contract.
 
 ## Storage Layout
 
@@ -156,7 +156,7 @@ The adapter owns only the bytes between the sentinel markers. Content outside th
 
 The block is capped at `max_inject_chars` (default 2048 bytes). When the block would exceed the budget, sub-sections are dropped in priority order: Project Knowledge drops before User Profile; the `[CROSS-MEMORY]` header is never dropped.
 
-See [SKILL.md — Always-on tier](SKILL.md#always-on-tier) for the full filter spec and size-budget drop protocol.
+See [always-on-tier.md](always-on-tier.md) for the full filter spec and size-budget drop protocol.
 
 ## Audit
 
@@ -182,7 +182,7 @@ See [SKILL.md — Always-on tier](SKILL.md#always-on-tier) for the full filter s
 
 Every action goes through the standard write-path confirmation gate before any change is applied. The agent never auto-applies recommendations.
 
-See [agents/cross-memory.md](../../agents/cross-memory.md) and [SKILL.md — Subcommand: audit](SKILL.md#subcommand-audit).
+See [agents/cross-memory.md](../../agents/cross-memory.md) and [subcommand-audit.md](subcommand-audit.md).
 
 ## Doctor
 
@@ -223,7 +223,7 @@ See [agents/cross-memory.md](../../agents/cross-memory.md) and [SKILL.md — Sub
 
 Under the human-readable report the skill always exits 0 — chat output is the feedback channel.
 
-See [SKILL.md → Subcommand: doctor](SKILL.md#subcommand-doctor) for full check definitions, finding shapes, PASS/WARN/FAIL criteria, the post-deploy walk procedures, and the verdict aggregation rule.
+See [subcommand-doctor.md](subcommand-doctor.md) for full check definitions, finding shapes, PASS/WARN/FAIL criteria, the post-deploy walk procedures, and the verdict aggregation rule.
 
 ## Reflect
 
@@ -364,7 +364,7 @@ The only Claude-Code-only surface is Source 1 (transcript ingestion via `--from-
 
 > **v1.3 deferral.** The `--non-interactive` flag, structured `--json` output, `--context` injection, and an external-trigger / post-run-hook contract (for integration with `/ops` or CI) are deferred to v1.3. The flag grammar is intentionally extensible — `--non-interactive` can be added without restructuring the routing flow.
 
-See [SKILL.md → Subcommand: reflect](SKILL.md#subcommand-reflect) for full flag definitions, source-pipeline staging details, the interactive-loop gate semantics, filter tokenization rules, and the cross-harness matrix.
+See [subcommand-reflect.md](subcommand-reflect.md) for full flag definitions, source-pipeline staging details, the interactive-loop gate semantics, filter tokenization rules, and the cross-harness matrix.
 
 ## Configuration
 
