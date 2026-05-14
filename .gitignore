@@ -5,6 +5,9 @@
 # Planning documents are not necessary to be committed.
 docs/plan/
 
+# Run-internal audit trail; treat as local-only.
+docs/ops-dispatch-log.md
+
 # Exceptions
 !.gitattributes
 !.gitignore
