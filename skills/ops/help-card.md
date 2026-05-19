@@ -10,6 +10,7 @@
   /ops execute          Execute a plan already in conversation
   /ops status           Show current task board and progress
   /ops resume           Pick up from existing task list
+  /ops save             Manual checkpoint: state + redacted conversation context, optional reflect
   /ops ralph "<goal>"   Wrap in a ralph loop for iterative goals
   /ops help             Show this reference card
 

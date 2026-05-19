@@ -13,6 +13,12 @@ When the user says "stop", "cancel", or "abort":
 
 Do not ask "are you sure?" — if the user says stop, stop. They can always resume.
 
+### Pause vs Save
+
+Both verbs interrupt an active run, but they target different problems. **`pause`** is a mid-session bookmark: the team manager stops dispatching new work, lets any currently-running agents finish, and then waits. Conversation context is still alive, so the user can type `resume` moments later and pick up exactly where things left off — no files read back, no reconstruction needed. Use `pause` for a coffee break, a quick side-lookup, or a brief detour inside the same session.
+
+**`save`** is a journal entry for context loss. The user invokes it as a deliberate prelude to clearing the context window, closing the terminal, or stepping away long enough that the conversation will not survive. Unlike `pause`, `save` captures the conversation-side state that the state file alone cannot hold — verbal decisions made mid-run, the working hypothesis, the "where I was" note — and writes it to a save file on disk. After saving, the user typically clears the window and later runs `/ops resume` in a fresh session, which reads both the on-disk state file and the save file together to reconstruct full context. See `~/.claude/skills/ops/subcommand-save.md` for the complete save invocation flow and file schema.
+
 ## Reprioritize
 
 When the user asks to change priority, reorder tasks, or skip a stage mid-run:
