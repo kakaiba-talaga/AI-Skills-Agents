@@ -153,7 +153,7 @@ rep(
 **Inline help fallback:**
 
 ```text
-Commands: /ops <spec> | plan | execute | status | resume | ralph "<goal>" | help
+Commands: /ops <spec> | plan | execute | status | resume | save | ralph "<goal>" | help
 Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor

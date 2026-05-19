@@ -12,6 +12,7 @@ Parse arguments as follows:
 - `execute` — skip planning, create tasks from an existing plan already in the conversation.
 - `status` — show current task board and agent assignments.
 - `resume` — pick up from existing task list and continue dispatching.
+- `save` — manual checkpoint: flush state, write a redacted save file capturing conversation-side context, optionally invoke `/cross-memory reflect`. See subcommand-save.md.
 - `--autonomous` — run without checkpoints between stages (stop only at decision points).
 - `--supervised` — check in with user after every single task.
 - `--parallel N` — max concurrent agents (default: 3).
@@ -34,7 +35,7 @@ If the argument is `help`, read and display the help card:
 **Inline help fallback:**
 
 ```text
-Commands: /ops <spec> | plan | execute | status | resume | ralph "<goal>" | help
+Commands: /ops <spec> | plan | execute | status | resume | save | ralph "<goal>" | help
 Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor
@@ -125,6 +126,7 @@ Classify the invocation before reading any further. Apply the first matching rul
 
 | Route | Predicate | Behavior |
 | :--- | :--- | :--- |
+| **save** | Argument is `save` | Execute save subcommand per the Save Subcommand section below. |
 | **trivial** | Single-sentence scope AND no code changes across multiple modules AND user did not say `plan` AND not `resume` / `status` / `execute` AND no stage-crossing dependencies implied (no verify→review→document chain) | Skip to **Trivial Dispatch** below. Never reads Phase 1a, Phase 2.5, or full Phase 4. |
 | **status-only** | Argument is `status` | Read state file, render dashboard, stop. |
 | **pipeline** | Everything else — `plan`, `execute`, `resume`, `--brainstorm`, any multi-stage or multi-module request | Full workflow: Phase 1a → Phase 2 → Phase 2.5 → Phase 3 → Phase 4. |
@@ -143,6 +145,7 @@ Determine the starting point from the parsed arguments:
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
 | `resume` | Read the state file from `.ops-state/`. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. All `in_progress` tasks are treated as orphaned — the previous session's agents are gone. Dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per in-progress task to determine actual completion status. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |
 | `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) via `Task(subagent_type="generalPurpose")` with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |
+| `save` | Verify a state file exists for the current run, then follow subcommand-save.md. If no state file exists, print "/ops save requires an active run. Start one with /ops <spec> or /ops resume." and stop. |
 
 If no arguments are given, ask the user what they want to manage.
 
@@ -157,6 +160,12 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
+
+#### Save Subcommand
+
+When the triage gate routes to `save`, the team manager executes a manual checkpoint: it flushes the current run state to disk, writes a redacted save file with conversation-side context captured at this moment, and optionally invokes `/cross-memory reflect` so durable facts are not lost across session boundaries. The save subcommand does not dispatch any pipeline agents and does not advance task status.
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/subcommand-save.md` for the full save flow, schema, ritual values, redaction integration, and resume interaction. If the file is missing, print "save subcommand unavailable" and stop.
 
 #### Brainstorm Gate (opt-in, pre-planning)
 
@@ -593,7 +602,7 @@ When every task is `completed` (check state file):
 6. Display the final task board (with per-task durations).
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
-9. **Clean up temp files, handoffs, state, and code-intel run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`.agents/handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs. **Do not delete** the parent `.code-intel/runs/` directory itself.
+9. **Clean up temp files, handoffs, state, and code-intel run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`.agents/handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). Delete this run's save file (`.ops-state/<run-id>-save.json`) if present. **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs. **Do not delete** the parent `.code-intel/runs/` directory itself.
 10. Suggest natural next steps (e.g., "Ready for commit" or "Run the full test suite").
 
 ---

@@ -42,6 +42,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `skills/ops/brief-contract.md` | `skills/ops/SKILL.md` (Agent Briefing Format), `agents/{executor,verifier,debugger,git-master,project-scoper}.md` (`## Brief Format` subsections) |
 | `skills/ops/README.md` | `skills/ops/SKILL.md`, `skills/ops/SKILL.cursor.md`, `skills/ops/*.md` |
 | `skills/ops/SKILL.cursor.md` | `skills/ops/SKILL.md`, `tooling/transform-cursor-ops.{ps1,sh}` |
+| `skills/ops/subcommand-save.md` | `skills/ops/SKILL.md` (Save Subcommand subsection + Phase 4 cleanup paragraph), `skills/ops/state-schema.md` (resume_phase open-set list), `skills/ops/interruption-recovery.md` (Pause vs Save subsection), `skills/cross-memory/redaction.md` (Pass A + Pass B reuse — read-only) |
 | `skills/ralph-loop/README.md` | `skills/ralph-loop/SKILL.md`, `skills/ralph-loop/*.md` |
 | `skills/ralph-loop/SKILL.cursor.md` | `skills/ralph-loop/SKILL.md`, `tooling/transform-cursor-ralph-loop.{ps1,sh}` |
 | `skills/timing-calibrator/README.md` | `skills/timing-calibrator/SKILL.md` |

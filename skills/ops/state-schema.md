@@ -88,7 +88,7 @@ Field meanings:
 
 - `skill` — the nested skill invoked (e.g., `"/deslop"`, `"/clickup"`). Matches the skill identifier.
 - `invoked_at` — ISO-8601 UTC timestamp of invocation. Enables future stale-marker detection.
-- `resume_phase` — short identifier of where the team manager must resume. Allowed values (open set): `"phase-1-intake"`, `"phase-3-dispatch"`, `"phase-3-deslop-stage"`.
+- `resume_phase` — short identifier of where the team manager must resume. Allowed values (open set): `"phase-1-intake"`, `"phase-3-dispatch"`, `"phase-3-deslop-stage"`, `"phase-3-save-followup"`.
 - `resume_notes` — one-line human-readable instruction the team manager re-reads when clearing the marker.
 
 **Lifecycle:** `null` → set on write-before → consumed and acted upon on clear-after → `null`.

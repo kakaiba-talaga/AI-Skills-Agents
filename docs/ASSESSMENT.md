@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-05-14 (cross-memory v1.1 + v1.2 + skill optimization)
-**Previous assessment:** 2026-05-09 (cross-memory v1 ship), 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-05-19 (ops save subcommand)
+**Previous assessment:** 2026-05-14 (cross-memory v1.1 + v1.2 + skill optimization), 2026-05-09 (cross-memory v1 ship), 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -140,6 +140,16 @@ The seven tracked plans (`code-intel-agent-{requirements,scoping,design,plan,cri
 | ralph-loop-skill-optimization-plan.md | Modularization plan for ralph-loop |
 | ssh-agent-plan.md | Plan for ssh-executor and ops/deploy integration |
 | unify-ops-state-management-plan.md | Plan to unify ops state management across Claude Code and Cursor |
+
+---
+
+## Changes Since Last Assessment (2026-05-14 — cross-memory v1.1 + v1.2 + skill optimization)
+
+### `/ops save` subcommand — 2026-05-19
+
+The `/ops` skill gained a `save` subcommand that writes a manual checkpoint mid-run. Invoking `/ops save` flushes the current board state and writes a second file — `.ops-state/<run-id>-save.json` (8 fields) — capturing conversation-side context the board file does not preserve: the next intended action, verbal decisions made mid-run, the working hypothesis, and open questions awaiting a decision. The canonical spec lives in the new companion file `skills/ops/subcommand-save.md` (~189 lines); `SKILL.md` gained an argument bullet, a Triage Gate row, a Phase 1 Intake row, a Save Subcommand subsection, and a Phase 4 cleanup paragraph. `state-schema.md` gained the `phase-3-save-followup` resume phase value; `interruption-recovery.md` gained a `Pause vs Save` subsection; `help-card.md` and `README.md` were updated with the new command.
+
+Four design properties distinguish this subcommand. First, **unconditional redaction**: all four user-supplied text fields (`next_action`, `verbal_decisions`, `working_hypothesis`, `open_questions`) pass through the existing cross-memory redaction module — Pass A (regex) and Pass B (LLM) — before the file touches disk. There is no `--redact` flag and no opt-out; the subcommand reuses the existing module rather than introducing parallel logic. Second, **atomic write**: the save file is written to a temp path, parsed back to confirm valid JSON, then renamed into place on success; on failure the temp file is deleted and no partial write is left on disk. Third, **`pending_nested_skill` non-null guard**: if a nested skill is already mid-flight (the state field is non-null), the post-save prompt offering to run `/cross-memory reflect` is suppressed entirely, preventing a second nested skill from launching while one is already pending. Fourth, the **reflect handoff is optional and default-N**: the user must opt in to the `/cross-memory reflect` step after the save file is written, keeping the reflect step a deliberate choice rather than automatic behavior. The subcommand is in-run-only for v1 — it errors if no active state file is found; free-floating saves are deferred to v1.1. Cursor parity was confirmed via drift-check exit 0 after `transform-cursor-ops.{ps1,sh}` PATCH 2 inline-help sync regenerated `SKILL.cursor.md`. Doc-sync map rows were added to both `CLAUDE.md` and `.cursor/rules/documentation-sync.mdc`.
 
 ---
 

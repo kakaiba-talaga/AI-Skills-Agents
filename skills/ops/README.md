@@ -11,6 +11,7 @@ A coordination skill that manages a team of specialized agents working on a shar
 /ops execute                  # plan already in conversation
 /ops status                   # check task board
 /ops resume                   # pick up where you left off
+/ops save                     # manual checkpoint: save state and context
 /ops ralph "hit 80% coverage" # wrap in ralph loop for iterative goals
 ```
 
@@ -22,6 +23,8 @@ A coordination skill that manages a team of specialized agents working on a shar
 4. **Dispatch Loop** — Spawns agents (in parallel where safe), tracks results, handles failures.
 5. **Verify → Fix Loop** — Verification failures trigger fix cycles that loop back until clean (max 3 loops).
 6. **Completion** — Final integration verification, summary, and next steps.
+
+At any point during or after a run, `/ops save` writes a manual checkpoint: the current task-board state and a snapshot of user-typed conversation context to disk. User-typed text fields are redacted unconditionally before write, so no sensitive content leaks into the saved file.
 
 The team manager never implements, verifies, reviews, or documents itself. It only coordinates.
 
@@ -388,6 +391,7 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | `timing-edge-cases.md` | 7 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time) | Phase 4 completion and Status Dashboard display |
 | `cost-tracking.md` | Token estimation heuristics, model pricing, cost dashboard format, per-task and per-model rollup templates | Phase 4 completion (cost estimate and dashboard) |
 | `interruption-recovery.md` | Detailed procedures for cancel, reprioritize, inject tasks, remove tasks, session recovery, foreground/background dispatch explainer | User interrupts, `resume` command, dispatch context |
+| `subcommand-save.md` | Full save flow, schema, ritual values, redaction integration, resume interaction | `save` subcommand |
 | `pointer-format.md` | Standard format for pointer lines, usage notes for extraction agents | Meta-reference for maintaining pointer consistency |
 
 These companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.
