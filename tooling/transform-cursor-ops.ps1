@@ -309,11 +309,11 @@ rep(
 
 **Display the tier decision:**
 
-```
-Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]
-Signals: [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
-Action: [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
-```
+Render this tier-decision block as plain Markdown, not inside a fence. Output the lines directly into chat so the UI renders them as formatted text.
+
+**Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]**
+**Signals:** [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
+**Action:** [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/plan-validation.md` for spec clarity evaluation criteria, plan complexity scoring signals, critic verdict handling, scoper/critic output descriptions, execute-skip detection, mode-specific behavior, and adaptation rules. If the file is missing, proceed using the tier table and display format above.""",
     """**Also skip when:** `resume`, `status`, or user says "just do it" / "skip validation".
@@ -330,11 +330,11 @@ Action: [what will happen — "Proceeding to task board" / "Dispatching project-
 
 **Display the tier decision:** Always show the tier decision to the user, regardless of autonomy mode:
 
-```text
-Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]
-Signals: [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
-Action: [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
-```
+Render this tier-decision block as plain Markdown, not inside a fence. Output the lines directly into chat so the UI renders them as formatted text.
+
+**Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]**
+**Signals:** [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
+**Action:** [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
 
 In **interactive mode**, show the tier decision and wait for the user to confirm, override, or skip. The user can say:
 - "proceed" — accept the tier decision
@@ -353,11 +353,6 @@ In **supervised mode**, show the tier decision and wait for approval before each
 rep(
     "Parse the plan into discrete, assignable tasks. Create the state file.",
     "Parse the plan into discrete, assignable tasks. Create the state file and TodoWrite display.",
-)
-
-rep(
-    "```\nRun ID: <plan-slug>-<ISO-date>\nState file: .ops-state/<run-id>-board.json\nPlan file: docs/plan/<name>-plan.md (if one was written in Phase 1)\n```",
-    "```text\nRun ID: <plan-slug>-<ISO-date>\nState file: .ops-state/<run-id>-board.json\nPlan file: docs/plan/<name>-plan.md (if one was written in Phase 1)\n```",
 )
 
 rep(
@@ -461,6 +456,8 @@ rep(
 
    **Mechanical agents.** Some agents are convention-blind: their output does not change based on project rules because they are read-only analysis tools or mechanical revert agents. These agents derive no benefit from rule injection and incur unnecessary brief overhead. The list at v1 is:
 
+   > **Literal constant definition — keep fenced.** The block below is a code-style definition used for reference, not a user-facing UI output. Do not unfence it.
+
    ```
    MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
    ```
@@ -499,6 +496,8 @@ rep(
 
    **Post-selector rule.** If the selector returns empty bytes, omit `## Project Knowledge` entirely — do not render an empty heading. If the selector returns non-empty bytes, render them as the `## Project Knowledge` section in the brief, placed **between `## Context` and `## Scope`**. After rendering, append the sentinel marker on its own line at the bottom of the section:
 
+   > **Literal sentinel string — keep fenced.** The block below is an exact byte sequence written into agent brief text, not a user-facing UI output. Do not unfence it.
+
    ```
    <!-- project-knowledge:carried -->
    ```
@@ -506,6 +505,8 @@ rep(
    This sentinel enables the next attempt's predicate to detect that the section was carried, avoiding re-injection.
 
    **Cursor first-time awareness banner.** When the active harness is **Cursor** AND this is the first dispatch in the current session that fires injection (i.e., the selector returned non-empty bytes AND the run-level state field `memory_inject_banner_emitted` is not yet `true`), emit the following one-line banner to the user before the dispatch:
+
+   > **Literal banner text — keep fenced.** The block below is the exact one-line string emitted to the user as a plain text message, not a formatted dashboard output. Do not unfence it.
 
    ```
    [memory-inject] Subagent briefs now carry ## Project Knowledge from your canonical store; top-level Cursor turns do not yet see this — see adapter-cursor.md §6 for the trust-model implication.
@@ -537,6 +538,8 @@ The Agent tool's `subagent_type` parameter accepts any agent type that has a def
 
    **Mechanical agents.** Some agents are convention-blind: their output does not change based on project rules because they are read-only analysis tools or mechanical revert agents. These agents derive no benefit from rule injection and incur unnecessary brief overhead. The list at v1 is:
 
+   > **Literal constant definition — keep fenced.** The block below is a code-style definition used for reference, not a user-facing UI output. Do not unfence it.
+
    ```
    MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
    ```
@@ -575,6 +578,8 @@ The Agent tool's `subagent_type` parameter accepts any agent type that has a def
 
    **Post-selector rule.** If the selector returns empty bytes, omit `## Project Knowledge` entirely — do not render an empty heading. If the selector returns non-empty bytes, render them as the `## Project Knowledge` section in the brief, placed **between `## Context` and `## Scope`**. After rendering, append the sentinel marker on its own line at the bottom of the section:
 
+   > **Literal sentinel string — keep fenced.** The block below is an exact byte sequence written into agent brief text, not a user-facing UI output. Do not unfence it.
+
    ```
    <!-- project-knowledge:carried -->
    ```
@@ -582,6 +587,8 @@ The Agent tool's `subagent_type` parameter accepts any agent type that has a def
    This sentinel enables the next attempt's predicate to detect that the section was carried, avoiding re-injection.
 
    **Cursor first-time awareness banner.** Since this IS the Cursor harness, this banner FIRES on the first dispatch in the current session that fires injection (i.e., the selector returned non-empty bytes AND the banner has not yet been emitted this session). Emit the following one-line banner to the user before the dispatch:
+
+   > **Literal banner text — keep fenced.** The block below is the exact one-line string emitted to the user as a plain text message, not a formatted dashboard output. Do not unfence it.
 
    ```
    [memory-inject] Subagent briefs now carry ## Project Knowledge from your canonical store; top-level Cursor turns do not yet see this — see adapter-cursor.md §6 for the trust-model implication.
@@ -608,6 +615,8 @@ rep(
 # ---------------------------------------------------------------------------
 rep(
     """**Dispatch example:**
+
+> **Code invocation example — keep fenced.** The block below is a code-style invocation example, not a user-facing UI output. Do not unfence it.
 
 ```
 Agent(
@@ -837,8 +846,8 @@ executor(task3) ──┘
 # PATCH 39 — Verify→Fix Loop: ``` → ```text
 # ---------------------------------------------------------------------------
 rep(
-    "## Verify → Fix Loop\n\n```\nexecutor → verifier → [FAIL] → executor (fix) → verifier (re-verify) → [PASS] → code-reviewer\n                                     ↑                    |\n                                     └────── [FAIL] ──────┘\n```",
-    "## Verify → Fix Loop\n\n```text\nexecutor → verifier → [FAIL] → executor (fix) → verifier (re-verify) → [PASS] → code-reviewer\n                                     ↑                    |\n                                     └────── [FAIL] ──────┘\n```",
+    "## Verify → Fix Loop\n\n> **ASCII flow diagram — keep fenced.** The blocks below are loop diagrams for reference, not user-facing UI output. Do not unfence them.\n\n```\nexecutor → verifier → [FAIL] → executor (fix) → verifier (re-verify) → [PASS] → code-reviewer\n                                     ↑                    |\n                                     └────── [FAIL] ──────┘\n```",
+    "## Verify → Fix Loop\n\n> **ASCII flow diagram — keep fenced.** The blocks below are loop diagrams for reference, not user-facing UI output. Do not unfence them.\n\n```text\nexecutor → verifier → [FAIL] → executor (fix) → verifier (re-verify) → [PASS] → code-reviewer\n                                     ↑                    |\n                                     └────── [FAIL] ──────┘\n```",
 )
 
 # ---------------------------------------------------------------------------
@@ -897,8 +906,8 @@ rep(
 # PATCH 45 — Status Dashboard: ``` → ```text + remove health indicators
 # ---------------------------------------------------------------------------
 rep(
-    "```\n## Team Manager — Status\n\n### Active\n- <agent> → Task #N: \"<subject>\" (in_progress, Xs elapsed) [health indicator]\n\nHealth indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2.5×), 🔴 OVERRUN (> 2.5×), 👻 ORPHAN? (elapsed > agent-type timeout, no completion received)",
-    "```text\n## Team Manager — Status\n\n### Active\n- <agent> → Task #N: \"<subject>\" (in_progress, Xs elapsed)",
+    "## Team Manager — Status\n\n### Active\n- <agent> → Task #N: \"<subject>\" (in_progress, Xs elapsed) [health indicator]\n\nHealth indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2.5×), 🔴 OVERRUN (> 2.5×), 👻 ORPHAN? (elapsed > agent-type timeout, no completion received)",
+    "## Team Manager — Status\n\n### Active\n- <agent> → Task #N: \"<subject>\" (in_progress, Xs elapsed)",
 )
 
 # ---------------------------------------------------------------------------
@@ -939,7 +948,7 @@ rep(
 # PATCH 49 — Model escalation → Retry strategy
 # ---------------------------------------------------------------------------
 rep(
-    "### Model escalation\n\n```\n1st attempt: assigned model (from frontmatter)\n2nd attempt: same model, with error context and narrowed scope\n3rd attempt: escalate model (sonnet → opus), with full error history\n4th attempt: escalate to user\n```\n\n> **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.",
+    "### Model escalation\n\n> **Algorithm steps — keep fenced.** The block below is a reference enumeration for internal logic, not a user-facing UI output. Do not unfence it.\n\n```\n1st attempt: assigned model (from frontmatter)\n2nd attempt: same model, with error context and narrowed scope\n3rd attempt: escalate model (sonnet → opus), with full error history\n4th attempt: escalate to user\n```\n\n> **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.",
     """### Retry strategy
 
 When an agent fails, the team-manager retries with increasing context before escalating:

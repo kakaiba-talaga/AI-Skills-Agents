@@ -219,11 +219,11 @@ The plan document is infrastructure — not a deliverable task — written befor
 
 **Display the tier decision:** Always show the tier decision to the user, regardless of autonomy mode:
 
-```text
-Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]
-Signals: [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
-Action: [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
-```
+Render this tier-decision block as plain Markdown, not inside a fence. Output the lines directly into chat so the UI renders them as formatted text.
+
+**Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]**
+**Signals:** [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
+**Action:** [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
 
 In **interactive mode**, show the tier decision and wait for the user to confirm, override, or skip. The user can say:
 - "proceed" — accept the tier decision
@@ -260,11 +260,11 @@ Parse the plan into discrete, assignable tasks. Create the state file and TodoWr
 
 **1. Initialize the state file (MANDATORY — do not skip):**
 
-```text
-Run ID: <plan-slug>-<ISO-date>
-State file: .ops-state/<run-id>-board.json
-Plan file: docs/plan/<name>-plan.md (if one was written in Phase 1)
-```
+Render this initialization block as plain Markdown, not inside a fence. Output the lines directly into chat so the UI renders them as formatted text.
+
+**Run ID:** `<plan-slug>-<ISO-date>`
+**State file:** `.ops-state/<run-id>-board.json`
+**Plan file:** `docs/plan/<name>-plan.md` (if one was written in Phase 1)
 
 Create the directory and file using these exact steps:
 
@@ -427,6 +427,8 @@ On the first Phase 2.5b dispatch when `.code-intel/index.sqlite` is absent, the 
 
 Compose a JSON-fenced brief and embed it in the dispatch prompt. The **JSON-fenced brief is the sole and authoritative orchestrator-path signal** — the agent detects the orchestrator caller by the presence of a fenced `json` block, not by any additional marker or sentinel. Do not add a `[context]` literal block. Run-scoped context (`run_id`, `files_touched`, `predicate_match`, `executor_brief_excerpt`) belongs in the standard **`## Context` Markdown section** of the agent brief per `skills/ops/SKILL.md:486-506` — the agent reads that Markdown for human-readable display only and does not act on it programmatically.
 
+> **Literal JSON brief — keep fenced.** The block below is the exact JSON payload passed to the `code-intel` agent, not a user-facing UI output. Do not unfence it.
+
 ```json
 {
   "query_type": "impact_analysis",
@@ -446,6 +448,8 @@ Compose a JSON-fenced brief and embed it in the dispatch prompt. The **JSON-fenc
 #### Dispatch contract — what code-intel returns
 
 For `output_mode: "disk"` (the orchestrator default), `code-intel` returns this JSON-fenced response:
+
+> **Literal JSON response shape — keep fenced.** The block below documents the exact JSON structure returned by `code-intel`, not a user-facing UI output. Do not unfence it.
 
 ```json
 {
@@ -480,6 +484,8 @@ When `--dispatch-log` is set, Phase 2.5b dispatches append to `docs/ops-dispatch
 #### Attaching to the executor brief
 
 After a successful Phase 2.5b dispatch, append a `Code Intelligence Context:` block to the executor's brief:
+
+> **Literal agent-brief text — keep fenced.** The block below is the exact text appended to the executor's prompt string, not a user-facing UI output. Do not unfence it.
 
 ```text
 Code Intelligence Context: see .code-intel/runs/<run-id>/impact_analysis-<symbol>.md
@@ -529,6 +535,8 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 
    **Mechanical agents.** Some agents are convention-blind: their output does not change based on project rules because they are read-only analysis tools or mechanical revert agents. These agents derive no benefit from rule injection and incur unnecessary brief overhead. The list at v1 is:
 
+   > **Literal constant definition — keep fenced.** The block below is a code-style definition used for reference, not a user-facing UI output. Do not unfence it.
+
    ```
    MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
    ```
@@ -567,6 +575,8 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 
    **Post-selector rule.** If the selector returns empty bytes, omit `## Project Knowledge` entirely — do not render an empty heading. If the selector returns non-empty bytes, render them as the `## Project Knowledge` section in the brief, placed **between `## Context` and `## Scope`**. After rendering, append the sentinel marker on its own line at the bottom of the section:
 
+   > **Literal sentinel string — keep fenced.** The block below is an exact byte sequence written into agent brief text, not a user-facing UI output. Do not unfence it.
+
    ```
    <!-- project-knowledge:carried -->
    ```
@@ -574,6 +584,8 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
    This sentinel enables the next attempt's predicate to detect that the section was carried, avoiding re-injection.
 
    **Cursor first-time awareness banner.** Since this IS the Cursor harness, this banner FIRES on the first dispatch in the current session that fires injection (i.e., the selector returned non-empty bytes AND the banner has not yet been emitted this session). Emit the following one-line banner to the user before the dispatch:
+
+   > **Literal banner text — keep fenced.** The block below is the exact one-line string emitted to the user as a plain text message, not a formatted dashboard output. Do not unfence it.
 
    ```
    [memory-inject] Subagent briefs now carry ## Project Knowledge from your canonical store; top-level Cursor turns do not yet see this — see adapter-cursor.md §6 for the trust-model implication.
@@ -584,6 +596,8 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 5. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
 
 **Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):
+
+> **Literal prompt string — keep fenced.** This is the exact text passed to each spawned agent as its prompt, not a user-facing UI output. Do not unfence it.
 
 ```
 You are running as agent type: <agent_type>.
@@ -678,6 +692,8 @@ When spawning an agent via the Task tool, always provide a **complete, self-cont
 
 The contract at `~/.cursor/skills/ops/brief-contract.md` is the single source of truth for the brief format. Each consumer agent declares its per-agent application of the contract in its own `## Brief Format` subsection. The fenced shape below is the producer-side rendering of what the contract specifies — it shows the section headers and placeholder text the team manager emits; the contract describes the semantic rules that govern each section.
 
+> **Literal prompt template — keep fenced.** The block below is the agent-side prompt body passed to spawned agents as a text string, not a user-facing UI output. Do not unfence it.
+
 ```text
 ## Task
 [Subject from the task]
@@ -751,6 +767,8 @@ When a task completes and feeds into a downstream task, write a **handoff docume
 
 ## Handoff Chains
 
+> **ASCII flow diagrams below — keep fenced.** The blocks below are pipeline diagrams for reference, not user-facing UI output. Do not unfence them.
+
 Pre-planning chain (optional, for work requiring design exploration):
 
 ```text
@@ -784,6 +802,8 @@ executor(task3) ──┘
 ---
 
 ## Verify → Fix Loop
+
+> **ASCII flow diagram — keep fenced.** The blocks below are loop diagrams for reference, not user-facing UI output. Do not unfence them.
 
 ```text
 executor → verifier → [FAIL] → executor (fix) → verifier (re-verify) → [PASS] → code-reviewer
@@ -869,7 +889,12 @@ When escalating, always include enough context for the user to make a decision w
 
 Show the full dashboard on `status` command and at completion. For runs with ≥ 3 non-internal tasks, also show at stage transitions. For runs with ≤ 2 non-internal tasks, stage transitions collapse to a one-line status — see Non-negotiables #8.
 
-```text
+Render the dashboard using native Markdown — output the `##` headers, `|...|` tables, and `**bold**` directly into chat. **Do NOT wrap your dashboard output in a fenced code block** (triple backticks); fencing causes the chat UI to render it as gray raw text instead of formatted sections.
+
+Past user incident: the team manager wrapped its dashboard output in fences and the renderer showed raw `##` and `|` characters in a gray box. The unfence-by-default rule prevents recurrence.
+
+---
+
 ## Team Manager — Status
 
 ### Active
@@ -898,7 +923,8 @@ Show the full dashboard on `status` command and at completion. For runs with ≥
 
 ### Escalations
 - (none)
-```
+
+---
 
 The Timing section is mandatory in every dashboard display — see Non-negotiables #7. Show elapsed time for in-progress tasks and final duration for completed tasks. At completion, always include total wall time, per-stage totals, and the longest task.
 
