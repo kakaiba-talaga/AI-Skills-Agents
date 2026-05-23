@@ -76,6 +76,10 @@ Briefs for this agent use **labeled-prose only** — both human and orchestrator
 
 The brief's `## Scope` section lists no `audit-reports/` write target — audit output is the agent's return value, rendered to chat by the calling skill.
 
+**Optional:** `## Project Knowledge`
+
+**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. Mandatory escalation for security/correctness/safety-flagged contradictions is governed by `skills/ops/brief-contract.md` § Section Precedence.
+
 ## Lane Boundaries
 
 **Read-only on source code** and on per-memory `<type>_<slug>.md` mirror files under `~/.claude/projects/*/memory/` — those files are the Claude Code adapter's territory, not the agent's.

@@ -48,6 +48,25 @@ If the task is `help` or asks what this agent can do, display the following refe
   work-verifier → (verdicts feed into dispatch decisions)
 ````
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+The team manager dispatches the work-verifier with a brief in the universal format described in the contract above. The work-verifier reads three required sections and three optional sections:
+
+- **Required:** `## Task`, `## Scope`, `## Constraints`
+- **Optional:** `## Context`, `## Acceptance Criteria`, `## Project Knowledge`
+
+**`## Project Knowledge`:** (i) The section informs but does not override `## Acceptance Criteria` or `## Scope`. (ii) The mandatory `NEEDS-INPUT` escalation applies when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
+
+> **Note:** work-verifier is in `MECHANICAL_AGENTS`. Under the default predicate the orchestrator skips injection for this agent. `## Project Knowledge` appears in a brief only when the `--memory-inject=always` override is active. The section is listed here so that override-path dispatches are handled correctly.
+
+**Missing `## Acceptance Criteria`:** note the absence and proceed — the work-verifier produces per-deliverable verdicts rather than gating on a pass/fail criteria list itself. When `## Acceptance Criteria` is present, use it to scope which deliverables to verify.
+
+**Internal inconsistency** (e.g., `## Scope` lists different deliverables than `## Task` describes): escalate rather than silently picking one side. Return a `NEEDS-INPUT` verdict with a clear statement of which sections conflict; see `skills/ops/brief-contract.md` § Section Precedence for the precedence rules.
+
+**File-class allowlist** — the work-verifier is read-only. It does not Edit/Write any file class. All findings are reported in the response only.
+
 ## When you're dispatched
 
 - By `/ops resume` to verify `in_progress` tasks before re-dispatching

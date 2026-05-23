@@ -80,6 +80,26 @@ The build debugger does **not** invoke `code-intel` directly — that is the tea
 
 - **Refusal handling** — if the brief says the consultation was attempted but refused (symbol not found, hard cap hit, malformed brief), proceed *without* the context. Call out the absence in any user-facing summary. Refusal is not a blocker — it is a signal to look more carefully, not a reason to stop.
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+**Required sections:** `## Task`, `## Scope`, `## Constraints`.
+
+**Optional sections:** `## Acceptance Criteria` (the build debugger reads these but does not branch on them — they inform the fix report, not the investigation strategy), `## Context` (often contains error output, reproduction steps, or correlated changes), `## Handoff Artifacts` (often the verifier's FAILED report or a prior build-debug session's findings), `## Code Intelligence Context` (symbol-resolution reports for symbol-shaped build errors), `## Project Knowledge`.
+
+**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The debugger-build honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
+
+**Missing-section behavior:**
+
+- Missing `## Task` — refuse the dispatch. The error description is non-negotiable; without it the investigation has no entry point.
+- Empty or absent `## Scope` — default to "investigate broadly" across the affected module or the full codebase if no module is identifiable. This is a lightweight stop-gap; the team manager should always supply scope.
+
+**File-class allowlist:**
+
+- In-scope (Edit/Write): `source` (the minimal fix), `config` (dependency or build-config correction), `test` (one regression test that fails without the fix and passes with it).
+- Excluded (no Edit/Write): `docs`, `agent-contract`, `plan-doc`. Flag any needed doc updates to the user.
+
 ## Workflow
 
 ### Build/compilation error investigation

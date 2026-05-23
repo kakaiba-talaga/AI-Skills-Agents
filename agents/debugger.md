@@ -97,7 +97,9 @@ The **code-intel** agent can produce structural reports — caller graphs, execu
 
 **Required sections:** `## Task`, `## Scope`, `## Constraints`.
 
-**Optional sections:** `## Acceptance Criteria` (the debugger reads these but does not branch on them — they inform the debug report, not the investigation strategy), `## Context` (often contains symptoms, reproduction steps, or correlated changes), `## Handoff Artifacts` (often the verifier's FAILED report or a prior debug session's findings), `## Code Intelligence Context` (call-chain execution-flow reports for call-chain-shaped bugs).
+**Optional sections:** `## Acceptance Criteria` (the debugger reads these but does not branch on them — they inform the debug report, not the investigation strategy), `## Context` (often contains symptoms, reproduction steps, or correlated changes), `## Handoff Artifacts` (often the verifier's FAILED report or a prior debug session's findings), `## Code Intelligence Context` (call-chain execution-flow reports for call-chain-shaped bugs), `## Project Knowledge`.
+
+**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The debugger honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 
 **Missing-section behavior:**
 

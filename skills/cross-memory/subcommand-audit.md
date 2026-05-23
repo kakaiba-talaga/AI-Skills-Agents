@@ -69,3 +69,4 @@ On any input other than a recognized action-plus-identifier, the skill re-displa
 - **Agent brief format and output contract**: `agents/cross-memory.md` (`## Brief Format` and `## Output Contract — audit`).
 - **`staleness_threshold_days` config field**: `## Config` above.
 - **Harness selection and audit environment block**: `adapter-selection.md` (the audit report's environment block names the active harness and the step that selected it).
+- **Tag values are free-form per `schema-validator.md`; the audit does not enforce a whitelist.** The `exclude:<agent>` prefix is one example of a permitted tag pattern — see `brief-injector.md` for the full tag vocabulary.

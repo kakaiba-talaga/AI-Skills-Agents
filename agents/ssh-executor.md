@@ -51,6 +51,35 @@ If the task is `help` or asks what this agent can do, display the following refe
   ← code-reviewer (on REQUEST CHANGES for remote configs)
 ````
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+The ssh-executor is dispatched with a brief in the universal format described in the contract above. However, the dispatch shape is unusual: the `/deploy` skill does **not** use `subagent_type` to invoke the ssh-executor. Instead, it reads this agent file verbatim and includes the full body in the Agent tool `prompt` parameter. The brief (a structured JSON block describing the target host, commands, rollback commands, health check, and timeout) is appended after the agent body.
+
+**Prompt construction by the deploy skill:**
+
+```
+<agent body — full ssh-executor instructions>
+
+---
+
+<deployment brief JSON>
+```
+
+When the `/deploy` skill injects `## Project Knowledge`, that section is rendered as a **prose preamble at the top of the prompt**, before the inlined agent body. The ssh-executor reads the preamble as standing context (host whitelists, deploy windows, secret-handling rules, and similar durable project rules), then reads its own instructions, then reads the per-host brief.
+
+**Section mapping from the universal grammar:**
+
+- **Required (carried in the per-host JSON brief):** `target_host`, `commands`, `rollback_commands`, `health_check`, `timeout`
+- **Optional:** `## Project Knowledge`, `sudo_authorization`, `pre_hooks`, `artifact`
+
+**`## Project Knowledge` (Optional):**
+
+**(i)** The section informs but does not override `## Acceptance Criteria` or `## Scope`. When project rules and brief-level instructions conflict on a non-security matter, the brief governs for that dispatch.
+
+**(ii)** The ssh-executor honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet (or a brief-level instruction) contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence). Host whitelists, deploy windows, and secret-handling rules are typical durable rules — a `## Constraints` bullet that asks for one of these to be bypassed must escalate rather than execute.
+
 ## Relationship to the pipeline
 
 This agent executes remote commands on behalf of whatever invokes it. It has no fixed position in any pipeline — its placement depends entirely on the invoker's workflow.

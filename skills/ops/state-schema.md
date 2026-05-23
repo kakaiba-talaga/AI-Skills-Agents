@@ -61,7 +61,8 @@ The state file JSON structure:
       "_internal": false
     }
   ],
-  "pending_nested_skill": null
+  "pending_nested_skill": null,
+  "memory_inject_banner_emitted": false
 }
 ```
 
@@ -94,6 +95,20 @@ Field meanings:
 **Lifecycle:** `null` → set on write-before → consumed and acted upon on clear-after → `null`.
 
 **Backward compatibility:** The `pending_nested_skill` field is additive. State files written before this field was introduced will not have it. The team manager treats absence as equivalent to `null`. No migration is required.
+
+### memory_inject_banner_emitted
+
+Root-level field tracking whether the Cursor first-time memory-injection awareness banner has been emitted in the current session.
+
+**Type:** `boolean` (default `false` when absent).
+
+**When `false` (or absent):** The banner has not yet fired this session. The first dispatch that fires injection under the Cursor harness will emit the banner and set this field to `true`.
+
+**When `true`:** The banner has already fired this session. Suppress subsequent banner emissions even if more injection-eligible dispatches follow.
+
+**Behavior:** The team manager writes `memory_inject_banner_emitted: true` immediately after emitting the banner, before the dispatch that triggered it proceeds. Under Claude Code, this field remains `false` (the banner is suppressed because there is no trust-model inversion to disclose — the top-level turn already sees `[CROSS-MEMORY]`).
+
+**Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `false`. No migration is required.
 
 ## Task Description Fields
 

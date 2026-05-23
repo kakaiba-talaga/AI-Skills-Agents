@@ -156,6 +156,8 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Shell(command="mkdir -p .ops-state")`. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with `Read`. Also call `TodoWrite(merge=false)` with the single task item.
 2. **Assign agent type:** Apply the Agent Assignment Rules table (Phase 2) — same lookup, same precedence rules. No manual override.
 3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. Use `description_inline` directly to compose the Context, Scope, and Acceptance Criteria sections. The agent has no conversation history — the prompt must be fully self-contained.
+
+   **Memory-injection predicate (trivial path).** Trivial runs always have `attempt=1` and `prior_handoff=None`, so the sentinel-marker handoff-detection branch never applies. The only gates are the override flag and the `MECHANICAL_AGENTS` list: skip injection when `--memory-inject=off` or when `agent_type` ∈ `MECHANICAL_AGENTS`; otherwise call the selector with `enable_agent_type_intersection=true` (or `false` when `--memory-inject=always`). If the selector returns non-empty bytes, render `## Project Knowledge` **between `## Context` and `## Scope`** in the brief and append the sentinel marker `<!-- project-knowledge:carried -->` at the bottom of that section. If empty bytes are returned, omit the section. The selector call references `skills/cross-memory/brief-injector.md` for the full function signature. The Cursor first-time awareness banner rule from Phase 3 Step 3 applies here as well — check `memory_inject_banner_emitted` and emit the banner once if appropriate.
 4. **Dispatch:** Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`. The prompt instructs the agent to read its own definition as its first action (see Agent Dispatch Procedure for the self-read prompt template).
 5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 
@@ -217,11 +219,11 @@ The plan document is infrastructure — not a deliverable task — written befor
 
 **Display the tier decision:** Always show the tier decision to the user, regardless of autonomy mode:
 
-```text
-Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]
-Signals: [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
-Action: [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
-```
+Render this tier-decision block as plain Markdown, not inside a fence. Output the lines directly into chat so the UI renders them as formatted text.
+
+**Plan Validation: Tier [N] — [Skip / Scope only / Scope + Critique]**
+**Signals:** [list which signals triggered, e.g., "6 impl tasks (high), new agent architecture (high), security model (medium)"]
+**Action:** [what will happen — "Proceeding to task board" / "Dispatching project-scoper" / "Dispatching project-scoper → critic"]
 
 In **interactive mode**, show the tier decision and wait for the user to confirm, override, or skip. The user can say:
 - "proceed" — accept the tier decision
@@ -258,11 +260,11 @@ Parse the plan into discrete, assignable tasks. Create the state file and TodoWr
 
 **1. Initialize the state file (MANDATORY — do not skip):**
 
-```text
-Run ID: <plan-slug>-<ISO-date>
-State file: .ops-state/<run-id>-board.json
-Plan file: docs/plan/<name>-plan.md (if one was written in Phase 1)
-```
+Render this initialization block as plain Markdown, not inside a fence. Output the lines directly into chat so the UI renders them as formatted text.
+
+**Run ID:** `<plan-slug>-<ISO-date>`
+**State file:** `.ops-state/<run-id>-board.json`
+**Plan file:** `docs/plan/<name>-plan.md` (if one was written in Phase 1)
 
 Create the directory and file using these exact steps:
 
@@ -425,6 +427,8 @@ On the first Phase 2.5b dispatch when `.code-intel/index.sqlite` is absent, the 
 
 Compose a JSON-fenced brief and embed it in the dispatch prompt. The **JSON-fenced brief is the sole and authoritative orchestrator-path signal** — the agent detects the orchestrator caller by the presence of a fenced `json` block, not by any additional marker or sentinel. Do not add a `[context]` literal block. Run-scoped context (`run_id`, `files_touched`, `predicate_match`, `executor_brief_excerpt`) belongs in the standard **`## Context` Markdown section** of the agent brief per `skills/ops/SKILL.md:486-506` — the agent reads that Markdown for human-readable display only and does not act on it programmatically.
 
+> **Literal JSON brief — keep fenced.** The block below is the exact JSON payload passed to the `code-intel` agent, not a user-facing UI output. Do not unfence it.
+
 ```json
 {
   "query_type": "impact_analysis",
@@ -444,6 +448,8 @@ Compose a JSON-fenced brief and embed it in the dispatch prompt. The **JSON-fenc
 #### Dispatch contract — what code-intel returns
 
 For `output_mode: "disk"` (the orchestrator default), `code-intel` returns this JSON-fenced response:
+
+> **Literal JSON response shape — keep fenced.** The block below documents the exact JSON structure returned by `code-intel`, not a user-facing UI output. Do not unfence it.
 
 ```json
 {
@@ -478,6 +484,8 @@ When `--dispatch-log` is set, Phase 2.5b dispatches append to `docs/ops-dispatch
 #### Attaching to the executor brief
 
 After a successful Phase 2.5b dispatch, append a `Code Intelligence Context:` block to the executor's brief:
+
+> **Literal agent-brief text — keep fenced.** The block below is the exact text appended to the executor's prompt string, not a user-facing UI output. Do not unfence it.
 
 ```text
 Code Intelligence Context: see .code-intel/runs/<run-id>/impact_analysis-<symbol>.md
@@ -518,9 +526,78 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk.
 2. Update TodoWrite: `TodoWrite(merge=true, todos=[{id: "task-N", content: "...", status: "in_progress"}])`.
 3. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read(path="docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
-4. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
+4. **Evaluate the memory-injection predicate (Lever 1) and call the selector (Lever 2).** Before spawning the agent, determine whether to inject `## Project Knowledge` into the brief.
+
+   **Override flag.** The run-level flag `--memory-inject=off|auto|always` controls injection:
+   - `off` — skip injection unconditionally for every dispatch in this run.
+   - `auto` (default) — apply the full predicate below.
+   - `always` — skip the predicate; call the selector with `enable_agent_type_intersection=false` (pure always-on tier output, no agent-type tag filtering).
+
+   **Mechanical agents.** Some agents are convention-blind: their output does not change based on project rules because they are read-only analysis tools or mechanical revert agents. These agents derive no benefit from rule injection and incur unnecessary brief overhead. The list at v1 is:
+
+   > **Literal constant definition — keep fenced.** The block below is a code-style definition used for reference, not a user-facing UI output. Do not unfence it.
+
+   ```
+   MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
+   ```
+
+   An agent belongs on this list when project conventions do not change its output — read-only or convention-blind agents that neither author files nor apply coding standards. To add or remove an agent from the list, edit it here.
+
+   **Predicate decision tree.** Evaluate top-to-bottom; the first matching branch governs:
+
+   | Condition | Action |
+   | :--- | :--- |
+   | `--memory-inject=off` | Skip injection. Proceed to spawn without `## Project Knowledge`. |
+   | `agent_type` ∈ `MECHANICAL_AGENTS` | Skip injection. Proceed to spawn without `## Project Knowledge`. |
+   | `attempt > 1` AND the prior handoff body contains the exact sentinel `<!-- project-knowledge:carried -->` | Skip injection (section was already carried in the prior attempt's handoff). |
+   | `--memory-inject=always` | Call selector with `enable_agent_type_intersection=false`. Inject if bytes returned. |
+   | Otherwise (default `auto` path) | Call selector with `enable_agent_type_intersection=true`. Inject if bytes returned. |
+
+   **Handoff-detection rule (sentinel marker).** On retry (attempt > 1), the predicate searches the prior handoff body for the sentinel marker `<!-- project-knowledge:carried -->`. The prior handoff body is the content of the file referenced by the upstream task's `handoff_file` field in the state JSON. Detection is **exact-byte grep** — no regular expressions, no whitespace tolerance, no case folding. The literal byte sequence `<!-- project-knowledge:carried -->` must match or the predicate proceeds as if the sentinel is absent.
+
+   Behavior on detection: skip injection — the downstream agent already received the section in the prior attempt's handoff and the content is considered carried.
+   Behavior on no detection: proceed with the normal predicate flow above.
+
+   **Why the sentinel approach?** A naïve substring scan for `## Project Knowledge` at the start of a line produces false positives when a handoff body contains a Markdown code fence that quotes a brief structure as an example — code fences do not indent their content, so column-0 matching cannot distinguish a real heading from a fenced example. The HTML-comment sentinel does not appear inside rendered Markdown code fences in normal output, eliminating this false-positive class.
+
+   **Failure shapes (both non-correctness-breaking):**
+   - Sentinel emitted but not detected on retry → predicate proceeds, brief carries the section a second time. Cost: duplicate bytes on attempt-2+ dispatches. Recovery: tighten the sentinel grep or verify the handoff file was written correctly.
+   - Sentinel detected but content removed from the prior handoff (e.g., the handoff file was edited after the orchestrator wrote it) → predicate skips, agent retry operates without rules. Cost: same posture as pre-injection behavior. Recovery: none needed; the next fresh dispatch will re-inject.
+
+   **Selector call.** Call the function documented in `skills/cross-memory/brief-injector.md` with a context object derived from the dispatch state:
+   - `agent_type` — the task's `agent_type` value from the state file
+   - `task_subject` — the task's `subject` field
+   - `stage` — the task's `stage` field
+   - `attempt` — the current attempt number
+   - `prior_handoff` — full body of the upstream handoff file, or `None` if attempt == 1
+   - `enable_agent_type_intersection` — `true` for default-inject, `false` for `always`-override
+   - `budget_chars` — pass the call-site budget (default: read `max_brief_inject_chars` from `~/.cross-memory/config.yaml`, default `4096`)
+
+   **Post-selector rule.** If the selector returns empty bytes, omit `## Project Knowledge` entirely — do not render an empty heading. If the selector returns non-empty bytes, render them as the `## Project Knowledge` section in the brief, placed **between `## Context` and `## Scope`**. After rendering, append the sentinel marker on its own line at the bottom of the section:
+
+   > **Literal sentinel string — keep fenced.** The block below is an exact byte sequence written into agent brief text, not a user-facing UI output. Do not unfence it.
+
+   ```
+   <!-- project-knowledge:carried -->
+   ```
+
+   This sentinel enables the next attempt's predicate to detect that the section was carried, avoiding re-injection.
+
+   **Cursor first-time awareness banner.** Since this IS the Cursor harness, this banner FIRES on the first dispatch in the current session that fires injection (i.e., the selector returned non-empty bytes AND the banner has not yet been emitted this session). Emit the following one-line banner to the user before the dispatch:
+
+   > **Literal banner text — keep fenced.** The block below is the exact one-line string emitted to the user as a plain text message, not a formatted dashboard output. Do not unfence it.
+
+   ```
+   [memory-inject] Subagent briefs now carry ## Project Knowledge from your canonical store; top-level Cursor turns do not yet see this — see adapter-cursor.md §6 for the trust-model implication.
+   ```
+
+   Emit the banner exactly once per Cursor session (track via a session-level first-emission cookie — once emitted, do not emit again in the same session). The harness-conditional check still applies: suppress on any non-Cursor harness.
+
+5. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
 
 **Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):
+
+> **Literal prompt string — keep fenced.** This is the exact text passed to each spawned agent as its prompt, not a user-facing UI output. Do not unfence it.
 
 ```
 You are running as agent type: <agent_type>.
@@ -615,6 +692,8 @@ When spawning an agent via the Task tool, always provide a **complete, self-cont
 
 The contract at `~/.cursor/skills/ops/brief-contract.md` is the single source of truth for the brief format. Each consumer agent declares its per-agent application of the contract in its own `## Brief Format` subsection. The fenced shape below is the producer-side rendering of what the contract specifies — it shows the section headers and placeholder text the team manager emits; the contract describes the semantic rules that govern each section.
 
+> **Literal prompt template — keep fenced.** The block below is the agent-side prompt body passed to spawned agents as a text string, not a user-facing UI output. Do not unfence it.
+
 ```text
 ## Task
 [Subject from the task]
@@ -688,6 +767,8 @@ When a task completes and feeds into a downstream task, write a **handoff docume
 
 ## Handoff Chains
 
+> **ASCII flow diagrams below — keep fenced.** The blocks below are pipeline diagrams for reference, not user-facing UI output. Do not unfence them.
+
 Pre-planning chain (optional, for work requiring design exploration):
 
 ```text
@@ -721,6 +802,8 @@ executor(task3) ──┘
 ---
 
 ## Verify → Fix Loop
+
+> **ASCII flow diagram — keep fenced.** The blocks below are loop diagrams for reference, not user-facing UI output. Do not unfence them.
 
 ```text
 executor → verifier → [FAIL] → executor (fix) → verifier (re-verify) → [PASS] → code-reviewer
@@ -806,7 +889,12 @@ When escalating, always include enough context for the user to make a decision w
 
 Show the full dashboard on `status` command and at completion. For runs with ≥ 3 non-internal tasks, also show at stage transitions. For runs with ≤ 2 non-internal tasks, stage transitions collapse to a one-line status — see Non-negotiables #8.
 
-```text
+Render the dashboard using native Markdown — output the `##` headers, `|...|` tables, and `**bold**` directly into chat. **Do NOT wrap your dashboard output in a fenced code block** (triple backticks); fencing causes the chat UI to render it as gray raw text instead of formatted sections.
+
+Past user incident: the team manager wrapped its dashboard output in fences and the renderer showed raw `##` and `|` characters in a gray box. The unfence-by-default rule prevents recurrence.
+
+---
+
 ## Team Manager — Status
 
 ### Active
@@ -835,7 +923,8 @@ Show the full dashboard on `status` command and at completion. For runs with ≥
 
 ### Escalations
 - (none)
-```
+
+---
 
 The Timing section is mandatory in every dashboard display — see Non-negotiables #7. Show elapsed time for in-progress tasks and final duration for completed tasks. At completion, always include total wall time, per-stage totals, and the longest task.
 
@@ -967,7 +1056,7 @@ Cursor does not have a permission enforcement system like Claude Code's `setting
 
 ## Output Tagging
 
-The **first line** of each assistant turn MUST begin with **`Team Manager`** (bold backtick-wrapped). Apply on turns containing dashboards, dispatch notifications, stage transitions, escalations, and completion summaries. Do **not** repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+The first line of each assistant turn MUST begin with **Team Manager** (bold-only, no backticks). Apply on turns containing dashboards, dispatch notifications, stage transitions, escalations, and completion summaries. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
 
 ---
 

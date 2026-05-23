@@ -60,7 +60,9 @@ If the task is `help` or asks what this agent can do, display the following refe
 The team manager dispatches the executor with a brief in the universal format described in the contract above. The executor reads four required sections and two optional sections:
 
 - **Required:** `## Task`, `## Scope`, `## Acceptance Criteria`, `## Constraints`
-- **Optional:** `## Context`, `## Code Intelligence Context`
+- **Optional:** `## Context`, `## Code Intelligence Context`, `## Project Knowledge`
+
+**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The executor honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 
 **Missing `## Acceptance Criteria`:** refuse the dispatch — do not infer criteria from `## Scope`, `## Task`, or any other section. Return a `NEEDS-INPUT` verdict and ask for an explicit numbered criteria list or a plan-doc reference. This closes the brief-section-parsing gap (the executor used to infer criteria from the wrong section when `## Acceptance Criteria` was absent); see `skills/ops/brief-contract.md` §6.6 for the full missing-section table.
 

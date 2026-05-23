@@ -60,7 +60,9 @@ If the task is `help` or asks what this agent can do, display the following refe
 The team manager dispatches git-master with a brief containing these sections.
 
 **Required:** `## Task`, `## Scope`, `## Constraints`.
-**Optional:** `## Mode`, `## Acceptance Criteria` (rare for git operations).
+**Optional:** `## Mode`, `## Acceptance Criteria` (rare for git operations), `## Project Knowledge`.
+
+**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The git-master honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence). The commit-trailer rule and `.gitignore` boundary are example durable rules; a `## Constraints` bullet that asks for either to be bypassed must escalate.
 
 **Mode handling** (closes the runtime-undetectable mode gap — the agent used to fork on `interactive` vs `autonomous` without a contractual source for the field):
 

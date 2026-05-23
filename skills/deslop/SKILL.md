@@ -369,10 +369,20 @@ For each batch, in order:
 
 **b. Skip verification if `--no-verify`.** Proceed directly to the next batch and log a warning.
 
-**c. Invoke the verifier agent.** Use the Agent tool with `subagent_type: "verifier"`. Brief the verifier:
+**c. Invoke the verifier agent.** Use the Agent tool with `subagent_type: "verifier"`.
+
+  **Memory-injection predicate.** Before composing the brief, evaluate the predicate documented in `skills/ops/SKILL.md` Phase 3 Step 3 and call the selector from `skills/cross-memory/brief-injector.md`. For deslop's per-batch verifier dispatches, the simplified predicate is:
+
+  - If `--memory-inject=off`: skip injection.
+  - Otherwise: `verifier` is not in `MECHANICAL_AGENTS`, and each per-batch dispatch is the first (and only) attempt for that batch — no prior handoff exists. Apply the default `auto` path: call the selector with `enable_agent_type_intersection=true`.
+  - If `--memory-inject=always`: call the selector with `enable_agent_type_intersection=false`.
+
+  If the selector returns non-empty bytes, render them as `## Project Knowledge` placed **before** the inline prose brief. If the selector returns empty bytes, omit the section and proceed with the prose brief alone.
+
+  Brief the verifier:
   > "Run the tests relevant to these modified files: [file list]. Focus on regression detection — any test failure counts as FAIL. Do not evaluate acceptance criteria. Report PASS or FAIL with a brief reason."
 
-  **Fallback if verifier unavailable:** If the verifier agent cannot be invoked (agent file missing at `~/.claude/agents/verifier.md` or invocation fails), fall back to a **lightweight build/compile check** directly via Bash. Detect the project's build tool from config files and run: `go build ./...` (Go), `tsc --noEmit` (TypeScript), `python -m py_compile <file>` (Python), `cargo check` (Rust), or the equivalent. This catches syntax errors, import breakage, and type errors from deletions — not as thorough as a full test suite, but sufficient to detect the most common deslop regressions. Automatically shift to `--conservative` mode if not already in it. Log: 'Verifier unavailable — using lightweight build check as fallback (conservative mode).' If no build tool is detected, proceed without verification, warn the user, and note in the report: 'Per-batch verification: skipped (no verifier agent and no build tool found).'
+  **Fallback if verifier unavailable:** If the verifier agent cannot be invoked (agent file missing at `~/.claude/agents/verifier.md` or invocation fails), fall back to a **lightweight build/compile check** directly via Bash. Detect the project's build tool from config files and run: `go build ./...` (Go), `tsc --noEmit` (TypeScript), `python -m py_compile <file>` (Python), `cargo check` (Rust), or the equivalent. This catches syntax errors, import breakage, and type errors from deletions — not as thorough as a full test suite, but sufficient to detect the most common deslop regressions. Automatically shift to `--conservative` mode if not already in it. Log: 'Verifier unavailable — using lightweight build check as fallback (conservative mode).' If no build tool is detected, proceed without verification, warn the user, and note in the report: 'Per-batch verification: skipped (no verifier agent and no build tool found).' The memory-injection predicate applies only when the verifier agent dispatch fires — the lightweight build/compile fallback runs without injection.
 
 **d. On PASS:** Record the batch as applied. Proceed to the next batch.
 
@@ -396,9 +406,19 @@ After all batches are complete, run `/linter` on all files that were modified by
 
 ### Step 7 — Code Review Pass
 
-**Fallback if code-reviewer unavailable:** If the code-reviewer agent cannot be invoked (agent file missing at `~/.claude/agents/code-reviewer.md` or invocation fails), fall back to a **lightweight self-review diff scan**. Deslop reads its own cumulative diff (`git diff` on modified files) and checks for the most dangerous deslop-specific mistakes: (1) deleted lines that are still referenced by other files (grep for the deleted symbol name across the codebase), (2) inlined code where indentation or scope changed incorrectly, (3) removed error handlers in functions that perform I/O, network calls, or database operations. This is not as thorough as a dedicated code-reviewer agent — it cannot catch subtle logic bugs or assess architectural impact — but it catches the highest-risk deslop regressions. Log: 'Code-reviewer unavailable — running lightweight self-review diff scan as fallback.' Include the self-review findings in the report under Code Review with the note: 'Code review: lightweight self-review (code-reviewer agent unavailable). Manual review still recommended for complex changes.'
+**Fallback if code-reviewer unavailable:** If the code-reviewer agent cannot be invoked (agent file missing at `~/.claude/agents/code-reviewer.md` or invocation fails), fall back to a **lightweight self-review diff scan**. Deslop reads its own cumulative diff (`git diff` on modified files) and checks for the most dangerous deslop-specific mistakes: (1) deleted lines that are still referenced by other files (grep for the deleted symbol name across the codebase), (2) inlined code where indentation or scope changed incorrectly, (3) removed error handlers in functions that perform I/O, network calls, or database operations. This is not as thorough as a dedicated code-reviewer agent — it cannot catch subtle logic bugs or assess architectural impact — but it catches the highest-risk deslop regressions. Log: 'Code-reviewer unavailable — running lightweight self-review diff scan as fallback.' Include the self-review findings in the report under Code Review with the note: 'Code review: lightweight self-review (code-reviewer agent unavailable). Manual review still recommended for complex changes.' The memory-injection predicate applies only when the code-reviewer agent dispatch fires — the lightweight self-review fallback runs without injection.
 
-Invoke the **code-reviewer** agent once on the cumulative diff of all applied deslop changes. Use the Agent tool with `subagent_type: "code-reviewer"`. Brief the reviewer:
+Invoke the **code-reviewer** agent once on the cumulative diff of all applied deslop changes. Use the Agent tool with `subagent_type: "code-reviewer"`.
+
+**Memory-injection predicate.** Before composing the brief, evaluate the predicate documented in `skills/ops/SKILL.md` Phase 3 Step 3 and call the selector from `skills/cross-memory/brief-injector.md`. For the code-reviewer dispatch, the simplified predicate is:
+
+- If `--memory-inject=off`: skip injection.
+- Otherwise: `code-reviewer` is not in `MECHANICAL_AGENTS`, and this dispatch is the first (and only) attempt for the review pass — no prior handoff exists. Apply the default `auto` path: call the selector with `enable_agent_type_intersection=true`.
+- If `--memory-inject=always`: call the selector with `enable_agent_type_intersection=false`.
+
+If the selector returns non-empty bytes, render them as `## Project Knowledge` placed **before** the inline prose brief. If the selector returns empty bytes, omit the section and proceed with the prose brief alone.
+
+Brief the reviewer:
 
 > "Review this diff for correctness. Focus specifically on: (1) Did any deletion break logic that the tests did not catch? (2) Did any inlining introduce subtle bugs? (3) Did removal of error handling leave a gap that could cause a silent failure in production? Do not review style. Report APPROVE, APPROVE WITH COMMENTS, or REQUEST CHANGES."
 
@@ -654,13 +674,7 @@ No state file is used. If the thread appears summarized or mid-run state is miss
 
 ## Output Tagging
 
-The **first line** of every assistant turn MUST begin with **`Deslop`** (bold backtick-wrapped).
-
-The badge appears only on the opening line of each turn. Do not repeat it on continuation lines, headings, or bullets within the same turn.
-
-**Format:** `**\`Deslop\`**` — bold, backtick-wrapped, as the first element on the opening line.
-
-**Apply the badge on:** scope resolution messages, savepoint creation, analysis progress, per-batch progress, linter pass status, code review delegation status, final report, warnings, and context recovery.
+The first line of each assistant turn MUST begin with **Deslop** (bold-only, no backticks). Apply on turns containing scope resolution messages, savepoint creation, analysis progress, per-batch progress, linter pass status, code review delegation status, final report, warnings, and context recovery. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
 
 **Example:**
 
