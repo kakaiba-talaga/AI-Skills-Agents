@@ -14,7 +14,7 @@
 21 agent definitions + 1 README.
 
 | File | Model | Role |
-|------|-------|------|
+| :--- | :--- | :--- |
 | interviewer.md | opus | Socratic requirements interview before planning |
 | architect.md | opus | Design exploration and Architecture Decision Documents (ADDs) |
 | planner.md | opus | Breaks specs into structured implementation plans |
@@ -42,7 +42,7 @@
 12 multi-file skills. 6 converted from single-file commands in the initial restructure; 1 added in the ops decoupling; 1 added as the kickoff skill; 1 added in the cross-memory v1 ship.
 
 | Skill | Directory | Files | SKILL.md Lines | Purpose |
-|-------|-----------|-------|----------------|---------|
+| :--- | :--- | :--- | :--- | :--- |
 | ClickUp | `skills/clickup/` | 2 | ~276 | ClickUp REST API integration |
 | Code Review | `skills/code-review/` | 2 | ~207 | Diff-based code review orchestration |
 | Commit Message | `skills/commit-message/` | 2 | ~75 | Conventional Commits message generation |
@@ -59,7 +59,7 @@
 ### Documentation (`docs/`)
 
 | File | Purpose |
-|------|---------|
+| :--- | :--- |
 | `docs/ASSESSMENT.md` | This file — periodic repo health snapshots |
 | `docs/portability-guide.md` | Format differences and tool gaps between Claude Code and Cursor |
 | `docs/ops-dispatch-log.md` | Append-only audit trail of `/ops` dispatch decisions (opt-in via `--dispatch-log`; 18 lines — seed header only until populated) |
@@ -67,13 +67,13 @@
 ### Documentation (`docs/agent-audits/`)
 
 | File | Purpose |
-|------|---------|
+| :--- | :--- |
 | `docs/agent-audits/tier-a-opus-4-7-audit.md` | Tier A Opus 4.7 explicitness audit — 5 core agents reviewed, 4 BLOCKERs + 27 MAJORs + 19 MINORs found; BLOCKERs resolved via brief-contract spec |
 
 ### Documentation (`docs/code-intel/`)
 
 | File | Purpose |
-|------|---------|
+| :--- | :--- |
 | `docs/code-intel/integration-test.md` | 418-line walkthrough spec for ralph-loop → /ops → code-intel end-to-end integration test |
 | `docs/code-intel/failure-mode-walkthrough.md` | 85-line R10 walkthrough covering 13 failure-mode scenarios |
 | `docs/code-intel/design-trace.md` | 76-line R1–R11 + Q1–Q10 design trace table (21 rows, all DONE) |
@@ -81,20 +81,20 @@
 ### Hooks (`hooks/`)
 
 | File | Purpose |
-|------|---------|
+| :--- | :--- |
 | post-compaction-context.sh | Restores project context after Claude Code compaction events |
 | notify.sh | Cross-platform notification script (Windows toast, macOS osascript, Linux notify-send) |
 
 ### Cursor Rules (`.cursor/rules/`)
 
 | File | Purpose |
-|------|---------|
+| :--- | :--- |
 | documentation-sync.mdc | Mirror of `CLAUDE.md` § Documentation Sync for Cursor, loaded as a cursor rule |
 
 ### Tooling (`tooling/`)
 
 | File | Purpose |
-|------|---------|
+| :--- | :--- |
 | deploy-manifest.json | Maps repo source directories to tool-specific global directories. 3 targets (claude-code, claude-code-wsl, cursor), 4 categories (agents, skills, hooks, settings). |
 | deploy.ps1 | PowerShell deploy script (primary). `SKILL.cursor.md` detection, agent tool-restriction hardening, `--prune` mode, hooks/settings deployment. |
 | deploy.sh | Bash deploy script (cross-platform, requires `jq`). Same features as deploy.ps1. |
@@ -110,7 +110,7 @@
 The seven tracked plans (`code-intel-agent-{requirements,scoping,design,plan,critique,critique-final}.md` and `ops-decoupling-plan.md`) remain at `docs/plan/` root as first-class historical references. The remaining 26 plans were moved to `docs/plan/archive/` as part of the 2026-05-14 cleanup pass — they map to shipped work in the repo and are kept locally for chronology, not for active consumption.
 
 | File | Purpose |
-|------|---------|
+| :--- | :--- |
 | agent-health-monitoring-gaps-plan.md | Plan to close agent health monitoring gaps in dispatch and recovery |
 | agent-roster-expansion-architecture.md | Architecture doc for agent roster expansion (architect and security-reviewer additions) |
 | agent-splitting-plan.md | Plan to split large agents into smaller definitions |
@@ -215,7 +215,7 @@ The 33 documents under `docs/plan/` were partitioned. The seven git-tracked plan
 Five Tier A consumer agents gained a new `## Brief Format` subsection linking them to the contract and listing their required brief inputs:
 
 | Agent | File |
-|-------|------|
+| :--- | :--- |
 | Executor | `agents/executor.md` (194 lines) |
 | Verifier | `agents/verifier.md` (237 lines) |
 | Debugger | `agents/debugger.md` (306 lines) |
@@ -239,7 +239,7 @@ The prior assessment (2026-04-26) reported `skills/ops/` at 15 files. A tree ins
 ### Supporting touchpoints
 
 | Change | Detail |
-|--------|--------|
+| :--- | :--- |
 | **`docs/agent-audits/`** | New subdirectory established. `tier-a-opus-4-7-audit.md` is the first entry. |
 | **`skills/ops/brief-contract.md`** | New companion file (281 lines). Not deployed to Cursor — Claude Code only. |
 | **`3f0ef61`** | Handoff storage moved from `docs/plan/.handoffs/` to `.agents/handoffs/` (refactor between assessment commits; no tracked files changed). |

@@ -5,7 +5,7 @@ This document describes the format differences between Claude Code and Cursor, w
 ## Format Differences
 
 | Aspect | Claude Code | Cursor |
-|--------|------------|--------|
+| :--- | :--- | :--- |
 | Agent format | YAML: `name`, `model`, `description`, `tools` | YAML: `name`, `description` only (no `model`/`tools`) |
 | Agent location | `~/.claude/agents/` | `~/.cursor/agents/` |
 | Skill entry point | `SKILL.md`; may have no frontmatter; can use `$ARGUMENTS` | `SKILL.md` with required `name` + `description` frontmatter |
@@ -45,7 +45,7 @@ The deploy script (`tooling/deploy.ps1` / `tooling/deploy.sh`) automates all tra
 ## Tool Name Mapping
 
 | Claude Code | Cursor | Notes |
-|------------|--------|-------|
+| :--- | :--- | :--- |
 | `Bash` | `Shell` | Same capabilities, different name |
 | `Edit` | `StrReplace` | Cursor uses exact string replacement instead of line-based edits |
 | `Write` | `Write` | Same in both |
@@ -60,7 +60,7 @@ The deploy script (`tooling/deploy.ps1` / `tooling/deploy.sh`) automates all tra
 These Claude Code features have no direct counterpart in Cursor. The mechanical transform cannot address these gaps. For ops and deploy, Cursor-native `SKILL.cursor.md` versions provide functional workarounds (see Cursor-Native Adaptations below).
 
 | Feature | Impact | Severity | Mitigation |
-|---------|--------|----------|------------|
+| :--- | :--- | :--- | :--- |
 | `TaskCreate`/`TaskUpdate`/`TaskList` | No shared task board for multi-agent coordination. | **Mitigated** | Both Claude Code and Cursor versions of ops now use a JSON state file (`.ops-state/<run-id>-board.json`) as the task board. Cursor adds `TodoWrite` as a display layer on top. Full metadata, dependencies, and timing preserved. |
 | `Agent` tool with custom `model`/`tools` | Cannot spawn agents with a specific model or restrict their tool access. | **Mitigated** | Ops and deploy use `Task(subagent_type=...)` for dispatch. Deploy script injects `## Tool Constraints` markdown into agent bodies for tool-restricted agents. Model selection is not possible — documented as accepted limitation. |
 | `Skill` tool | Cannot programmatically invoke another skill from within a skill. | **Mitigated** | Read-and-dispatch pattern: read the target skill's `SKILL.md` from `~/.cursor/skills/<name>/SKILL.md`, then follow inline or pass to `Task(subagent_type="generalPurpose")`. |
