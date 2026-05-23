@@ -1056,7 +1056,7 @@ Cursor does not have a permission enforcement system like Claude Code's `setting
 
 ## Output Tagging
 
-The **first line** of each assistant turn MUST begin with **`Team Manager`** (bold backtick-wrapped). Apply on turns containing dashboards, dispatch notifications, stage transitions, escalations, and completion summaries. Do **not** repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+The first line of each assistant turn MUST begin with **Team Manager** (bold-only, no backticks). Apply on turns containing dashboards, dispatch notifications, stage transitions, escalations, and completion summaries. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
 
 ---
 

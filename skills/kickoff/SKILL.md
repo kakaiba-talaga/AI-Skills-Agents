@@ -14,15 +14,7 @@ If `help` is the argument, display a brief summary of the above flags and the 7 
 
 ## Output Tagging
 
-**`Kickoff`** appears on the **opening line** of each assistant turn only. Do **not** prefix every bullet or heading in the same turn.
-
-The **first line** of each assistant turn for this command MUST begin with: **`Kickoff`**
-
-Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
-
-Apply the badge on turns that contain: phase announcements, status/progress messages, interview prompts, agent dispatch notifications, error messages, and the final handoff summary.
-
-**Format:** **`Kickoff`** (bold backtick-wrapped) as the **first element** on the **opening line** of the turn.
+The first line of each assistant turn MUST begin with **Kickoff** (bold-only, no backticks). Apply on turns containing phase announcements, status/progress messages, interview prompts, agent dispatch notifications, error messages, and the final handoff summary. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
 
 ---
 

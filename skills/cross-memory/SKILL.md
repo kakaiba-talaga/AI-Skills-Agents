@@ -376,12 +376,4 @@ If the conversation thread is summarized, compacted, or interrupted mid-flow, re
 
 ## Output Tagging
 
-**`Cross-Memory`** appears on the **opening line** of each assistant turn only. Do **not** prefix every bullet or heading in the same turn.
-
-The **first line** of each assistant turn for this command MUST begin with: **`Cross-Memory`**
-
-Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
-
-Apply the badge on the opening line of turns that contain: save confirmations, recall results, list output, forget confirmations, search results, audit output, status/progress messages, validation errors, and auto-propose proposals.
-
-**Format:** **`Cross-Memory`** (bold backtick-wrapped) as the **first element** on the **opening line** of the turn.
+The first line of each assistant turn MUST begin with **Cross-Memory** (bold-only, no backticks). Apply on turns containing save confirmations, recall results, list output, forget confirmations, search results, audit output, status/progress messages, validation errors, and auto-propose proposals. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.

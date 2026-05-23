@@ -64,12 +64,4 @@ type(scope): #issue Short imperative description.
 
 ## Output tagging
 
-**`Commit`** appears on the **opening line** of each assistant turn only. Do **not** prefix every bullet or heading in the same turn.
-
-The **first line** of each assistant turn for this command MUST begin with: **`Commit`**
-
-Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
-
-Apply the badge on the opening line of turns that contain: the generated commit message presentation, status/progress messages, warnings, and confirmations.
-
-**Format:** **`Commit`** (bold backtick-wrapped) as the **first element** on the **opening line** of the turn.
+The first line of each assistant turn MUST begin with **Commit** (bold-only, no backticks). Apply on turns containing the generated commit message presentation, status/progress messages, warnings, and confirmations. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
