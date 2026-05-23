@@ -123,6 +123,8 @@ Max-Results: 50
 
 Fields map one-to-one to the JSON brief fields. `Output:` maps to `output_mode`. `Max-Depth:`, `Max-Files:`, `Max-Wall-Clock-S:` are also accepted.
 
+**Optional (labeled-prose path only):** `## Project Knowledge` — informs but does not override any field in the labeled-prose brief. JSON-fenced briefs do NOT carry `## Project Knowledge`; the JSON schema is not extended with this field.
+
 ## Lane Boundaries
 
 **Read-only on source code.** Source files are inputs, never outputs. You read them; you never write them.

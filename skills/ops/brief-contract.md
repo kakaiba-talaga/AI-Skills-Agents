@@ -113,6 +113,16 @@ The sections below are not required in every brief. Their absence is not an erro
 
 **When absent:** Proceed without it. Phase 2.5b is advisory — its absence is not a blocker.
 
+### `## Project Knowledge`
+
+**When present:** When the orchestrator predicate fired AND the selector (documented in `skills/cross-memory/brief-injector.md`) returned non-empty bytes.
+
+**Content:** Selector output rendered under the `## Project Knowledge` heading — the `User Profile:` and `Project Knowledge:` sub-sections defined in `skills/cross-memory/injection-block.md`. These sub-sections carry the user's standing durable rules from the canonical store.
+
+**When absent:** Predicate was skipped OR the selector returned empty bytes — proceed without it. No escalation required. This section is often absent by design; predicate-gated injection means many dispatches will omit it.
+
+**Precedence:** This section sits at **tier 1.5** — below `## Acceptance Criteria` (tier 1) but above `## Scope` (tier 2), `## Constraints` (tier 3), and `## Context` / `## Code Intelligence Context` (tier 4). User-global durable rules carried here are NOT overridable by a per-task `## Constraints` bullet. See the Section Precedence section below for the full ordering and the mandatory escalation rule for security/correctness/safety contradictions.
+
 ---
 
 ## Section Precedence
@@ -120,11 +130,31 @@ The sections below are not required in every brief. Their absence is not an erro
 When the brief contains an internal contradiction (for example, `## Scope` lists different files than `## Acceptance Criteria` references), apply this precedence order:
 
 1. **`## Acceptance Criteria`** is the contractual bar. It defines what done means. No other section overrides it.
+1.5. **`## Project Knowledge`** carries the user's standing durable rules from the canonical store. These rules sit above per-task scope and constraints; they are not overridable by a `## Constraints` bullet in the same brief.
 2. **`## Scope`** constrains where the work happens. It cannot expand the criteria, but it can narrow the set of files the agent touches while satisfying them.
 3. **`## Constraints`** further restricts how the work happens. Task-specific constraints narrow the allowed approach.
-4. **`## Context`** and **`## Code Intelligence Context`** inform what the agent considers. They never override the above three.
+4. **`## Context`** and **`## Code Intelligence Context`** inform what the agent considers. They never override the above tiers.
 
-**On contradiction:** When `## Scope` and `## Acceptance Criteria` reference contradictory file sets or modules, the consumer must **escalate** — do not silently resolve by picking one side. Return a `NEEDS-INPUT` verdict with a clear statement of the contradiction and which sections conflict.
+**Mandatory `NEEDS-INPUT` escalation for security/correctness/safety contradictions.** When a task-specific `## Constraints` bullet contradicts a `## Project Knowledge` rule whose body or tags signal security, correctness, or safety semantics, the agent MUST escalate via `NEEDS-INPUT` rather than silently apply the constraint. The v1 detection is body-keyword based: if the durable rule's body contains any of the following keywords — *secret*, *credential*, *token*, *redact*, *prod*, *production*, *destroy*, *drop*, *delete*, *force*, *auth* — the rule is security-flagged and the contradiction requires explicit user confirmation. The escalation message must name: (a) the conflicting durable rule (with its memory file path if available), (b) the conflicting `## Constraints` bullet, (c) an explicit ask for the user to confirm which one governs this task. Err on the side of escalating when body language is ambiguous.
+
+**Advisory escalation for non-security durable rules.** When a task-specific `## Constraints` bullet contradicts a `## Project Knowledge` rule that does not trigger any of the security-flagged keywords — for example, a style preference, naming convention, or formatting choice — the agent notes the conflict in its handoff and proceeds with the `## Constraints` bullet as the local override for that single task. The conflict is surfaced to the user in the handoff output so it can be reviewed. Err on the side of escalating when the body language is ambiguous.
+
+**Example `NEEDS-INPUT` escalation message shape:**
+
+```
+NEEDS-INPUT: Conflict between durable rule and task-specific constraint.
+
+Durable rule (from ~/.cross-memory/.../feedback_redact_secrets_by_default.md):
+> Snapshot/save/checkpoint surfaces must redact secrets unconditionally...
+
+Task-specific constraint:
+> Include the production API token verbatim in the test fixture for this task.
+
+The durable rule has security semantics (keyword: "redact", "secret", "production").
+Which governs this task — the durable rule (redact unconditionally) or the task-specific constraint (include verbatim)?
+```
+
+**On contradiction between `## Scope` and `## Acceptance Criteria`:** When these two sections reference contradictory file sets or modules, the consumer must **escalate** — do not silently resolve by picking one side. Return a `NEEDS-INPUT` verdict with a clear statement of the contradiction and which sections conflict.
 
 ---
 
@@ -140,6 +170,7 @@ When the brief contains an internal contradiction (for example, `## Scope` lists
 | `## Mode` | Default to `autonomous`. | No escalation. See "Mode Handling" below. This closes `git-master` BLOCKER-1. |
 | `## Handoff Artifacts` | Proceed without reading handoff files. | No escalation. Often absent for first-stage dispatches. |
 | `## Code Intelligence Context` | Proceed without code-intel report. | No escalation. Phase 2.5b is advisory. |
+| `## Project Knowledge` | Proceed without it. | No escalation. Often absent; predicate-gated injection means many dispatches will omit this section by design. |
 
 ---
 

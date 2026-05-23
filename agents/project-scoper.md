@@ -61,7 +61,9 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
 
-The team manager dispatches the project-scoper with a brief following the universal format in the contract above. Required sections: `## Task`, `## Scope`, `## Constraints`. Optional sections: `## Acceptance Criteria` (rare for scoping work), `## Context` (often contains the critic finding being addressed in revise-mode).
+The team manager dispatches the project-scoper with a brief following the universal format in the contract above. Required sections: `## Task`, `## Scope`, `## Constraints`. Optional sections: `## Acceptance Criteria` (rare for scoping work), `## Context` (often contains the critic finding being addressed in revise-mode), `## Project Knowledge`.
+
+**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The project-scoper honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 
 **Mode handling:** The scoper defaults to `autonomous` and does not branch on the `## Mode` field. Read it; ignore it; proceed.
 

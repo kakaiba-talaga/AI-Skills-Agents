@@ -349,6 +349,12 @@ Each name belongs to one of five groups. Checks within a group run in declared o
 
 ---
 
+## Brief-time injection
+
+> **Reference:** You MUST Read `~/.claude/skills/cross-memory/brief-injector.md` for the brief-time injection spec (parameterized selector function signature with all seven context-object parameters, Lever 1 — the orchestrator predicate that decides WHEN to inject by checking whether `## Project Knowledge` is already present in the outbound brief, Lever 2 — the D2-B agent-type tag intersection that decides WHAT to include by filtering the always-on tier output through the dispatched agent's type tags, the `## Project Knowledge` output destination in the subagent brief, the header-strip rule, the budget rule using `max_brief_inject_chars`, the selector timeout rule, the sentinel-marker emission rule, and the twelve failure-mode scenarios). If the file is missing, proceed using the inline summary: the selector is called by the orchestrator before each subagent dispatch; Lever 1 fires only when the outbound brief does not already contain a `<!-- project-knowledge:carried -->` sentinel; Lever 2 filters the always-on tier entry list to entries whose tags do not include `exclude:<agent-type>` for the dispatched agent type; the result renders under a `## Project Knowledge` heading appended to the brief, with the sentinel on its own line at the bottom.
+
+---
+
 ## Context Resilience
 
 If the conversation thread is summarized, compacted, or interrupted mid-flow, recover by:

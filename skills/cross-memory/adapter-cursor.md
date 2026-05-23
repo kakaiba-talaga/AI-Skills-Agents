@@ -168,6 +168,10 @@ Cursor's equivalent session-start always-on injection mechanism is not fully spe
 
 If Cursor's integration testing reveals a specific surface (for example, a `.cursor/rules/*.mdc` file or a project-level context injection file), this section should be updated to document the bootstrap, rewrite-update, refuse-and-halt, and no-marker-append behaviors following the same pattern as `adapter-claude-code.md → ## 6. update_sentinel_block(content)`.
 
+### Trust-model disclosure — brief-injector bypass
+
+This is a trust-model disclosure, not a fix or a workaround. The brief-injector (`skills/cross-memory/brief-injector.md`) reads `~/.cross-memory/**` directly at dispatch time, bypassing this no-op surface. Under v1, Cursor subagents dispatched via the Agent tool see `## Project Knowledge` in their briefs even though the top-level Cursor session does not see `[CROSS-MEMORY]`. A maintainer reading this adapter without this disclosure could assume the sentinel-block surface is the only injection path and be surprised by subagent behavior. Once Cursor's `update_sentinel_block` is implemented in a future release, the disclosure can be downgraded to "the brief-injector still bypasses the sentinel surface even though the top-level turn now also sees it."
+
 ---
 
 ## Cross-references

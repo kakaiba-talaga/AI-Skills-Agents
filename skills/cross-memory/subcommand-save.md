@@ -107,6 +107,39 @@ Write the file to the resolved canonical path. Update the scope's `MEMORY.md` in
 
 Echo the canonical path to the user.
 
+## Atomicity contract
+
+All writes to the canonical store at `~/.cross-memory/**` follow a **write-to-temp-then-rename** pattern. This contract applies to every file written during Gate 4 and the Supersede branch: canonical memory files, archive copies, and the scope's `MEMORY.md` index file.
+
+### Write procedure
+
+1. **Write to a sibling temp file.** Before touching the canonical path, write the full intended content to a sibling temp file in the same directory, e.g. `<canonical-name>.tmp.<pid>` or `<canonical-name>.tmp` with a unique suffix that prevents collisions with concurrent writers.
+2. **Flush (`fsync` or platform-equivalent).** Ensure the OS write buffers are committed to storage before proceeding. On POSIX, call `fsync(fd)` and close the file descriptor. On Windows, call `FlushFileBuffers`.
+3. **Atomic rename to the canonical name.** Replace the canonical path in a single atomic filesystem operation.
+   - **POSIX:** `rename(2)` is atomic for files within the same directory — a reader opening the canonical path sees either the old bytes or the new bytes, never a torn intermediate.
+   - **Windows:** `MoveFileEx(src, dst, MOVEFILE_REPLACE_EXISTING)` provides atomic replace semantics for same-volume moves.
+4. **Clean up** the temp file on failure before the rename. If a prior crash left a stale temp file, overwrite it rather than erroring.
+
+### Readers-side guarantee
+
+Readers always see either the **pre-save state** or the **post-save state** of any canonical-store file — never a torn intermediate. A reader that opens the canonical path while a write is in flight receives the previous complete content; the new content becomes visible only after the rename commits.
+
+This guarantee makes the partial-write race impossible by construction. If the brief injector reads `~/.cross-memory/**` at the same moment a save is in progress, it sees a consistent snapshot, not partially written bytes.
+
+### Scope of this contract
+
+The contract applies to every write site that touches `~/.cross-memory/**` canonical paths:
+
+- **Gate 4 — canonical memory file write** (new memory: `~/.cross-memory/<scope>/<type>_<name>.md`)
+- **Gate 4 — MEMORY.md index update** (`~/.cross-memory/<scope>/MEMORY.md`)
+- **Supersede branch Step 4 — archive write** (`~/.cross-memory/archive/<stem>-<timestamp>.md`)
+- **Supersede branch Step 5 — new canonical write** (same path as Gate 4)
+- **Supersede branch Step 6 — MEMORY.md update** (same path as Gate 4)
+
+The `forget` subcommand's archive move and `MEMORY.md` update follow the same pattern (see `subcommand-forget.md`). The `reflect` subcommand's state and ledger writes follow the same pattern (see `subcommand-reflect.md`).
+
+---
+
 ### Supersede branch
 
 Triggered when Gate 4 detects a filename collision: the resolved canonical path `<type>_<name>.md` already exists in the target scope directory. If no collision is found, Gate 4 proceeds with the standard write path. If a collision is found, execution enters this branch instead.

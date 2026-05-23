@@ -158,6 +158,19 @@ The block is capped at `max_inject_chars` (default 2048 bytes). When the block w
 
 See [always-on-tier.md](always-on-tier.md) for the full filter spec and size-budget drop protocol.
 
+## Brief-Time Injection
+
+When an orchestrating skill (such as `/ops`) dispatches a subagent, the brief injector fires once per qualifying dispatch and places the relevant subset of standing rules under a `## Project Knowledge` heading in the agent's brief. This is distinct from the always-on tier: the always-on tier fires once at session bootstrap to populate the harness-native `MEMORY.md`, while the brief injector fires per-dispatch to carry durable rules into the agent's isolated context.
+
+Two levers gate what gets injected:
+
+- **Lever 1 — orchestrator predicate.** The dispatching skill decides *whether* to inject at all, based on the run-level override flag (`--memory-inject=off|auto|always`), whether the agent type is in the mechanical-agents exemption list, and whether the prior handoff already carried the section.
+- **Lever 2 — agent-type tag intersection.** When injection fires, the selector applies a tag intersection step on top of the always-on tier filter output, retaining only memories whose `tags[]` array carries the dispatched agent type as a positive tag or no agent-type tags at all. A memory tagged `exclude:<agent>` is dropped for that agent type regardless of other tags.
+
+The injector is a thin composer over `always-on-tier.md` and `injection-block.md`: it calls the always-on tier filter unchanged, applies the agent-type tag intersection on top, passes the result to the injection-block formatter, then strips the `[CROSS-MEMORY]` header line before returning the bytes to the orchestrator. Empty bytes signal "skip injection." The per-dispatch character budget is governed by `max_brief_inject_chars` (default `4096`), a separate config field from the sentinel-block budget `max_inject_chars` (default `2048`).
+
+See [brief-injector.md](brief-injector.md) for the full function signature, composition steps, tag vocabulary, budget rule, selector timeout rule, sentinel marker emission rule, and failure modes.
+
 ## Audit
 
 `/cross-memory audit` dispatches the cross-memory agent (opus-class) to scan the canonical store and return a structured report rendered directly to chat. No on-disk audit artifact is written at v1.

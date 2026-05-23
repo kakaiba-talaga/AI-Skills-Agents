@@ -437,7 +437,68 @@ rep(
 # here AND in the sibling .ps1/.sh script so both wrappers stay in lockstep.
 rep(
     """2. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read("docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
-3. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file. Follow the dispatch procedure below.
+3. **Evaluate the memory-injection predicate (Lever 1) and call the selector (Lever 2).** Before spawning the agent, determine whether to inject `## Project Knowledge` into the brief.
+
+   **Override flag.** The run-level flag `--memory-inject=off|auto|always` controls injection:
+   - `off` — skip injection unconditionally for every dispatch in this run.
+   - `auto` (default) — apply the full predicate below.
+   - `always` — skip the predicate; call the selector with `enable_agent_type_intersection=false` (pure always-on tier output, no agent-type tag filtering).
+
+   **Mechanical agents.** Some agents are convention-blind: their output does not change based on project rules because they are read-only analysis tools or mechanical revert agents. These agents derive no benefit from rule injection and incur unnecessary brief overhead. The list at v1 is:
+
+   ```
+   MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
+   ```
+
+   An agent belongs on this list when project conventions do not change its output — read-only or convention-blind agents that neither author files nor apply coding standards. To add or remove an agent from the list, edit it here.
+
+   **Predicate decision tree.** Evaluate top-to-bottom; the first matching branch governs:
+
+   | Condition | Action |
+   | :--- | :--- |
+   | `--memory-inject=off` | Skip injection. Proceed to spawn without `## Project Knowledge`. |
+   | `agent_type` ∈ `MECHANICAL_AGENTS` | Skip injection. Proceed to spawn without `## Project Knowledge`. |
+   | `attempt > 1` AND the prior handoff body contains the exact sentinel `<!-- project-knowledge:carried -->` | Skip injection (section was already carried in the prior attempt's handoff). |
+   | `--memory-inject=always` | Call selector with `enable_agent_type_intersection=false`. Inject if bytes returned. |
+   | Otherwise (default `auto` path) | Call selector with `enable_agent_type_intersection=true`. Inject if bytes returned. |
+
+   **Handoff-detection rule (sentinel marker).** On retry (attempt > 1), the predicate searches the prior handoff body for the sentinel marker `<!-- project-knowledge:carried -->`. The prior handoff body is the content of the file referenced by the upstream task's `handoff_file` field in the state JSON. Detection is **exact-byte grep** — no regular expressions, no whitespace tolerance, no case folding. The literal byte sequence `<!-- project-knowledge:carried -->` must match or the predicate proceeds as if the sentinel is absent.
+
+   Behavior on detection: skip injection — the downstream agent already received the section in the prior attempt's handoff and the content is considered carried.
+   Behavior on no detection: proceed with the normal predicate flow above.
+
+   **Why the sentinel approach?** A naïve substring scan for `## Project Knowledge` at the start of a line produces false positives when a handoff body contains a Markdown code fence that quotes a brief structure as an example — code fences do not indent their content, so column-0 matching cannot distinguish a real heading from a fenced example. The HTML-comment sentinel does not appear inside rendered Markdown code fences in normal output, eliminating this false-positive class.
+
+   **Failure shapes (both non-correctness-breaking):**
+   - Sentinel emitted but not detected on retry → predicate proceeds, brief carries the section a second time. Cost: duplicate bytes on attempt-2+ dispatches. Recovery: tighten the sentinel grep or verify the handoff file was written correctly.
+   - Sentinel detected but content removed from the prior handoff (e.g., the handoff file was edited after the orchestrator wrote it) → predicate skips, agent retry operates without rules. Cost: same posture as pre-injection behavior. Recovery: none needed; the next fresh dispatch will re-inject.
+
+   **Selector call.** Call the function documented in `skills/cross-memory/brief-injector.md` with a context object derived from the dispatch state:
+   - `agent_type` — the task's `agent_type` value from the state file
+   - `task_subject` — the task's `subject` field
+   - `stage` — the task's `stage` field
+   - `attempt` — the current attempt number
+   - `prior_handoff` — full body of the upstream handoff file, or `None` if attempt == 1
+   - `enable_agent_type_intersection` — `true` for default-inject, `false` for `always`-override
+   - `budget_chars` — pass the call-site budget (default: read `max_brief_inject_chars` from `~/.cross-memory/config.yaml`, default `4096`)
+
+   **Post-selector rule.** If the selector returns empty bytes, omit `## Project Knowledge` entirely — do not render an empty heading. If the selector returns non-empty bytes, render them as the `## Project Knowledge` section in the brief, placed **between `## Context` and `## Scope`**. After rendering, append the sentinel marker on its own line at the bottom of the section:
+
+   ```
+   <!-- project-knowledge:carried -->
+   ```
+
+   This sentinel enables the next attempt's predicate to detect that the section was carried, avoiding re-injection.
+
+   **Cursor first-time awareness banner.** When the active harness is **Cursor** AND this is the first dispatch in the current session that fires injection (i.e., the selector returned non-empty bytes AND the run-level state field `memory_inject_banner_emitted` is not yet `true`), emit the following one-line banner to the user before the dispatch:
+
+   ```
+   [memory-inject] Subagent briefs now carry ## Project Knowledge from your canonical store; top-level Cursor turns do not yet see this — see adapter-cursor.md §6 for the trust-model implication.
+   ```
+
+   After emitting the banner, set `memory_inject_banner_emitted: true` in the state file. The banner fires exactly once per session. Under **Claude Code**, suppress this banner — the top-level turn already sees `[CROSS-MEMORY]` injected by the always-on tier, so there is no trust-model inversion to disclose. At v1.1, once Cursor's `update_sentinel_block` lands and the top-level turn also sees the canonical store, this banner becomes unnecessary; the harness-conditional remains in place but evaluates to false.
+
+4. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file. Follow the dispatch procedure below.
 
 **Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
 
@@ -452,7 +513,68 @@ The Agent tool's `subagent_type` parameter accepts any agent type that has a def
 **Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):""",
     """2. Update TodoWrite: `TodoWrite(merge=true, todos=[{id: "task-N", content: "...", status: "in_progress"}])`.
 3. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read(path="docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
-4. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
+4. **Evaluate the memory-injection predicate (Lever 1) and call the selector (Lever 2).** Before spawning the agent, determine whether to inject `## Project Knowledge` into the brief.
+
+   **Override flag.** The run-level flag `--memory-inject=off|auto|always` controls injection:
+   - `off` — skip injection unconditionally for every dispatch in this run.
+   - `auto` (default) — apply the full predicate below.
+   - `always` — skip the predicate; call the selector with `enable_agent_type_intersection=false` (pure always-on tier output, no agent-type tag filtering).
+
+   **Mechanical agents.** Some agents are convention-blind: their output does not change based on project rules because they are read-only analysis tools or mechanical revert agents. These agents derive no benefit from rule injection and incur unnecessary brief overhead. The list at v1 is:
+
+   ```
+   MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
+   ```
+
+   An agent belongs on this list when project conventions do not change its output — read-only or convention-blind agents that neither author files nor apply coding standards. To add or remove an agent from the list, edit it here.
+
+   **Predicate decision tree.** Evaluate top-to-bottom; the first matching branch governs:
+
+   | Condition | Action |
+   | :--- | :--- |
+   | `--memory-inject=off` | Skip injection. Proceed to spawn without `## Project Knowledge`. |
+   | `agent_type` ∈ `MECHANICAL_AGENTS` | Skip injection. Proceed to spawn without `## Project Knowledge`. |
+   | `attempt > 1` AND the prior handoff body contains the exact sentinel `<!-- project-knowledge:carried -->` | Skip injection (section was already carried in the prior attempt's handoff). |
+   | `--memory-inject=always` | Call selector with `enable_agent_type_intersection=false`. Inject if bytes returned. |
+   | Otherwise (default `auto` path) | Call selector with `enable_agent_type_intersection=true`. Inject if bytes returned. |
+
+   **Handoff-detection rule (sentinel marker).** On retry (attempt > 1), the predicate searches the prior handoff body for the sentinel marker `<!-- project-knowledge:carried -->`. The prior handoff body is the content of the file referenced by the upstream task's `handoff_file` field in the state JSON. Detection is **exact-byte grep** — no regular expressions, no whitespace tolerance, no case folding. The literal byte sequence `<!-- project-knowledge:carried -->` must match or the predicate proceeds as if the sentinel is absent.
+
+   Behavior on detection: skip injection — the downstream agent already received the section in the prior attempt's handoff and the content is considered carried.
+   Behavior on no detection: proceed with the normal predicate flow above.
+
+   **Why the sentinel approach?** A naïve substring scan for `## Project Knowledge` at the start of a line produces false positives when a handoff body contains a Markdown code fence that quotes a brief structure as an example — code fences do not indent their content, so column-0 matching cannot distinguish a real heading from a fenced example. The HTML-comment sentinel does not appear inside rendered Markdown code fences in normal output, eliminating this false-positive class.
+
+   **Failure shapes (both non-correctness-breaking):**
+   - Sentinel emitted but not detected on retry → predicate proceeds, brief carries the section a second time. Cost: duplicate bytes on attempt-2+ dispatches. Recovery: tighten the sentinel grep or verify the handoff file was written correctly.
+   - Sentinel detected but content removed from the prior handoff (e.g., the handoff file was edited after the orchestrator wrote it) → predicate skips, agent retry operates without rules. Cost: same posture as pre-injection behavior. Recovery: none needed; the next fresh dispatch will re-inject.
+
+   **Selector call.** Call the function documented in `skills/cross-memory/brief-injector.md` with a context object derived from the dispatch state:
+   - `agent_type` — the task's `agent_type` value from the state file
+   - `task_subject` — the task's `subject` field
+   - `stage` — the task's `stage` field
+   - `attempt` — the current attempt number
+   - `prior_handoff` — full body of the upstream handoff file, or `None` if attempt == 1
+   - `enable_agent_type_intersection` — `true` for default-inject, `false` for `always`-override
+   - `budget_chars` — pass the call-site budget (default: read `max_brief_inject_chars` from `~/.cross-memory/config.yaml`, default `4096`)
+
+   **Post-selector rule.** If the selector returns empty bytes, omit `## Project Knowledge` entirely — do not render an empty heading. If the selector returns non-empty bytes, render them as the `## Project Knowledge` section in the brief, placed **between `## Context` and `## Scope`**. After rendering, append the sentinel marker on its own line at the bottom of the section:
+
+   ```
+   <!-- project-knowledge:carried -->
+   ```
+
+   This sentinel enables the next attempt's predicate to detect that the section was carried, avoiding re-injection.
+
+   **Cursor first-time awareness banner.** Since this IS the Cursor harness, this banner FIRES on the first dispatch in the current session that fires injection (i.e., the selector returned non-empty bytes AND the banner has not yet been emitted this session). Emit the following one-line banner to the user before the dispatch:
+
+   ```
+   [memory-inject] Subagent briefs now carry ## Project Knowledge from your canonical store; top-level Cursor turns do not yet see this — see adapter-cursor.md §6 for the trust-model implication.
+   ```
+
+   Emit the banner exactly once per Cursor session (track via a session-level first-emission cookie — once emitted, do not emit again in the same session). The harness-conditional check still applies: suppress on any non-Cursor harness.
+
+5. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
 
 **Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):""",
 )

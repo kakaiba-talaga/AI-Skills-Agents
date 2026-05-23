@@ -98,8 +98,13 @@ After `active_adapter.mirror_remove(memory)` succeeds, the forget flow updates t
 
 This call follows the same canonical-first failure-isolation rules as `mirror_remove`: a failure here is a structured warning, not an error. The canonical archive still succeeds and `mirror_remove` is not rolled back.
 
+### Atomicity
+
+The archive move (Step 3) and the `MEMORY.md` update (Step 4) both follow the write-to-temp-then-rename pattern documented in `subcommand-save.md § Atomicity contract`. Readers always see either the pre-forget or the post-forget state of any affected file — never a torn intermediate.
+
 ### Cross-references
 
+- **Atomicity contract** (write-to-temp-then-rename semantics, platform notes, readers-side guarantee): `subcommand-save.md § Atomicity contract`.
 - **Archive filename pattern and timestamp format**: `subcommand-save.md § Supersede branch, Step 4`.
 - **`superseded_by` field rules (only on supersede, never on forget)**: `schema-validator.md` and `subcommand-save.md § Supersede branch, Step 4`.
 - **Scope-directory mapping**: `## Config` section above.

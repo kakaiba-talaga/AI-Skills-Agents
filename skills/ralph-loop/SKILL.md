@@ -212,6 +212,10 @@ Evaluated during Reflect, after `achieved_percent` is updated. Uses template `au
 
 When the template's `hooks.verify.for_each` is defined, Verify fans out across multiple inputs using subagents.
 
+**Memory-injection predicate at the fan-out site.** Before composing each subagent's brief, evaluate the predicate-and-selector pair documented in `skills/ops/SKILL.md` Phase 3 Step 3 (the canonical predicate table lives there — do NOT duplicate the table here). The short form: fan-out subagents in this site are typically `verifier` or similar agents that are NOT in `MECHANICAL_AGENTS`, so the default branch fires. Call the selector with `enable_agent_type_intersection=true`. If the selector returns non-empty bytes, render a `## Project Knowledge` block from those bytes and place it before the brief contents of each subagent spawn. If the selector returns empty bytes, omit the section and proceed. The override flag (`--memory-inject=off|auto|always`) is honored.
+
+**Wrap-mode interaction.** When `/ops` wraps a Ralph Loop via the `ralph` subcommand (behavior documented in `skills/ops/SKILL.md` § Ralph Loop Integration), the inner Ralph Loop's fan-out sites evaluate the predicate independently using their own dispatch context. There is no double-injection: each evaluator sees its own `agent_type`, `attempt`, and `prior_handoff` values, and the sentinel-marker check in the predicate prevents re-injection if the prior handoff already carried the section.
+
 > If `execution-extras.md` is missing, run the single verify command without fan-out.
 
 ## Cleanup Stage — Additional Detail
@@ -300,7 +304,7 @@ When a template with `acceptance_criteria` is active, `achieved_percent` is comp
      **Track recurring failures:**
      8. Compare this iteration's failures against `auto_pause_state.recurring_failures`. Matching signature from previous iteration: increment `consecutive_count`, update `last_seen_iter`. New failure: add entry with `consecutive_count: 1`. Remove entries not seen in current or previous iteration.
      9. If any entry reaches `consecutive_count >= threshold` (default 3): set `status: blocked` (or `paused`), add to `blockers`, log `recurring_failure_escalated` event, report: "RECURRING FAILURE: [signature] has failed for [N] consecutive iterations. This likely requires user input to resolve."
-   - For comparison/data-analysis iterations with >= 2 independent commands or pipelines, spawn one subagent per command/pipeline and run concurrently, then aggregate outputs.
+   - For comparison/data-analysis iterations with >= 2 independent commands or pipelines, spawn one subagent per command/pipeline and run concurrently, then aggregate outputs. Before composing each subagent brief, evaluate the predicate-and-selector pair documented in `skills/ops/SKILL.md` Phase 3 Step 3 (canonical table lives there). Data-analysis agents are NOT in `MECHANICAL_AGENTS` at v1, so the default branch fires: call the selector with `enable_agent_type_intersection=true` and render a `## Project Knowledge` block before the brief contents when bytes are returned. The override flag (`--memory-inject=off|auto|always`) is honored. When `/ops` wraps a Ralph Loop via the `ralph` subcommand (see `skills/ops/SKILL.md` § Ralph Loop Integration), the inner loop's fan-out sites here evaluate the predicate independently — no double-injection.
 3. Check pause criteria:
    - target percent reached, hard blocker detected, recurring failure escalated, or auto-pause heuristic triggered (plateau, diminishing returns, regression, max iterations)
    - if target goal reached/exceeded, present structured options: 1) mark `done` and exit, 2) continue with updated goal, 3) continue with same goal + additional details/constraints, 4) pause for now

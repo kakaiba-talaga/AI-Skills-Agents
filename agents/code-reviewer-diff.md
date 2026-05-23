@@ -56,6 +56,19 @@ If the task is `help` or asks what this agent can do, display the following refe
   → executor (on REQUEST CHANGES, with specific findings)
 ````
 
+## Brief Format
+
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+
+The team manager dispatches the code-reviewer-diff with a brief in the universal format described in the contract above.
+
+- **Required:** `## Task`, `## Scope`, `## Constraints`
+- **Optional:** `## Context`, `## Acceptance Criteria`, `## Project Knowledge`, `## Code Intelligence Context`
+
+**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The code-reviewer-diff honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
+
+**File-class allowlist** — the code-reviewer-diff is read-only on all file classes. It does not Edit or Write any file — not `source`, `test`, `config`, `docs`, `agent-contract`, or `plan-doc`. On REQUEST CHANGES, it returns findings to the executor; it does not apply fixes itself.
+
 ## Diff review workflow
 
 **1. Gather the diff:**

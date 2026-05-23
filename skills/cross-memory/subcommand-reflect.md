@@ -407,6 +407,16 @@ Under Cursor and generic harnesses, `reflect` runs on Sources 3 + 4 + 5 only (no
 
 The `--non-interactive` flag, structured `--json` output, `--context` injection, and the corresponding exit-code contracts are deferred to v1.3. The argument grammar above is intentionally extensible: adding `--non-interactive` in v1.3 means adding it to the flag list; the eight-step routing flow is unaffected and does not need restructuring.
 
+### Atomicity
+
+All writes this subcommand makes to the canonical store follow the write-to-temp-then-rename pattern documented in `subcommand-save.md § Atomicity contract`. This applies to:
+
+- **`state.toml` write** (on `done` — `~/.cross-memory/projects/<slug>/state.toml`)
+- **`reflect_declined.md` append** (on `decline <id>` — `~/.cross-memory/projects/<slug>/reflect_declined.md`)
+- **Canonical memory file and MEMORY.md writes** triggered by `save <id>`, which routes through Gate 4 of the save pipeline (see `subcommand-save.md § Gate 4 — Write` and `§ Atomicity contract`).
+
+Readers always see either the pre-write or the post-write state of any canonical-store file — never a torn intermediate.
+
 ### Cross-references
 
 - **Agent brief shape and output contract**: `agents/cross-memory.md` (`## Brief Format` and `## Output Contract — distill`).

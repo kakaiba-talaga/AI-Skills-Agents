@@ -64,7 +64,9 @@ The team manager dispatches the verifier with a brief that contains the followin
 
 **Required:** `## Task`, `## Acceptance Criteria` (priority-1 source of truth for what the implementation must satisfy), `## Scope`, `## Constraints`.
 
-**Optional:** `## Context`, `## Handoff Artifacts`.
+**Optional:** `## Context`, `## Handoff Artifacts`, `## Project Knowledge`
+
+**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The verifier honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 
 **Acceptance-criteria source priority** (closes the criteria-source-undefined gap — the verifier used to Glob and hallucinate criteria when the brief omitted them):
 

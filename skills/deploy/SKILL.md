@@ -161,13 +161,22 @@ Build the ssh-executor brief. Every brief targets one host and one host only. Fo
 
 Dispatch the ssh-executor via the Agent tool. The Agent tool's `subagent_type` parameter does not accept custom agent types — `ssh-executor` is not a built-in type. You must read the agent file and include its instructions in the prompt.
 
+**Memory-injection predicate and selector (Lever 1 / Lever 2).**
+
+Before constructing the prompt, evaluate the memory-injection predicate. The canonical procedure lives in `skills/ops/SKILL.md` Phase 3 Step 3 — follow it verbatim for the full predicate decision tree, `MECHANICAL_AGENTS` list, override flag behavior, sentinel marker detection, and selector call shape. Key points for this dispatch:
+
+- `ssh-executor` is **not** in `MECHANICAL_AGENTS` — default behavior is **inject**.
+- The override flag `--memory-inject=off|auto|always` is honored. `auto` is the default.
+- If the selector (see `skills/cross-memory/brief-injector.md`) returns non-empty bytes, render them as the `## Project Knowledge` section and prepend it to the prompt **before** the inlined ssh-executor body — the agent sees the project knowledge block first, then its own instructions.
+- If the selector returns empty bytes, omit `## Project Knowledge` and proceed with the prompt as constructed below.
+
 **ssh-executor Dispatch Procedure** (applies to ALL ssh-executor dispatches in this skill — deployment, rollback, state-check, and monitoring):
 
 1. **Read** `~/.claude/agents/ssh-executor.md`. Extract the `model` from YAML frontmatter and the full instruction body (everything after the closing `---`).
 2. **`description`**: Set to `"ssh-executor(<target_host>: <action>)"` — e.g., `"ssh-executor(prod-web-01: deploy v1.4.2)"` or `"ssh-executor(prod-web-01: rollback)"`. Always include the host and action so the user can identify which dispatch targets which server.
 3. **`model`**: Set from the agent's frontmatter `model` field.
 4. **`subagent_type`**: **Omit** — `ssh-executor` is not a built-in type.
-5. **`prompt`**: Concatenate the agent definition body + `\n\n---\n\n` + the deployment brief (JSON). The agent has no conversation history — the prompt must be fully self-contained.
+5. **`prompt`**: Concatenate the `## Project Knowledge` block (if the selector returned non-empty bytes) + `\n\n` + the agent definition body + `\n\n---\n\n` + the deployment brief (JSON). The agent has no conversation history — the prompt must be fully self-contained.
 
 The dispatch pattern depends on the deployment pattern selected in Phase 1.
 
@@ -197,7 +206,7 @@ Prerequisites from the deploy config: `active_host` (currently serving traffic),
 **Canary (1 canary host, then N-1 remaining):**
 - Dispatch ssh-executor for the `canary_host`.
 - Wait for health check to pass.
-- Dispatch a monitoring ssh-executor that polls the health check endpoint over the `--canary-duration` window (default 300 seconds).
+- Dispatch a monitoring ssh-executor that polls the health check endpoint over the `--canary-duration` window (default 300 seconds). The same memory-injection predicate-and-selector procedure from the canonical site above applies to this monitoring dispatch; its `## Task` will differ from a deployment dispatch but the injection evaluation is identical.
 - If canary stays healthy through the full window, dispatch ssh-executors for the `remaining_hosts` using rolling pattern (sequential, gated on health check).
 - If the canary fails during the monitoring window, rollback the canary and abort.
 
@@ -220,7 +229,7 @@ Read the ssh-executor's structured response and determine next steps.
 | SSH exit code 255 (connection drop) | Connection-drop recovery: dispatch a state-check ssh-executor to verify what the dropped command actually did on the remote. Based on the state check, continue or enter rollback flow. Do not blindly retry. |
 
 **Connection-drop recovery detail (SSH exit code 255):**
-1. Dispatch a state-check ssh-executor — a brief-only read operation connecting to the same host to check: is the service running, was the file deployed, what is the backup directory status.
+1. Dispatch a state-check ssh-executor — a brief-only read operation connecting to the same host to check: is the service running, was the file deployed, what is the backup directory status. The same memory-injection predicate-and-selector procedure from Phase 4 applies to this state-check dispatch; its `## Task` identifies it as a state check rather than a deployment.
 2. Based on the state check: if the dropped command completed, treat it as success and continue. If it did not complete, treat it as failure and enter rollback flow. If state is ambiguous (e.g., the state-check itself can't connect), escalate to the user.
 3. Do NOT blindly retry. Re-running a non-idempotent command after a connection drop causes double-execution. The state check prevents this.
 
@@ -253,7 +262,7 @@ Phase 6 only runs when Phase 5 triggers an automatic rollback. If `--no-rollback
    - `health_check`: same as the original deployment brief.
    - `timeout`: same budget as the original deployment.
    - `sudo_authorization`: same list as the original deployment.
-6. Dispatch the rollback ssh-executor via the Agent tool.
+6. Dispatch the rollback ssh-executor via the Agent tool. The same memory-injection predicate-and-selector procedure from Phase 4 applies to this rollback dispatch; its `## Task` identifies it as a rollback rather than a deployment.
 7. Wait for the rollback response.
 8. If rollback `status: success`, proceed to Phase 7 and report both the deployment failure and the successful rollback.
 9. If rollback `status: failed`, escalate to the user immediately. Report: what the original deployment did, what the rollback attempted, which rollback step failed and why, the current known remote state. Do NOT retry rollback.
