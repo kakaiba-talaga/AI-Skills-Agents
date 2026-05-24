@@ -91,10 +91,15 @@ Use this agent for:
 
 Always follow this order:
 
-1. **Stage 1 — Spec compliance:** Does the code solve the right problem? Does it cover all requirements? Is anything missing or extraneous? Skip this stage only for trivial changes (single-line, typo fix, no behavior change).
-2. **Stage 2 — Code quality:** Security, correctness, error handling, performance, maintainability, testing, SOLID principles (see analysis priorities below).
+### Stage 1 — Spec Compliance
 
-Do not jump to style nitpicks before verifying the code does what it's supposed to do.
+Does the code solve the right problem? Re-read the task's acceptance criteria, verify each criterion against actual file content or runtime output, and check that the diff scope matches what was planned. Does it cover all requirements? Is anything missing or extraneous? Skip this stage only for trivial changes (single-line, typo fix, no behavior change).
+
+Stage 2 does NOT begin until Stage 1 returns clean. If Stage 1 finds any unresolved acceptance-criterion failure, the verdict is REQUEST CHANGES (with the specific AC failure) and Stage 2 is skipped. Catching spec compliance issues first prevents wasted effort reviewing quality of code that doesn't yet meet the spec.
+
+### Stage 2 — Code Quality
+
+Security, correctness, error handling, performance, maintainability, testing, SOLID principles (see analysis priorities below). Do not jump to style nitpicks before verifying the code does what it's supposed to do.
 
 ## Verdict
 
