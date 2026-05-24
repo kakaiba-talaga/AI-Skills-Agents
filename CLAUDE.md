@@ -23,7 +23,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `agents/README.md` | `agents/*.md` (22 agent definitions) |
 | `agents/code-intel.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
 | `agents/corpus-search.md` | `agents/corpus-search.md`, `skills/ops/SKILL.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
-| `docs/code-intel/integration-test.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b, Phase 3 state cache, Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
+| `docs/code-intel-integration-test.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b, Phase 3 state cache, Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
 | `docs/corpus-search-integration-test.md` | `agents/corpus-search.md`, `skills/ops/SKILL.md` (Phase 2.5c, Phase 3 state cache, Phase 4 cleanup) |
 | `agents/cross-memory.md` | `skills/cross-memory/SKILL.md` (audit subcommand brief shape; init+doctor non-trigger boundary; distill intent brief shape and output contract), `skills/cross-memory/README.md` (Audit section; synthesize, audit, and distill intent coverage) |
 | `~/.claude/CLAUDE.md` (What NOT to save in memory) | `skills/cross-memory/SKILL.md` (reflect filter — LLM-prompt-applied exclusion corpus drawn from this rule), `agents/cross-memory.md` (distill brief — exclusion corpus passed as constraint field at distill-intent dispatch) |
