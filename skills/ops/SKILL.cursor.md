@@ -725,6 +725,7 @@ Include this block verbatim in every agent brief's `## Constraints` section:
 - **No sub-agent spawning** — do not use the Task tool. Only the team manager orchestrates.
 - **No scope expansion** — report discovered out-of-scope work; do not act on it.
 - **No commit trailers** — do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the system default.
+- **Fresh verification before completion** — see ~/.cursor/skills/ops/verification-gate.md
 
 ---
 
