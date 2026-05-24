@@ -1,6 +1,6 @@
 # Corpus Search — Integration Test Procedures
 
-## 4.2.1 — Doc header
+## 1. Purpose and prerequisites
 
 **Purpose:** Manual verification procedures for the **corpus-search** agent — standalone dispatch, `/ops` Phase 2.5c pipeline integration, dual preflight with code-intel, Phase 4 cleanup, and refusal handling.
 
@@ -13,7 +13,7 @@
 
 ---
 
-## 4.2.2 — Standalone dispatch (`verify_claim`)
+## 2. Standalone dispatch (`verify_claim`)
 
 **Purpose:** Confirm the agent contract works outside `/ops`.
 
@@ -51,7 +51,7 @@ Report file exists on disk; header fields populated; verdict is `CONFIRMED`.
 
 ---
 
-## 4.2.3 — Phase 2.5c ops test (pipeline path)
+## 3. Phase 2.5c ops test (pipeline path)
 
 **Purpose:** Confirm `/ops` Phase 2.5c fires during Phase 3 Step 2 and attaches `Corpus Search Context` to consumer briefs.
 
@@ -102,7 +102,7 @@ Pipeline path used; `Corpus Search Context` appears in executor brief; ephemeral
 
 ---
 
-## 4.2.4 — Dual preflight test (Phase 2.5b + 2.5c)
+## 4. Dual preflight test (Phase 2.5b + 2.5c)
 
 **Purpose:** Confirm both code-intel and corpus-search run when an executor task matches both predicates.
 
@@ -133,13 +133,13 @@ Both context blocks present in executor brief; corpus-search report uses `trace_
 
 ---
 
-## 4.2.5 — Phase 4 cleanup test
+## 5. Phase 4 cleanup test
 
 **Purpose:** Confirm ephemeral run artifacts are deleted after run completion; durable docs directory is preserved.
 
 ### Steps
 
-1. Complete an ops run that triggered Phase 2.5c (§ 4.2.3 or § 4.2.4).
+1. Complete an ops run that triggered Phase 2.5c (§ 3 or § 4).
 
 2. Note the run-id and confirm `.corpus-search/runs/<run-id>/` exists **before** Phase 4 completes.
 
@@ -153,7 +153,7 @@ Both context blocks present in executor brief; corpus-search report uses `trace_
 | :--- | :--- |
 | `.corpus-search/runs/<run-id>/` | **Deleted** (ephemeral run artifacts) |
 | `.corpus-search/` (parent) | May remain if empty or from other runs — **not** deleted by Phase 4 |
-| `docs/corpus-search/` | **Untouched** (durable human opt-in reports; empty dir is fine) |
+| `docs/corpus-search/` | **Untouched** (durable human-opt-in reports; empty dir is fine) |
 | `.code-intel/runs/<run-id>/` | Also deleted (parallel cleanup — unrelated but confirms step 9 ran) |
 
 ### Pass criteria
@@ -162,7 +162,7 @@ Run-scoped directory absent post-Phase-4; `docs/corpus-search/` not deleted.
 
 ---
 
-## 4.2.6 — Refusal test (malformed JSON brief)
+## 6. Refusal test (malformed JSON brief)
 
 **Purpose:** Confirm strict schema validation and advisory semantics — refusal does not block ops.
 

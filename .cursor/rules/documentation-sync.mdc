@@ -22,7 +22,7 @@ alwaysApply: false
 | `agents/code-intel.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
 | `agents/corpus-search.md` | `agents/corpus-search.md`, `skills/ops/SKILL.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
 | `docs/code-intel/integration-test.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b, Phase 3 state cache, Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
-| `docs/corpus-search/integration-test.md` | `agents/corpus-search.md`, `skills/ops/SKILL.md` (Phase 2.5c, Phase 3 state cache, Phase 4 cleanup) |
+| `docs/corpus-search-integration-test.md` | `agents/corpus-search.md`, `skills/ops/SKILL.md` (Phase 2.5c, Phase 3 state cache, Phase 4 cleanup) |
 | `agents/cross-memory.md` | `agents/cross-memory.md`, `skills/cross-memory/SKILL.md` (audit subcommand brief shape; init+doctor non-trigger boundary; distill intent brief shape and output contract), `skills/cross-memory/README.md` (Audit section; synthesize, audit, and distill intent coverage) |
 | `docs/cross-memory/v1-shipped.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/*.md`, `agents/cross-memory.md` (v1 traceability — shipped surface, deferred items, SC verification map) |
 | `docs/cross-memory/v1.1-shipped.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/*.md`, `agents/cross-memory.md` (v1.1 traceability — shipped surface, deferred items, verifier closures) |
