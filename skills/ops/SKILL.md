@@ -637,6 +637,14 @@ After updating timing, check elapsed time of all in-progress background agents a
 | **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
 | **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task describing the issue. Pause dependent chain. Flag to user. |
 | **Scope issue** — agent says the plan is wrong or incomplete | Pause chain. Ask the user whether to re-plan or adjust. |
+| **NEEDS_CLARIFICATION** — brief is well-formed but agent has one clarifying question before starting | See handling below. |
+
+**NEEDS_CLARIFICATION handling:**
+
+- **Interactive mode:** Present the agent's question and context to the user verbatim. Get the answer. Re-dispatch the same agent with the answer appended to `## Context` under a heading like `**Clarification answer:**`.
+- **Autonomous mode:** The team manager answers if it has the information from the state file, plan doc, or prior handoff context. If it does not have the information, escalate to the user (same as interactive mode for this question).
+- **Round-trip cap:** Allow at most one NEEDS_CLARIFICATION round-trip per task. If the re-dispatched agent returns NEEDS_CLARIFICATION a second time, treat it as a **Scope issue** and escalate to the user — do not answer autonomously a second time.
+- Do not mark the task `failed` or increment the attempt counter on a NEEDS_CLARIFICATION return. The re-dispatch after clarification is attempt 1.
 
 Orphan detection is handled by the **work-verifier** agent (see `~/.claude/agents/work-verifier.md`), which includes timeout budgets per agent type and orphan detection heuristics.
 

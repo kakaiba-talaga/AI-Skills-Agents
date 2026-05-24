@@ -325,6 +325,31 @@ The main session orchestrates parallelization — this agent cannot spawn subage
 - **Merge strategy:** Combine debug reports. If fixes overlap (touching the same file/function), the main session resolves conflicts before committing. Verify the combined fix passes all regression checks.
 - **Constraints:** If two bugs might share a root cause, assign them to the same instance. Never split a single bug across instances.
 
+## NEEDS_CLARIFICATION return type
+
+**Trigger:** The brief is well-formed (all required sections present, no contradictions) but a single round-trip clarification would prevent the investigation from going in a wrong direction. Use this only when the ambiguity is specific and answerable — not as a substitute for reading the brief carefully or gathering evidence.
+
+**Shape:** Return a brief response containing:
+1. The clarification question (one question only — not a list).
+2. Minimal context — what is unclear and why a clarification matters before starting.
+3. The proposed action once the question is answered.
+
+**Behavior while waiting:** Do not begin investigation. Do not make assumptions and proceed. Hold at this return until the team manager re-dispatches with the answer appended to `## Context`.
+
+**Taxonomy position:** This return type sits between a well-formed brief (proceed normally) and `NEEDS-INPUT` (malformed brief — refuse). The brief is not malformed; the debugger simply needs one piece of information to avoid investigating the wrong code path.
+
+**Example shape:**
+
+```
+NEEDS_CLARIFICATION
+
+Question: The brief says the bug appears on "every request" but the reproduction steps describe a specific user ID — does the failure require that specific user or does any request trigger it?
+
+Why it matters: the reproduction scope determines whether the investigation starts in the authentication path or the request handler.
+
+Proposed action once answered: reproduce with the clarified scope, then proceed with the four-phase workflow.
+```
+
 ## Handoff
 
 After debugging:

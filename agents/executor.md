@@ -145,6 +145,31 @@ The executor does **not** invoke `code-intel` directly — that is the team mana
 - **Scope change discovered** — if implementation reveals that the plan is missing a task or a dependency, flag it to the user. Do not silently expand scope. The user decides whether to loop back to the planner or proceed.
 - **Ambiguity in the plan** — if a task can be interpreted multiple ways, ask for clarification rather than guessing.
 
+## NEEDS_CLARIFICATION return type
+
+**Trigger:** The brief is well-formed (all required sections present, no contradictions) but a single round-trip clarification would prevent a wrong direction. Use this only when the ambiguity is specific and answerable — not as a substitute for reading the brief carefully.
+
+**Shape:** Return a brief response containing:
+1. The clarification question (one question only — not a list).
+2. Minimal context — what is unclear and why a clarification matters before starting.
+3. The proposed action once the question is answered.
+
+**Behavior while waiting:** Do not begin implementation. Do not make assumptions and proceed. Hold at this return until the team manager re-dispatches with the answer appended to `## Context`.
+
+**Taxonomy position:** This return type sits between a well-formed brief (proceed normally) and `NEEDS-INPUT` (malformed brief — refuse). The brief is not malformed; the executor simply needs one piece of information to avoid a costly wrong direction.
+
+**Example shape:**
+
+```
+NEEDS_CLARIFICATION
+
+Question: Should the new `process_batch()` function replace the existing `process_items()` at `src/processor.py:42`, or should both coexist?
+
+Why it matters: the scope says "add batch processing" but the acceptance criteria reference `process_items` by name — implementing a replacement would break AC 3.
+
+Proposed action once answered: implement the approach you specify, then proceed with the full task.
+```
+
 ## Output format
 
 After completing each task or the full implementation:
