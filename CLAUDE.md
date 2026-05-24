@@ -52,6 +52,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `skills/ralph-loop/templates/README.md` | `skills/ralph-loop/templates/*.yaml` |
 | `docs/agent-audits/tier-a-opus-4-7-audit.md` | `agents/{executor,verifier,debugger,git-master,project-scoper}.md` (Opus 4.7 critic audit, 2026-05-04) |
 | `skills/tdd/SKILL.md` | (NEW skill — no README yet, defines opt-in TDD discipline) |
+| `skills/using-ai-skills-agents/SKILL.md` | (NEW meta-skill — no README; user-global CLAUDE.md Active Skill Detection table) |
 
 ### Rules
 
