@@ -21,7 +21,7 @@ Parse arguments as follows:
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
-- `--tdd` — opt-in mode: executor follows the RED-GREEN-REFACTOR discipline from `skills/tdd/SKILL.md`. Verifier adds a TDD-discipline check.
+- `--tdd` — opt-in mode: executor follows the RED-GREEN-REFACTOR discipline from `skills/ops/tdd-discipline.md`. Verifier adds a TDD-discipline check.
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
 
 Default mode is **interactive** — check in after each pipeline stage completes.
@@ -737,7 +737,7 @@ production code is written. Capture observed test runner output
 at both the RED step and the GREEN step.
 ```
 
-The executor reads `skills/tdd/SKILL.md` for the full discipline. The verifier adds a TDD-discipline check (commit-ordering assertion) when this section is present.
+The executor reads `skills/ops/tdd-discipline.md` for the full discipline. The verifier adds a TDD-discipline check (commit-ordering assertion) when this section is present.
 
 ### Shared Brief Constraints {#shared-brief-constraints}
 

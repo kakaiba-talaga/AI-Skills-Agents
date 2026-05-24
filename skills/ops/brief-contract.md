@@ -95,7 +95,7 @@ The sections below are not required in every brief. Their absence is not an erro
 
 **Values:** `interactive | autonomous | supervised | tdd`
 
-**`tdd`:** When present, the executor follows the RED-GREEN-REFACTOR discipline defined in `skills/tdd/SKILL.md`. No production code may be written before an observed-failing test exists for that behavior. The verifier adds a commit-ordering discipline check when this value is present. Propagated by the team manager when `--tdd` is set on the `/ops` invocation.
+**`tdd`:** When present, the executor follows the RED-GREEN-REFACTOR discipline defined in `skills/ops/tdd-discipline.md`. No production code may be written before an observed-failing test exists for that behavior. The verifier adds a commit-ordering discipline check when this value is present. Propagated by the team manager when `--tdd` is set on the `/ops` invocation.
 
 **When absent:** Default to `autonomous`. See the "Mode Handling" section below for the full specification.
 
@@ -190,7 +190,7 @@ The `## Mode` section carries one of four values: `interactive`, `autonomous`, `
 
 This closes `git-master` BLOCKER-1: the decision tree no longer forks on a runtime-undetectable inferred mode.
 
-**`tdd` is a discipline overlay, not a git-master fork trigger.** When `## Mode: tdd` is set, git-master treats it as `autonomous` for uncommitted-change decisions — `tdd` is not a recognized fork-triggering value, so the autonomous fallback applies. The `tdd` value primarily affects the executor (RED-GREEN-REFACTOR discipline, per `skills/tdd/SKILL.md`) and the verifier (commit-ordering check). Git-master applies no special behavior for `tdd` beyond the autonomous stash default.
+**`tdd` is a discipline overlay, not a git-master fork trigger.** When `## Mode: tdd` is set, git-master treats it as `autonomous` for uncommitted-change decisions — `tdd` is not a recognized fork-triggering value, so the autonomous fallback applies. The `tdd` value primarily affects the executor (RED-GREEN-REFACTOR discipline, per `skills/ops/tdd-discipline.md`) and the verifier (commit-ordering check). Git-master applies no special behavior for `tdd` beyond the autonomous stash default.
 
 **All other audited agents** (`executor`, `verifier`, `debugger`, `project-scoper`) ignore the `## Mode` field unless they explicitly declare mode-branching behavior in their own `## Brief Format` subsection. Absence of a `## Brief Format` mode declaration means: read the field, ignore it, proceed as `autonomous`.
 

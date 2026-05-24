@@ -1,8 +1,10 @@
-# TDD Skill
+<!-- Referenced by ~/.claude/skills/ops/SKILL.md. Keep in sync. -->
+
+# TDD Discipline
 
 ## Overview
 
-The TDD skill imposes a strict RED-GREEN-REFACTOR discipline on the executor's source-code work.
+The TDD discipline imposes a strict RED-GREEN-REFACTOR discipline on the executor's source-code work.
 It is **opt-in**: it activates when the `/ops` invocation includes the `--tdd` flag or when the
 task brief explicitly requests TDD discipline via a `## Mode: tdd` section. When active, no
 production code may be written before a failing test has been observed running. The verifier
@@ -148,33 +150,3 @@ signal. Captured test output in the commit message or brief handoff is supportin
   only enough code to pass the failing test. New behavior requires a new RED cycle.
 - **Batching refactor edits without intermediate test runs.** Each structural change must be
   independently verified before the next. Stacking changes makes failure attribution impossible.
-
-## Output Tagging
-
-**`TDD`** appears on the **opening line** of each assistant turn when TDD mode is active. Do
-**not** prefix every bullet or heading in the same turn.
-
-**Sub-mode badge — no standalone `/tdd` command exists.** The **`TDD`** badge is activated via
-`/ops --tdd`, not via a standalone slash command. The user-global CLAUDE.md "Active Skill
-Detection" re-invoke reminder does **not** apply to this badge — there is no `/tdd` command to
-re-invoke. When the **`TDD`** badge appears mid-run, the correct action is to continue the active
-`/ops` workflow, not to type `/tdd <message>`.
-
-The **first line** of each assistant turn for this skill MUST begin with: **`TDD`**
-
-Apply the badge on the opening line for: RED phase setup, GREEN phase verification, REFACTOR
-pass, verifier discipline-check results, failure reports, and any communication about test
-discipline during an active TDD run.
-
-**Format:** **`TDD`** (bold backtick-wrapped) as the **first element** on the **opening line** of
-the turn.
-
-**Example:**
-
-```text
-**`TDD`** RED phase complete — `test_calculate_total.py` fails with AssertionError as expected.
-
-Observed output:
-
-    FAILED test_calculate_total.py::test_empty_cart - AssertionError: expected 0, got None
-```

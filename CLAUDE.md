@@ -50,8 +50,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `skills/ralph-loop/SKILL.cursor.md` | `skills/ralph-loop/SKILL.md`, `tooling/transform-cursor-ralph-loop.{ps1,sh}` |
 | `skills/timing-calibrator/README.md` | `skills/timing-calibrator/SKILL.md` |
 | `skills/ralph-loop/templates/README.md` | `skills/ralph-loop/templates/*.yaml` |
-| `docs/agent-audits/tier-a-opus-4-7-audit.md` | `agents/{executor,verifier,debugger,git-master,project-scoper}.md` (Opus 4.7 critic audit, 2026-05-04) |
-| `skills/tdd/SKILL.md` | (NEW skill — no README yet, defines opt-in TDD discipline) |
+| `skills/ops/tdd-discipline.md` | TDD discipline reference loaded by `/ops --tdd`; consumed via Read by executor (RED-GREEN-REFACTOR sequence) and verifier (commit-ordering discipline check) when `## Mode: tdd` is present in the brief |
 | `skills/using-ai-skills-agents/SKILL.md` | (NEW meta-skill — no README; user-global CLAUDE.md Active Skill Detection table) |
 | `docs/authoring-skills.md` | `skills/*/SKILL.md` (file layout, flat-markdown convention, output tagging, sub-file extraction, transform-regen rule — contributor conventions derived from existing skills) |
 

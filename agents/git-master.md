@@ -67,7 +67,7 @@ The team manager dispatches git-master with a brief containing these sections.
 **Mode handling** (closes the runtime-undetectable mode gap — the agent used to fork on `interactive` vs `autonomous` without a contractual source for the field):
 
 - Read `## Mode` from the brief. Values: `interactive | autonomous | supervised | tdd`.
-  - `tdd` — discipline overlay; treat as `autonomous` for uncommitted-change handling. See `skills/tdd/SKILL.md`.
+  - `tdd` — discipline overlay; treat as `autonomous` for uncommitted-change handling. See `skills/ops/tdd-discipline.md`.
 - Absent → default `autonomous`.
 - In `autonomous` mode with uncommitted changes on `main`: stash with ISO-timestamped descriptive label (`git stash push -m "<task description> - <ISO-timestamp>"`); emit the stash ref in the response.
 - In `interactive` mode: ask the user — stash, WIP commit, or include in new branch.
