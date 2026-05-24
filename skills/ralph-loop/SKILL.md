@@ -124,7 +124,22 @@ If `deslop_enabled` is `false` in state, replace step 5 with `⏭️ 5) Cleanup 
 
 ## Output tagging
 
-The first line of each assistant turn MUST begin with **Ralph Loop** (bold-only, no backticks). Apply on turns containing status/progress updates, warnings and blockers, pause/complete confirmations, final result summaries, regression alerts, recurring failure escalations, auto-pause recommendations, and headless mode exit reports. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+The **first line** of each assistant turn during an active loop MUST begin with the skill badge: **`Ralph Loop`**
+
+Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
+
+Apply the badge on the opening line of turns that contain:
+
+- status/progress updates
+- warnings and blockers
+- pause/complete confirmations
+- final result summaries
+- regression alerts
+- recurring failure escalations
+- auto-pause recommendations
+- headless mode exit reports
+
+Format: Use **`Ralph Loop`** (bold backtick-wrapped) as the first element on the opening line of each assistant turn.
 
 # Part B — Loaded once at start
 

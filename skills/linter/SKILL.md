@@ -116,7 +116,13 @@ The pass/fail line is the **very first line** of the Lint run summary block, ren
 
 ## Output tagging
 
-The first line of each assistant turn MUST begin with **Linter** (bold-only, no backticks). Apply on turns containing early scope/partition, grouping/parallel launch, status/progress, final **Lint run summary** / **Deferred tooling**, warnings, and context recovery. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+**`Linter`** appears on the **opening line** of each assistant turn only. Do **not** prefix every bullet or heading in the same turn.
+
+The **first line** of each assistant turn for this command MUST begin with: **`Linter`**
+
+Apply the badge on the opening line for: early scope/partition, grouping/parallel launch, status/progress, final **Lint run summary** / **Deferred tooling**, warnings, and context recovery.
+
+**Format:** **`Linter`** (bold backtick-wrapped) as the **first element** on the **opening line** of the turn.
 
 **Example -- single turn:**
 

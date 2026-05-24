@@ -66,14 +66,18 @@ For large doc sets (10+ files), group docs by code area and run up to 4 parallel
 
 ## Output tagging
 
-The first line of each assistant turn MUST begin with **Doc Sync** (bold-only, no backticks). Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+**`Doc Sync`** appears on the **opening line** of each assistant turn only. Do **not** prefix every bullet or heading in the same turn.
 
-Use **at least two user-facing turns** for non-trivial audits: discovery/scope, then findings, then summary. If constrained to one turn, first line = **Doc Sync** + short progress sentence, **then** the summary block.
+The **first line** of each assistant turn for this command MUST begin with: **`Doc Sync`**
+
+Use **at least two user-facing turns** for non-trivial audits: discovery/scope, then findings, then summary. If constrained to one turn, first line = **`Doc Sync`** + short progress sentence, **then** the summary block.
 
 **Anti-pattern:** Running the entire audit silently and sending one message with only the summary. Avoid this.
 
+**Format:** **`Doc Sync`** (bold backtick-wrapped) as the **first element** on the **opening line** of the turn.
+
 Examples:
 
-- **Doc Sync** Found 14 documentation files (12 prose, 2 diagrams) across 6 code areas. Confirming scope...
-- **Doc Sync** Staleness report: 5 findings across 3 files (2 stale, 2 incomplete, 1 drift).
-- **Doc Sync** Audit complete — 4 findings fixed, 1 skipped.
+- **`Doc Sync`** Found 14 documentation files (12 prose, 2 diagrams) across 6 code areas. Confirming scope...
+- **`Doc Sync`** Staleness report: 5 findings across 3 files (2 stale, 2 incomplete, 1 drift).
+- **`Doc Sync`** Audit complete — 4 findings fixed, 1 skipped.

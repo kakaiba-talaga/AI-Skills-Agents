@@ -395,7 +395,13 @@ When `/ops` invokes `/deploy`, the **`Deploy`** badge appears on turns where the
 
 ## Output Tagging
 
-The first line of each assistant turn MUST begin with **Deploy** (bold-only, no backticks). Apply on turns containing deployment progress, dispatch notifications, preflight results, rollback decisions, and completion summaries. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+**`Deploy`** appears on the **opening line** of each assistant turn only. Do not prefix every bullet or heading.
+
+The **first line** of each assistant turn for this command MUST begin with: **`Deploy`**
+
+Apply the badge on turns that contain: deployment progress, dispatch notifications, preflight results, rollback decisions, completion summaries.
+
+**Format:** **`Deploy`** (bold backtick-wrapped) as the **first element** on the **opening line**.
 
 ---
 

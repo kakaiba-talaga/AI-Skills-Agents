@@ -196,4 +196,12 @@ Track recurring feedback themes. Note frequently repeated suggestions so they ca
 
 ## Output tagging
 
-The first line of each assistant turn MUST begin with **Code Review** (bold-only, no backticks). Apply on turns containing review headings, status/progress messages, error messages, and confirmations. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+**`Code Review`** appears on the **opening line** of each assistant turn only. Do **not** prefix every bullet or heading in the same turn.
+
+The **first line** of each assistant turn for this command MUST begin with: **`Code Review`**
+
+Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
+
+Apply the badge on the opening line of turns that contain: review headings, status/progress messages, error messages, and confirmations.
+
+**Format:** **`Code Review`** (bold backtick-wrapped) as the **first element** on the **opening line** of the turn.

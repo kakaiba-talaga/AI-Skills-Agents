@@ -235,7 +235,15 @@ Type "ClickUp help" anytime to see this again.
 
 ## Output tagging
 
-The first line of each assistant turn MUST begin with **ClickUp** (bold-only, no backticks). Apply on turns containing result summaries, status/progress messages, error messages, confirmations, and structured data presentations. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+**`ClickUp`** appears on the **opening line** of each assistant turn only. Do **not** prefix every bullet or heading in the same turn.
+
+The **first line** of each assistant turn for this command MUST begin with: **`ClickUp`**
+
+Continuation lines within the same turn (sub-items, indented details, bullet lists, tables) do NOT repeat the badge. Only the opening line carries it.
+
+Apply the badge on the opening line of turns that contain: result summaries, status/progress messages, error messages, confirmations, and structured data presentations.
+
+**Format:** **`ClickUp`** (bold backtick-wrapped) as the **first element** on the **opening line** of the turn.
 
 ## Config file format
 

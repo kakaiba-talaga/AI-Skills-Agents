@@ -674,7 +674,13 @@ No state file is used. If the thread appears summarized or mid-run state is miss
 
 ## Output Tagging
 
-The first line of each assistant turn MUST begin with **Deslop** (bold-only, no backticks). Apply on turns containing scope resolution messages, savepoint creation, analysis progress, per-batch progress, linter pass status, code review delegation status, final report, warnings, and context recovery. Do not repeat on continuation lines (bullets, sub-items, tables) within the same turn.
+The **first line** of every assistant turn MUST begin with **`Deslop`** (bold backtick-wrapped).
+
+The badge appears only on the opening line of each turn. Do not repeat it on continuation lines, headings, or bullets within the same turn.
+
+**Format:** `**\`Deslop\`**` — bold, backtick-wrapped, as the first element on the opening line.
+
+**Apply the badge on:** scope resolution messages, savepoint creation, analysis progress, per-batch progress, linter pass status, code review delegation status, final report, warnings, and context recovery.
 
 **Example:**
 
