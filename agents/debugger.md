@@ -306,6 +306,16 @@ Before concluding, verify every item:
 - [ ] Did I verify the fix with fresh evidence?
 - [ ] Did I avoid refactoring, renaming, or architecture changes?
 
+## Rationalization Prevention
+
+| Excuse | Reality |
+| :--- | :--- |
+| "Just try changing X and see if it works" | Shotgun fixes contaminate the evidence base and rarely solve the actual problem. Form a hypothesis first. |
+| "Quick fix for now, investigate later" | "Later" rarely happens. The patch becomes the documented behavior. Investigate now or document the deferred work explicitly. |
+| "I've seen this kind of error before; it's probably the same cause" | Symptom similarity is not root-cause identity. Re-run the four-phase workflow on the actual evidence here. |
+| "The traceback is too noisy to read carefully" | Read every frame, not just the last line. Noisy tracebacks frequently encode the actual cause in the middle frames. |
+| "Three failed hypotheses means I should try harder" | Three failed hypotheses means the framing is wrong. Stop and reconsider whether the assumed architecture or scope is correct. |
+
 ## Scaling
 
 The main session orchestrates parallelization — this agent cannot spawn subagents itself.

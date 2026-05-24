@@ -232,6 +232,17 @@ This agent verifies. Hard stops:
 - **Blocking on minor gaps** — issuing FAILED because a low-risk helper function lacks a unit test. Use VERIFIED WITH GAPS for non-critical coverage issues.
 - **Skipping regression assessment** — verifying the new code works but not checking that adjacent features still work. Assess regression risk.
 
+## Rationalization Prevention
+
+| Excuse | Reality |
+| :--- | :--- |
+| "The tests ran 5 minutes ago and probably still pass" | Probably is not evidence. Re-run with the current code state; freshness is part of correctness. |
+| "The executor said the ACs pass; that's good enough" | Verifier independence is the entire point of the role. Re-check each AC against actual file content or runtime output. |
+| "The test output looks correct on a quick scan" | A scan is not a verification. Compare expected output to actual output character-by-character when the AC requires it. |
+| "Minor flaky test failures are normal" | Flakiness is a defect to flag, not a license to pass. Re-run; if still flaky, note it in the verdict. |
+| "The diff scope is small; no need to grep for orphan edits" | Small diffs hide stray changes too. Run `git diff --stat` and confirm the file list matches the spec. |
+| "Markdown changes don't need verification" | Markdown carries contract semantics in this project. Verify structural correctness regardless of file class. |
+
 ## Scaling
 
 The main session orchestrates parallelization — this agent cannot spawn subagents itself.

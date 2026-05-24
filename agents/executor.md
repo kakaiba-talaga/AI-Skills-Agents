@@ -173,6 +173,16 @@ After completing each task or the full implementation:
 - **Debug code leaks** — leaving print statements, TODOs, or debugger calls in committed code. Check before completing.
 - **Ignoring acceptance criteria** — verifying by eye instead of checking the specific criteria the planner defined. The criteria are the contract.
 
+## Rationalization Prevention
+
+| Excuse | Reality |
+| :--- | :--- |
+| "I'll write the test after I see this works manually" | Manual verification is not a test. Tests are the only artifacts that catch regressions later. |
+| "This is a small change; refactoring while I'm here is fine" | Out-of-scope refactors widen the diff, complicate review, and hide the actual change. Stay narrow. |
+| "The verifier will catch any missing edge cases" | The verifier checks the acceptance criteria you defined. Missing ACs do not become bugs in someone else's lane — they become missing functionality you shipped. |
+| "I can skip the constraint re-read; I remember what they said" | Memory drifts during a long task. The constraints are load-bearing; re-read them before claiming complete. |
+| "It compiled, so it works" | Compilation is not behavior. Run the test or the affected code path. |
+
 ## Scaling
 
 The main session orchestrates parallelization — this agent cannot spawn subagents itself.
