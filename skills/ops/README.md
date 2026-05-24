@@ -392,6 +392,7 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | `cost-tracking.md` | Token estimation heuristics, model pricing, cost dashboard format, per-task and per-model rollup templates | Phase 4 completion (cost estimate and dashboard) |
 | `interruption-recovery.md` | Detailed procedures for cancel, reprioritize, inject tasks, remove tasks, session recovery, foreground/background dispatch explainer | User interrupts, `resume` command, dispatch context |
 | `subcommand-save.md` | Full save flow, schema, ritual values, redaction integration, resume interaction | `save` subcommand |
+| `completion-options.md` | Four-option completion menu (merge / PR / keep / discard), per-option workflow, destructive-option confirmation gate, worktree cleanup by provenance | Phase 4 completion (present decision menu and capture user choice) |
 | `pointer-format.md` | Standard format for pointer lines, usage notes for extraction agents | Meta-reference for maintaining pointer consistency |
 
 These companion files live at `~/.claude/skills/ops/` alongside `SKILL.md`. The skill entry point is `~/.claude/skills/ops/SKILL.md`.

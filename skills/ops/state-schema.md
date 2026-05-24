@@ -96,6 +96,32 @@ Field meanings:
 
 **Backward compatibility:** The `pending_nested_skill` field is additive. State files written before this field was introduced will not have it. The team manager treats absence as equivalent to `null`. No migration is required.
 
+### worktrees_created
+
+Root-level field tracking worktrees this run created, used for provenance-safe cleanup in Phase 4.
+
+**Type:** `array` (default `[]` when absent).
+
+**Element shape:**
+
+```json
+{
+  "path": "/absolute/path/to/worktree",
+  "added_at": "2026-04-14T10:05:00Z"
+}
+```
+
+Field meanings:
+
+- `path` — absolute path to the worktree directory, as returned by `git worktree add`. Used for exact-match provenance verification during cleanup.
+- `added_at` — ISO-8601 UTC timestamp recorded immediately after `git worktree add` succeeds. Used to confirm the worktree falls within this run's time window.
+
+**Write lifecycle:** The team manager appends an entry to `worktrees_created` each time a worktree is created. This happens in Phase 1.5 when `--worktree` is set and git-master creates worktrees, or at any other point during the run where git-master creates additional worktrees on the team manager's behalf. The entry is written immediately after the git-master confirms the worktree was created.
+
+**Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `[]`. No migration is required.
+
+---
+
 ### memory_inject_banner_emitted
 
 Root-level field tracking whether the Cursor first-time memory-injection awareness banner has been emitted in the current session.

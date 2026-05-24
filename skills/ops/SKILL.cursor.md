@@ -264,6 +264,8 @@ When skipping, **always log it as an adaptation**: "Adapted: skipped branch crea
 
 **Worktree baseline gate (`--worktree` only):** When `--worktree` is set, the git-master dispatch additionally runs a Worktree Baseline check before creating the worktree — see `agents/git-master.md` § Worktree Baseline. The check runs the project test suite as a baseline; on red, the user is asked for explicit permission to proceed. Use `--skip-baseline` to opt out of the test-suite check (the `.gitignore` enforcement still runs unconditionally). When `--skip-baseline` is set, the team manager includes it in the git-master brief so the agent knows to skip the test-suite check.
 
+**Worktree registration (`--worktree` only):** After each worktree is successfully created, append `{"path": "<absolute-path>", "added_at": "<ISO-8601-UTC>"}` to the `worktrees_created` array in the run's state file. This enables provenance-safe cleanup in Phase 4 — see `skills/ops/completion-options.md` § Worktree cleanup by provenance check.
+
 > **Reference:** Dispatch the **git-master** agent (see `~/.cursor/agents/git-master.md`) with a branch-workflow task. The git-master's "Branch workflow" section contains the full decision matrix, uncommitted-change handling, naming conventions, completion cleanup, and worktree interaction rules.
 
 ### Phase 2 — Task Board Creation
@@ -694,7 +696,9 @@ When every task is `completed` (check state file):
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
 9. **Clean up temp files, handoffs, state, and code-intel run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`.agents/handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). Delete this run's save file (`.ops-state/<run-id>-save.json`) if present. **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs. **Do not delete** the parent `.code-intel/runs/` directory itself.
-10. Suggest natural next steps (e.g., "Ready for commit" or "Run the full test suite").
+10. **Present completion options** — render the structured four-option menu (merge locally / push and PR / keep branch / discard) and capture user decision before exiting.
+
+   > **Reference:** You MUST Read `~/.cursor/skills/ops/completion-options.md` for the four-option menu, per-option workflow, destructive-option confirmation gate, and worktree-cleanup-by-provenance procedure. If the file is missing, fall back to suggesting natural next steps (e.g., "Ready for commit" or "Run the full test suite").
 
 ---
 
