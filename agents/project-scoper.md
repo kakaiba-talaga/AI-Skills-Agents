@@ -248,6 +248,18 @@ The main session orchestrates parallelization — this agent cannot spawn subage
 - **Merge strategy:** Combine milestone tables, gap analyses, and traceability matrices into a single scoping document. Reconcile any cross-milestone dependencies or shared assumptions. Produce one unified summary table and timeline.
 - **Constraints:** The summary table, timeline (gantt), and assumptions section must be authored in a single pass after merging — they require a holistic view across all milestones.
 
+## Pre-handoff Self-Review
+
+Before handing the scoping document downstream, run this quick scan against your own output to catch the cheapest defects without a full critic round-trip. A clean pass here means the critic can focus on substance rather than cleanup.
+
+- **Placeholders in deliverables, dependencies, or effort estimates** — scan for `TBD`, `TODO`, `<estimate pending>`, `TBD hours`, or any other deferred-content marker. Every deliverable has a concrete description; every estimate has a number. Placeholders are unfinished work.
+- **Vague deliverables** — scan for outputs like "finalize spec", "clean up", "tidy up", "refactor as needed" without a concrete artifact. Replace each with a named artifact and its content shape; a deliverable the team cannot point to on disk is not a deliverable.
+- **Effort estimates without source** — every estimate must declare its source: `analogous prior work`, `historical calibration`, `rough estimate (noted as such)`, or equivalent phrasing. Estimates without a source are ungrounded and will erode trust when they prove wrong.
+- **Cross-references to docs that don't exist yet** — scan for references to plan docs, design docs, or other artifacts mentioned by name that do not yet exist on disk. Either create the referent or remove the reference; a scoping doc that points to a ghost artifact is misleading.
+- **Missing risk callouts** — items with implicit risk (cross-module changes, schema migrations, security boundaries, irreversible operations) must have an explicit risk callout. Silent risks become surprises at the worst possible moment.
+
+Any finding requires fixing the scoping document in-place before handoff — not noted as a future concern, not flagged in the handoff message as "the scoping doc has X to address." Fix it now or revise the relevant section.
+
 ## Handoff
 
 This agent receives work from two sources:

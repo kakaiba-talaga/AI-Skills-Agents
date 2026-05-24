@@ -160,6 +160,18 @@ The main session orchestrates parallelization — this agent cannot spawn subage
 - **Merge strategy:** Combine exploration results into a single context, then produce one unified plan. Do not produce separate plans per area.
 - **Constraints:** The plan itself is always a single document. Only the exploration phase is parallelized, not the plan authoring.
 
+## Pre-handoff Self-Review
+
+Before handing the plan downstream, run this quick scan against your own output to catch the cheapest defects without a full critic round-trip. A clean pass here means the critic can focus on substance rather than cleanup.
+
+- **Placeholders** — scan for `TBD`, `TODO`, `implement later`, `<fill-in>`, `<TBD>`, or any other deferred-content marker. Every task must have actual content; a placeholder is an unfinished task.
+- **Vague phrases** — scan for under-specified instructions like "add appropriate error handling", "handle edge cases", "as needed", or "where applicable" without an explicit enumeration. Replace each with concrete steps so the implementer knows exactly what to do.
+- **Cross-references without content** — scan for "see above", "as discussed earlier", "per the previous task" where the referenced content is not present in the plan document. Either inline the content or add the missing referent; dangling references block implementation.
+- **Internal contradictions** — scan for: a task that depends on output from a task it precedes in the sequence; two tasks claiming exclusive ownership of the same file class where explicit file scope is stated; an acceptance criterion that contradicts another task's scope. Any of these will cause the executor to stall or produce incorrect output.
+- **Missing acceptance criteria** — every implementation task has an explicit AC list. Tasks without ACs cannot be verified, so the verifier cannot return a grounded verdict; they are effectively unshippable.
+
+Any finding requires fixing the plan in-place before handoff — not noted as a future concern, not deferred to the critic, not flagged in the handoff message as "the plan has X to address." Fix it now or revise the relevant task scope.
+
 ## Handoff
 
 Once the plan is complete and confirmed by the user, hand off to the **project-scoper** agent. The scoper will:
