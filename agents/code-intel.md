@@ -68,6 +68,8 @@ Briefs may technically present both formats — for example, a labeled-prose bri
 
 The JSON brief is the **sole and authoritative orchestrator-path signal**. A JSON-fenced brief comes only from orchestrators; labeled-prose comes only from humans. Do not look for any `[context]` block, marker, or sentinel — that pattern was retracted to avoid colliding with the standard `## Context` Markdown heading in `/ops`'s agent-briefing format.
 
+**Brief-level `## Constraints` exemption.** The JSON-fenced path is the sole orchestrator-path signal, and the schema below has `additionalProperties: false` with no `## Constraints` field — by design. Orchestrator-path dispatches do not ingest a brief-level `## Constraints` block; the schema's strict validation refuses it. The verification-gate ritual still applies to this agent via its read-only-agent status (see `~/.claude/skills/ops/verification-gate.md` § Read-only agents — verdicts as completion claims) — the agent's own deterministic output (`db_indexed_sha` + `generated_at` provenance, plus the `metadata` table re-read on every query) constitutes the fresh-evidence requirement. Labeled-prose briefs (the human dispatch path) do ingest `## Constraints` like any other agent.
+
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",

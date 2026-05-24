@@ -113,6 +113,13 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
     - **Before** invoking another skill (e.g., `/deslop`, `/clickup`), write a `pending_nested_skill` record to the state file on disk (fields: `skill`, `invoked_at`, `resume_phase`, `resume_notes`). See `state-schema.md`.
     - **After** the nested skill returns, re-read the state file, consult `pending_nested_skill.resume_phase` and `resume_notes` to know where to resume, capture any output that downstream phases need (into a handoff file where one exists per the Handoff Documents section, or into the next agent's brief when no handoff procedure applies — e.g., ClickUp), clear the field back to `null`, write the state file, and execute the resume action in the same turn.
     - The dispatch loop terminates **only** on Phase 4 completion (all tasks `completed`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
+    - **Reality note: post-Skill() mechanism limitation.** When a nested skill is invoked via the **Skill** tool (e.g., `/deslop`, `/clickup`), the next assistant turn IS the skill's processing — the LLM is operating in the skill's prompt context, not the team manager's. The team manager has no turn from which to "continue dispatching in the same turn" with the skill. Under this mechanism, the "clear-after" ritual above must be split across two turns: the skill's response turn must end with an explicit user-visible halt notice, and the user's `/ops resume` invocation then completes the clear-after steps. Failing to emit the halt notice leaves the user staring at the skill's final output with no signal that further dispatching is needed — this is a structural limitation, not a workflow preference.
+
+      **Mandatory halt-notice template** (the team manager — operating as the skill — emits these lines as the final lines of the skill's response output, before yielding the turn to the user):
+
+      > **NEXT STEP — `/ops resume`** to continue dispatching task-N (\<agent-type\>: \<subject\>). State has been preserved: `pending_nested_skill` will be cleared by the resume invocation.
+
+      Substitute `task-N`, `\<agent-type\>`, and `\<subject\>` with the actual values from the next pending task's `id`, `agent_type`, and `subject` fields. The `pending_nested_skill` record persists across the user-interaction boundary so `/ops resume` can reconstruct the dispatch state and continue from the correct point.
 
 ---
 
@@ -603,6 +610,8 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 You are running as agent type: <agent_type>.
 
 **Your first action:** Read your full agent definition from `~/.cursor/agents/<agent_type>.md`. This file contains your workflow, responsibilities, lane boundaries, and constraints. Do not proceed with the task until you have read this file in full.
+
+**Before any completion claim** — the message in which the agent declares the task done, returns a verdict, or hands off a deliverable artifact — re-read the task brief's `## Constraints` section in full. Those constraints are load-bearing for verdict and completion validity: they govern what counts as evidence, what counts as scope, and what completion looks like for this dispatch.
 
 Once you have read the agent definition, execute the task below following the agent's instructions verbatim.
 
