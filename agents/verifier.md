@@ -75,6 +75,17 @@ The team manager dispatches the verifier with a brief that contains the followin
 3. Executor's stated brief in the relevant handoff file (`.agents/handoffs/<run_id>/handoff-*.md`) — MEDIUM confidence (state this explicitly in the verification report).
 4. If none of the above resolve, refuse with verdict `NEEDS-INPUT` and escalate to the dispatcher.
 
+**`## Mode: tdd` — TDD-discipline check (conditional):** When the brief carries `## Mode: tdd`, the verifier runs the following commit-ordering check in addition to the standard acceptance-criteria checks:
+
+1. Run `git log --oneline <base-branch>..HEAD` on the working branch to enumerate commits since it diverged.
+2. Identify commits that add or modify production source files (non-test paths).
+3. Classify test files using these default glob patterns: `**/test_*.py`, `**/*_test.py`, `**/tests/**`, `**/__tests__/**` (Python); `**/*.test.{js,ts,jsx,tsx}`, `**/*.spec.{js,ts,jsx,tsx}` (JS/TS); `**/*_test.go` (Go); `**/*_spec.rb`, `**/spec/**` (Ruby); or paths explicitly named as test files in the executor's brief.
+4. For each such commit, confirm that a preceding commit on the same branch adds or modifies a test file covering the same module or behavior.
+5. If any production-code commit has no preceding test commit, issue a `FAILED` verdict citing the offending commit hash.
+6. A test commit added *after* the implementation commit ("retroactive RED") is also a failure condition.
+
+This check is **conditional** — it runs only when `## Mode: tdd` is present in the brief. When `## Mode` is absent or set to any other value, this check is skipped.
+
 **File-class allowlist:** Write/Edit permitted for `test` files only. All source code (`source`) is read-only — the verifier does not modify production code.
 
 ## Relationship to the pipeline

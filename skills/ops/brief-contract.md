@@ -93,7 +93,9 @@ The sections below are not required in every brief. Their absence is not an erro
 
 **When present:** When the orchestrator sets an explicit execution mode, or when the task's behavior diverges significantly between modes.
 
-**Values:** `interactive | autonomous | supervised`
+**Values:** `interactive | autonomous | supervised | tdd`
+
+**`tdd`:** When present, the executor follows the RED-GREEN-REFACTOR discipline defined in `skills/tdd/SKILL.md`. No production code may be written before an observed-failing test exists for that behavior. The verifier adds a commit-ordering discipline check when this value is present. Propagated by the team manager when `--tdd` is set on the `/ops` invocation.
 
 **When absent:** Default to `autonomous`. See the "Mode Handling" section below for the full specification.
 
@@ -167,7 +169,7 @@ Which governs this task — the durable rule (redact unconditionally) or the tas
 | `## Acceptance Criteria` | None — `executor` and `verifier` refuse. Other consumers: note absence, proceed. | `executor` and `verifier`: refuse with "Brief missing required section `## Acceptance Criteria`. Cannot proceed. Re-dispatch with verifiable criteria, or provide a plan-doc reference." This closes `executor` MAJOR-1 and `verifier` BLOCKER-1. |
 | `## Constraints` | Treat the Shared Brief Constraints block as the full constraint set. Proceed. | No escalation. |
 | `## Context` | Proceed without prior context. | No escalation. Often absent. |
-| `## Mode` | Default to `autonomous`. | No escalation. See "Mode Handling" below. This closes `git-master` BLOCKER-1. |
+| `## Mode` | Default to `autonomous`. | No escalation. See "Mode Handling" below. Recognized values: `interactive`, `autonomous`, `supervised`, `tdd`. This closes `git-master` BLOCKER-1. |
 | `## Handoff Artifacts` | Proceed without reading handoff files. | No escalation. Often absent for first-stage dispatches. |
 | `## Code Intelligence Context` | Proceed without code-intel report. | No escalation. Phase 2.5b is advisory. |
 | `## Project Knowledge` | Proceed without it. | No escalation. Often absent; predicate-gated injection means many dispatches will omit this section by design. |
@@ -176,7 +178,7 @@ Which governs this task — the durable rule (redact unconditionally) or the tas
 
 ## Mode Handling
 
-The `## Mode` section carries one of three values: `interactive`, `autonomous`, or `supervised`.
+The `## Mode` section carries one of four values: `interactive`, `autonomous`, `supervised`, or `tdd`.
 
 **When `## Mode` is absent:** default to `autonomous`. This is the correct behavior for all trivial dispatches, ralph-loop dispatches, and any dispatch where the orchestrator did not explicitly set a mode.
 
@@ -187,6 +189,8 @@ The `## Mode` section carries one of three values: `interactive`, `autonomous`, 
 - `supervised` — equivalent to `interactive` for git-master's decision tree unless the agent's `## Brief Format` subsection specifies otherwise.
 
 This closes `git-master` BLOCKER-1: the decision tree no longer forks on a runtime-undetectable inferred mode.
+
+**`tdd` is a discipline overlay, not a git-master fork trigger.** When `## Mode: tdd` is set, git-master treats it as `autonomous` for uncommitted-change decisions — `tdd` is not a recognized fork-triggering value, so the autonomous fallback applies. The `tdd` value primarily affects the executor (RED-GREEN-REFACTOR discipline, per `skills/tdd/SKILL.md`) and the verifier (commit-ordering check). Git-master applies no special behavior for `tdd` beyond the autonomous stash default.
 
 **All other audited agents** (`executor`, `verifier`, `debugger`, `project-scoper`) ignore the `## Mode` field unless they explicitly declare mode-branching behavior in their own `## Brief Format` subsection. Absence of a `## Brief Format` mode declaration means: read the field, ignore it, proceed as `autonomous`.
 
