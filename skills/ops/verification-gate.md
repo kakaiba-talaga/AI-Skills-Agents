@@ -51,4 +51,4 @@ Agents that produce verdicts rather than code changes — the critic, the work-v
 
 ## Cross-references
 
-See `~/.claude/skills/ops/SKILL.md` § Non-negotiables for the team-manager-level enforcement points (non-negotiables #3 and #4 govern deliverables on disk and timing). See `~/.claude/skills/ops/SKILL.md` § Verify→Fix Loop for how the pipeline enforces fresh evidence at the verifier stage. This file governs the agent-level ritual that runs before any completion claim, at every dispatch route.
+See `~/.claude/skills/ops/SKILL.md` § Non-negotiables for the team-manager-level enforcement points (non-negotiables #3 and #4 govern timing and deliverables on disk). See `~/.claude/skills/ops/SKILL.md` § Verify → Fix Loop for how the pipeline enforces fresh evidence at the verifier stage. This file governs the agent-level ritual that runs before any completion claim, at every dispatch route.
