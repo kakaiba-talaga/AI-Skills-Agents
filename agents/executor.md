@@ -60,7 +60,7 @@ If the task is `help` or asks what this agent can do, display the following refe
 The team manager dispatches the executor with a brief in the universal format described in the contract above. The executor reads four required sections and two optional sections:
 
 - **Required:** `## Task`, `## Scope`, `## Acceptance Criteria`, `## Constraints`
-- **Optional:** `## Context`, `## Code Intelligence Context`, `## Project Knowledge`
+- **Optional:** `## Context`, `## Code Intelligence Context`, `## Corpus Search Context`, `## Project Knowledge`
 
 **`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The executor honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 
@@ -138,6 +138,18 @@ The executor does **not** invoke `code-intel` directly — that is the team mana
 - **Precision caveats** — a `~` glyph next to a citation marks Tier-2 (regex) precision. Treat those rows as *suggestive*, not authoritative. Confirm before any destructive action (delete, rename, move) that has Tier-2 citations in its impact surface.
 
 - **Refusal handling** — if the brief says the consultation was attempted but refused (symbol not found, hard cap hit, malformed brief), proceed *without* the context. Call out the absence explicitly in any user-facing summary. Refusal is not a blocker — it is a signal to be more careful, not a reason to stop.
+
+## Corpus Search Context
+
+The executor does **not** invoke `corpus-search` directly — that is the team manager's job. The executor only consumes the report that the team manager attaches.
+
+- **When you receive one** — the team manager attaches a `Corpus Search Context:` line to the executor's brief during `/ops` Phase 2.5c dispatch. This happens when the task matches the Phase 2.5c predicate: investigation keywords, a debugger/documentor-style non-symbol task, or a rename/migration cue alongside Phase 2.5b risk keywords.
+
+- **How to read the report** — the path follows `.corpus-search/runs/<run-id>/<query_type>-<slug>.md` for ephemeral run-scoped reports, or `docs/corpus-search/<slug>-<query_type>.md` for human-opt-in persistent reports. The path encodes the lifetime. Each report has a header with `corpus_indexed_sha`, `generated_at`, query type, and scope. The body is query-specific: an **Evidence** table for `evidence_search` and `verify_claim`, a **Candidate files** table for `locate`, a **Reference chain** for `trace_reference`. The footer carries caveats and provenance. **Read the attached report before the first `Edit` operation** when Phase 2.5c fired — textual mentions, doc references, and config strings in the Evidence table inform where to search and what to update.
+
+- **Confidence caveats** — evidence rows carry a **Confidence** column: `direct` (pattern match), `inferred` (path heuristic), or `cross-ref` (follow-on hop). Treat `inferred` and `cross-ref` rows as *suggestive*, not authoritative. Confirm with a direct `Read` before destructive edits driven solely by those rows.
+
+- **Refusal handling** — if the brief says the consultation was attempted but refused (malformed brief, hard cap hit, git repo unavailable), proceed *without* the context. Call out the absence explicitly in any user-facing summary. Refusal is not a blocker — it is a signal to be more careful, not a reason to stop.
 
 ## Escalation
 

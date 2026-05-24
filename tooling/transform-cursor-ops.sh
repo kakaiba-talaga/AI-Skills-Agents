@@ -448,7 +448,7 @@ rep(
    > **Literal constant definition — keep fenced.** The block below is a code-style definition used for reference, not a user-facing UI output. Do not unfence it.
 
    ```
-   MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
+   MECHANICAL_AGENTS = {code-intel, corpus-search, work-verifier, preflight, change-analyzer, rollback}
    ```
 
    An agent belongs on this list when project conventions do not change its output — read-only or convention-blind agents that neither author files nor apply coding standards. To add or remove an agent from the list, edit it here.
@@ -530,7 +530,7 @@ The Agent tool's `subagent_type` parameter accepts any agent type that has a def
    > **Literal constant definition — keep fenced.** The block below is a code-style definition used for reference, not a user-facing UI output. Do not unfence it.
 
    ```
-   MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
+   MECHANICAL_AGENTS = {code-intel, corpus-search, work-verifier, preflight, change-analyzer, rollback}
    ```
 
    An agent belongs on this list when project conventions do not change its output — read-only or convention-blind agents that neither author files nor apply coding standards. To add or remove an agent from the list, edit it here.

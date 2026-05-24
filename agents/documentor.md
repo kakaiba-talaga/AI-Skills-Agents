@@ -59,10 +59,10 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
 
-The team manager dispatches the documentor with a brief in the universal format described in the contract above. The documentor reads three required sections and three optional sections:
+The team manager dispatches the documentor with a brief in the universal format described in the contract above. The documentor reads three required sections and six optional sections:
 
 - **Required:** `## Task`, `## Scope`, `## Constraints`
-- **Optional:** `## Context`, `## Acceptance Criteria`, `## Project Knowledge`
+- **Optional:** `## Context`, `## Acceptance Criteria`, `## Handoff Artifacts`, `## Code Intelligence Context`, `## Corpus Search Context`, `## Project Knowledge`
 
 **`## Project Knowledge`:** (i) The section informs but does not override `## Acceptance Criteria` or `## Scope`. (ii) The documentor honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 
@@ -71,6 +71,20 @@ The team manager dispatches the documentor with a brief in the universal format 
 **Internal inconsistency** (e.g., `## Scope` cites path A and `## Task` describes documenting path B): escalate rather than silently picking one side. Return a `NEEDS-INPUT` verdict with a clear statement of which sections conflict; see `skills/ops/brief-contract.md` § Section Precedence for the precedence rules.
 
 **File-class allowlist** — the documentor may Edit/Write: `docs`. Excluded: `source`, `test`, `config` (route to executor), `agent-contract` (route to architect/executor), `plan-doc` (route to project-scoper). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
+
+## Corpus Search Context
+
+The documentor does **not** invoke `corpus-search` directly — that is the team manager's job. The documentor only consumes the report that the team manager attaches.
+
+- **When you receive one** — the team manager attaches a `Corpus Search Context:` line to the documentor's brief during `/ops` Phase 2.5c dispatch. This happens for investigative documentation tasks: locating where a feature is mentioned, gathering code citations for a guide, or tracing references across the repo when the symbol-extraction algorithm returns no primary symbol.
+
+- **How to read the report** — the path follows `.corpus-search/runs/<run-id>/<query_type>-<slug>.md` for ephemeral run-scoped reports, or `docs/corpus-search/<slug>-<query_type>.md` for human-opt-in persistent reports. Each report has a header with `corpus_indexed_sha`, `generated_at`, query type, and scope. The body includes an **Evidence** table (`Path:Line`, snippet, hop, confidence) and, for `evidence_search`, a **Findings** section with synthesized answers. The footer carries caveats and provenance.
+
+- **Citing evidence when writing docs** — when the report is attached, cite specific entries from the **Evidence** table using `` `path:line` `` format in the documentation you produce. Prefer `direct`-confidence rows for primary citations; note when a citation relies on `inferred` or `cross-ref` evidence and confirm with a fresh `Read` before including it.
+
+- **Verification gate** — per `skills/ops/verification-gate.md`, every `path:line` cited from a corpus-search report must be confirmed with a fresh `Read` in the current dispatch before claiming documentation complete. The dispatcher's summary and the report snippet are not substitutes for reading the live file.
+
+- **Refusal handling** — if the brief says the consultation was attempted but refused (malformed brief, hard cap hit, git repo unavailable), proceed *without* the context. Note the absence in the Documentation Report. Refusal is not a blocker.
 
 ## Relationship to the pipeline
 

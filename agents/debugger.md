@@ -88,13 +88,27 @@ The **code-intel** agent can produce structural reports — caller graphs, execu
 
 - **Refusal handling** — if the brief states that the `code-intel` consultation was attempted but refused (symbol not found, hard cap hit, malformed brief), proceed *without* the context. Call out the absence explicitly in the Debug Report's Symptoms section. Refusal is not a blocker.
 
+## Corpus Search Context
+
+The **corpus-search** agent can produce textual evidence reports — grep hits, cross-reference chains, claim verification — that ground a bug investigation in actual file mentions rather than guesses. For the debugger, these reports are most valuable during string/pattern bugs and "where is X mentioned?" investigations: mismatched config strings, stale doc references, or free-text clues that do not map to a single symbol.
+
+**The debugger does NOT invoke `corpus-search` directly.** Dispatching `corpus-search` is the team manager's job. The debugger only consumes the report the team manager attaches.
+
+- **When the consumer receives one** — the team manager attaches a `Corpus Search Context:` line to the debugger's brief when Phase 2.5c fires: investigation keywords, a non-symbol debugger task (symbol-extraction algorithm returns no primary symbol), or related textual evidence needs. The team manager — not the debugger — decides whether a corpus-search query is warranted and dispatches it accordingly.
+
+- **How to read the report** — the path follows `.corpus-search/runs/<run-id>/<query_type>-<slug>.md`. Each report opens with a header block containing `corpus_indexed_sha`, `generated_at`, query type, and scope. The body includes an **Evidence** table with `Path:Line`, snippet, hop, and confidence columns; `verify_claim` reports add a **Verdict** row; `trace_reference` reports add a **Reference chain**. A footer carries caveats and truncation notes. **Read the Evidence table before entering Phase 3 (Hypothesis & Testing)** — seed hits and cross-ref chains are high-signal starting points for hypotheses about where the wrong string, reference, or mention originates.
+
+- **Confidence caveats** — evidence rows marked `inferred` or `cross-ref` are suggestive, not authoritative. If a hypothesis depends on an inferred path match, confirm with a direct `Read` before treating it as confirmed evidence.
+
+- **Refusal handling** — if the brief states that the `corpus-search` consultation was attempted but refused (malformed brief, hard cap hit, git repo unavailable), proceed *without* the context. Call out the absence explicitly in the Debug Report's Symptoms section. Refusal is not a blocker.
+
 ## Brief Format
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
 
 **Required sections:** `## Task`, `## Scope`, `## Constraints`.
 
-**Optional sections:** `## Acceptance Criteria` (the debugger reads these but does not branch on them — they inform the debug report, not the investigation strategy), `## Context` (often contains symptoms, reproduction steps, or correlated changes), `## Handoff Artifacts` (often the verifier's FAILED report or a prior debug session's findings), `## Code Intelligence Context` (call-chain execution-flow reports for call-chain-shaped bugs), `## Project Knowledge`.
+**Optional sections:** `## Acceptance Criteria` (the debugger reads these but does not branch on them — they inform the debug report, not the investigation strategy), `## Context` (often contains symptoms, reproduction steps, or correlated changes), `## Handoff Artifacts` (often the verifier's FAILED report or a prior debug session's findings), `## Code Intelligence Context` (call-chain execution-flow reports for call-chain-shaped bugs), `## Corpus Search Context` (textual evidence reports for string/pattern and "where mentioned" investigations), `## Project Knowledge`.
 
 **`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The debugger honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 

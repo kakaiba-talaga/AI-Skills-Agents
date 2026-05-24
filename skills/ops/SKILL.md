@@ -313,6 +313,7 @@ Before displaying the task board, confirm the state file exists and is valid:
 | Rollback, revert changes, undo, restore files, clean state | `rollback` |
 | Analyze changes, classify diff, stage skip, change classification, diff analysis | `change-analyzer` |
 | Impact analysis, symbol lookup, caller graph, dependency graph, structural query on source — dispatched per code-modifying task when brief contains a risk keyword (`refactor`, `rename`, `delete`, `breaking change`, `migrate`, `deprecate`, `extract`, `move`) or `files_touched > 1`; not assigned to tasks the way executor/verifier are (see Phase 2.5b) | `code-intel` |
+| Evidence search, locate file/content, verify claim, grep investigation, free-text search, trace references across repo — dispatched per investigative task for `executor`, `debugger`, or `documentor` when Phase 2.5c predicate matches (see Phase 2.5c); not assigned to tasks the way executor/verifier are | `corpus-search` |
 
 **Domain-specific agents take precedence** (`ssh-executor`, `debugger-build` over `verifier`/`executor`). Never assign documentation, scoping, or review tasks to the executor — these have dedicated agents. **When genuinely in doubt**, dispatch an **interviewer** to clarify — a quick clarification is cheaper than re-doing the work.
 
@@ -339,6 +340,7 @@ Each agent must stay in its lane:
 | **rollback** | decide rollback scope, re-dispatch agents, or modify code beyond git restore (git operations on specified files only) |
 | **change-analyzer** | execute pipeline stages, modify files, or dispatch agents (read-only diff analysis only) |
 | **code-intel** | write to source files (read-only on source code); Write only to `docs/code-intel/**`, `.code-intel/**`, `_tmp_*` (glob-matched); refuse-and-halt on first write-allowlist violation; Bash constrained by the agent's allow/deny lists |
+| **corpus-search** | write to source files (read-only on source code); Write only to `docs/corpus-search/**`, `.corpus-search/**`, `_tmp_*` (glob-matched); refuse-and-halt on first write-allowlist violation; Bash constrained by the agent's allow/deny lists |
 
 **Debugger variant selection:**
 - If the task description contains a specific error type (ImportError, ModuleNotFoundError, TypeError, SyntaxError, dependency, build, compilation, config error), use `debugger-build`.
@@ -465,6 +467,144 @@ Code Intelligence Context: see .code-intel/runs/<run-id>/impact_analysis-<symbol
 
 Phase 4 step 9 cleans `.code-intel/runs/<run-id>/` (ephemeral, this run only — analogous to `.agents/handoffs/<run_id>/`). Persistent infrastructure (`.code-intel/index.sqlite` and its WAL/SHM sidecars) is **not** Phase 4 cleaned.
 
+### Phase 2.5c — Corpus Search Preflight (advisory)
+
+Before each `executor`, `debugger`, or `documentor` dispatch in Phase 3 Step 2, the team manager may dispatch a **corpus-search** agent to perform a multi-hop textual evidence search. This phase is *advisory* — its output enriches the consumer's brief but never blocks it.
+
+#### Trigger predicate
+
+Evaluate the predicate `(i) OR (ii) OR (iii)` against each dispatch where `agent_type` ∈ `{executor, debugger, documentor}` at Phase 3 Step 2, before composing the consumer brief. When Phase 2.5b also matches for an `executor` task, run Phase 2.5b first, then Phase 2.5c (see **Dual preflight sequence** below).
+
+- **(i) Investigation keyword** — the task brief contains at least one (case-insensitive): `find evidence`, `where is`, `where are`, `grep for`, `search for`, `locate`, `verify that`, `confirm that`, `investigate`, `trace`, `mentions`, `documented in`, `free-text`, `corpus`, `string match`.
+- **(ii) Consumer agent + non-symbol task** — `agent_type` ∈ `{debugger, documentor}` AND the **symbol-extraction algorithm** (below) returns no extractable primary symbol. Clause (ii) passes only when all three ordered checks fail.
+- **(iii) Rename/migration cue** — code-modifying task (`agent_type == executor`) AND the brief contains at least one *risk keyword* from Phase 2.5b (`refactor`, `rename`, `delete`, `breaking change`, `migrate`, `deprecate`, `extract`, `move`) AND at least one textual migration cue: `update references`, `rename mentions`, `docs mention`, `string replace`, `across repo`, `all occurrences`.
+
+If the predicate matches (and `--corpus-search=off` is not set), dispatch `corpus-search` synchronously (wait for the report path) before composing the consumer brief.
+
+#### Symbol-extraction algorithm (clause (ii))
+
+Evaluate in order against the resolved task brief (after `description_ref` resolution). Stop at the first successful extraction — if any check yields a symbol, clause (ii) **fails** (corpus-search is not triggered via this clause):
+
+1. **`Symbol:` line** — a line matching `Symbol:` outside Markdown code fences (column-0 or indented prose only; ignore fenced blocks).
+2. **First backtick token in `## Task`** — the first backtick-wrapped token in the `## Task` section body.
+3. **`def` / `class` / `function` name** — a name following `def`, `class`, or `function` in task prose (outside code fences).
+
+Clause (ii) passes only when **all three checks fail** — no extractable primary symbol → corpus-search eligible for debugger/documentor non-symbol tasks.
+
+#### Flags
+
+- `--corpus-search` — alias for `--corpus-search=always`. Fires `corpus-search` on every Phase 3 Step 2 dispatch where the consumer is `executor`, `debugger`, or `documentor`, regardless of predicate.
+- `--corpus-search=off` — disables Phase 2.5c for the entire run.
+
+#### Dispatch trigger point
+
+The team manager dispatches `corpus-search` during **Phase 3 Step 2 (Batch parallel work), before composing the brief** for tasks where `agent_type` ∈ `{executor, debugger, documentor}`. Evaluate `(i) OR (ii) OR (iii)` against the task brief at that moment; if matched (or `--corpus-search` is set), dispatch `corpus-search` synchronously and wait for the JSON response before composing the consumer brief.
+
+**Dual preflight sequence (when both Phase 2.5b and 2.5c match on an executor task):**
+
+1. Dispatch **code-intel** (Phase 2.5b); wait for JSON response.
+2. Invalidate state cache (read-on-next-Step-1).
+3. Dispatch **corpus-search** with `query_type: "trace_reference"` and seed `query` from the symbol-extraction algorithm above; if all extraction checks fail, use the first non-empty line of `## Task` prose as fallback seed. Wait for JSON response.
+4. Invalidate state cache again.
+5. Attach **both** `Code Intelligence Context:` and `Corpus Search Context:` blocks to the executor brief.
+
+When Phase 2.5b did **not** run, use `query_type: "evidence_search"` with `query` derived from the task subject or investigative string in the brief.
+
+#### Dispatch contract — what the team manager passes in
+
+Compose a JSON-fenced brief and embed it in the dispatch prompt. The **JSON-fenced brief is the sole and authoritative orchestrator-path signal** — the agent detects the orchestrator caller by the presence of a fenced `json` block, not by any additional marker or sentinel. Do not add a `[context]` literal block. Run-scoped context belongs in the standard **`## Context` Markdown section** of the agent brief — the agent reads that Markdown for human-readable display only and does not act on it programmatically.
+
+> **Literal JSON brief — keep fenced.** The blocks below are exact JSON payloads passed to the `corpus-search` agent, not user-facing UI output. Do not unfence them.
+
+**Single preflight** (Phase 2.5b did not run — use `evidence_search`):
+
+```json
+{
+  "query_type": "evidence_search",
+  "query": "<task subject or investigative string from the brief>",
+  "scope": "<optional file glob from task scope, e.g. 'skills/ops/**'>",
+  "output_mode": "disk",
+  "max_results": 50,
+  "max_hops": 3,
+  "max_files": 2000,
+  "max_wall_clock_s": 120
+}
+```
+
+**Dual preflight** (Phase 2.5b ran first — use `trace_reference`):
+
+```json
+{
+  "query_type": "trace_reference",
+  "query": "<symbol from symbol-extraction algorithm, or first non-empty line of ## Task if extraction fails>",
+  "scope": "<optional file glob from task scope>",
+  "output_mode": "disk",
+  "max_results": 50,
+  "max_hops": 3,
+  "max_files": 2000,
+  "max_wall_clock_s": 120
+}
+```
+
+`query_type` must be one of: `evidence_search`, `locate`, `verify_claim`, `trace_reference`. Use `evidence_search` for typical standalone preflight and `trace_reference` after dual preflight with code-intel. `output_mode` should be `"disk"` for orchestrator dispatch — the agent writes the report to disk and returns the path.
+
+#### Dispatch contract — what corpus-search returns
+
+For `output_mode: "disk"` (the orchestrator default), `corpus-search` returns this JSON-fenced response:
+
+> **Literal JSON response shape — keep fenced.** The block below documents the exact JSON structure returned by `corpus-search`, not a user-facing UI output. Do not unfence it.
+
+```json
+{
+  "status": "ok" | "partial" | "refused",
+  "report_path": ".corpus-search/runs/<run-id>/evidence_search-<slug>.md",
+  "json_sidecar": ".corpus-search/runs/<run-id>/evidence_search-<slug>.json",
+  "summary": "<one-paragraph human summary>",
+  "corpus_indexed_sha": "a3f7c12",
+  "generated_at": "2026-05-24T14:35:00Z",
+  "evidence_count": 12,
+  "files_touched": 4,
+  "caveats": ["truncated at 50 results"]
+}
+```
+
+For `output_mode: "inline"`: includes `report_inline` (full Markdown), omits `report_path`. For `output_mode: "both"`: both populated, but `report_inline` carries only the summary and path — not duplicate full content.
+
+#### State cache invalidation
+
+After `corpus-search` returns from a Phase 2.5c dispatch, the team manager invalidates its state cache (read-on-next-Step-1) before composing the consumer brief. `corpus-search` is an agent rather than a nested skill, so the nested-skill-return rule at Phase 3 Step 1 does not strictly fire on its own — but because `corpus-search` writes a report to disk that the consumer must subsequently read, invalidation is required to keep the consumer's view consistent.
+
+#### Refusal handling
+
+If `corpus-search` returns `status: refused` for any reason (timeout, hard-cap hit, malformed brief, lane violation, git repo unavailable), the team manager:
+
+1. Logs the refusal in the dispatch log when `--dispatch-log` is set (standard entry format: timestamp, agent name, task ID, brief excerpt, return status `refused`).
+2. Attaches the refusal reason to the consumer's brief so the consumer knows the consultation was attempted but did not yield results.
+3. Proceeds. Phase 2.5c is *advisory* — refusal does not block the consumer.
+
+#### Dispatch log entry
+
+When `--dispatch-log` is set, Phase 2.5c dispatches append to `docs/ops-dispatch-log.md` following the standard dispatch-log entry format (timestamp, agent name `corpus-search`, task ID, brief excerpt, return status). When `--dispatch-log` is not set, no log entry is written — matching the existing per-dispatch behavior in `dispatch-log.md`.
+
+#### Attaching to the consumer brief
+
+After a successful Phase 2.5c dispatch, append a `Corpus Search Context:` block to the consumer's brief (`executor`, `debugger`, or `documentor`):
+
+> **Literal agent-brief text — keep fenced.** The block below is the exact text appended to the consumer's prompt string, not a user-facing UI output. Do not unfence it.
+
+```text
+Corpus Search Context: see .corpus-search/runs/<run-id>/evidence_search-<slug>.md
+  - <one-line summary from the response>
+  - <caveat 1, if any>
+  - <caveat 2, if any>
+```
+
+When dual preflight ran, the path token reflects `trace_reference-<slug>.md` instead of `evidence_search-<slug>.md`.
+
+#### Cleanup pointer
+
+Phase 4 step 9 cleans `.corpus-search/runs/<run-id>/` (ephemeral, this run only). Unlike code-intel, corpus-search has **no persistent index** — only run-scoped report directories are deleted. **Do not delete** the parent `.corpus-search/` directory or `docs/corpus-search/` (durable human opt-in reports).
+
 ### Phase 2.5 — Preflight Validation
 
 After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`). If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
@@ -504,7 +644,7 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
    > **Literal constant definition — keep fenced.** The block below is a code-style definition used for reference, not a user-facing UI output. Do not unfence it.
 
    ```
-   MECHANICAL_AGENTS = {code-intel, work-verifier, preflight, change-analyzer, rollback}
+   MECHANICAL_AGENTS = {code-intel, corpus-search, work-verifier, preflight, change-analyzer, rollback}
    ```
 
    An agent belongs on this list when project conventions do not change its output — read-only or convention-blind agents that neither author files nor apply coding standards. To add or remove an agent from the list, edit it here.
@@ -689,7 +829,7 @@ When every task is `completed`:
 6. Display the final task board (with per-task durations).
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
-9. **Clean up temp files, handoffs, state, and code-intel run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`.agents/handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). Delete this run's save file (`.ops-state/<run-id>-save.json`) if present. **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs. **Do not delete** the parent `.code-intel/runs/` directory itself.
+9. **Clean up temp files, handoffs, state, and advisory preflight run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`.agents/handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's `.corpus-search/runs/<run-id>/` subdirectory (ephemeral corpus-search reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). Delete this run's save file (`.ops-state/<run-id>-save.json`) if present. **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs. **Do not delete** the parent `.code-intel/runs/` directory itself. **Do not delete** the parent `.corpus-search/` directory or `docs/corpus-search/` — corpus-search has no persistent index (unlike code-intel's SQLite DB); only the run-scoped subdirectory is ephemeral.
 10. **Present completion options** — render the structured four-option menu (merge locally / push and PR / keep branch / discard) and capture user decision before exiting.
 
    > **Reference:** You MUST Read `~/.claude/skills/ops/completion-options.md` for the four-option menu, per-option workflow, destructive-option confirmation gate, and worktree-cleanup-by-provenance procedure. If the file is missing, fall back to suggesting natural next steps (e.g., "Ready for commit" or "Run the full test suite").

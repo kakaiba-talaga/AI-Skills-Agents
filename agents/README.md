@@ -19,6 +19,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [code-reviewer](code-reviewer.md) | sonnet | Two-stage code review (spec compliance then quality) for pipeline and targeted module reviews. Severity-rated findings with verdicts. For standalone diff reviews, see `code-reviewer-diff` or use the `/code-review` slash command. |
 | [code-reviewer-diff](code-reviewer-diff.md) | sonnet | Standalone diff review variant. Full diff-gathering protocol, exclusion filters, cross-file impact analysis, language-specific checks. Used when `/code-review` skill is unavailable. |
 | [code-intel](code-intel.md) | opus | Indexes the project into a SQLite-backed symbol graph and answers structural queries (callers, dependencies, impact, implementations, execution flow) for other agents and orchestrators. Prevents silent breakage by replacing structural guessing with citable lookups. |
+| [corpus-search](corpus-search.md) | opus | Terminal-native multi-hop corpus search for free-text evidence, file location, claim verification, and reference tracing — every finding cites path:line. Dispatched by `/ops` Phase 2.5c and standalone for investigative tasks. |
 | [cross-memory](cross-memory.md) | opus | Handles three intents: synthesize curated context blocks from the cross-memory store (User preferences / Project context / Harness rules / Notes); audit the store for staleness, duplicates, contradictions, and redaction misses; distill reflect-session entries into durable memory. Dispatched by `/ops`, `/kickoff`, and peer agents for `synthesize`; by `/cross-memory audit` for `audit`; by `/cross-memory reflect` for `distill`. |
 | [documentor](documentor.md) | sonnet | Writes new documentation for implemented features, creates guides, documents architectural decisions, and updates project scoping after milestones. Writes in clear, natural language tailored to the audience. Delegates to `/doc-sync` for accuracy checks, or runs its own audit when the skill is unavailable. |
 | [debugger](debugger.md) | opus | Runtime bug investigation — hypothesis-driven root cause analysis, circuit breaker, similar pattern scan, regression verification. For build errors, see `debugger-build`. Available at any pipeline stage. |
@@ -32,7 +33,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, cross-memory. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, preflight, work-verifier, rollback, change-analyzer.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, corpus-search, cross-memory. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: executor, git-master, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, preflight, work-verifier, rollback, change-analyzer.
 
 ### Overriding the default model
 
@@ -123,6 +124,12 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Run an impact analysis on `UserRepository.save` before we refactor it"_
 - _"Trace the execution flow from `handle_request` down three levels"_
 - _"Find all concrete implementations of the `StorageBackend` interface"_
+
+### Corpus Search
+
+- _"Search the repo for evidence that Phase 2.5c is advisory — grep for 'advisory' in skills/ops"_
+- _"Locate where the verification-gate ritual is documented"_
+- _"Verify that README.md contains the phrase 'reusable AI agents'"_
 
 ### Cross-Memory
 
@@ -312,6 +319,15 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - **Output format:** JSON response for `/ops` Phase 2.5b orchestrator dispatches (summary + path); full inline rendered report for standalone human queries
 - Read-only on source code — writes only to `.code-intel/**`, `docs/code-intel/**`, and `_tmp_*`
 
+**Corpus Search:**
+
+- Multi-hop textual evidence search via terminal-native tools (`rg`, `Glob`, `Read`) — no vector retrieval or embeddings
+- Four query types: `evidence_search`, `locate`, `verify_claim`, `trace_reference`
+- **Primary consumers:** executor (Phase 2.5c investigative preflight), debugger (string/pattern bugs, "where mentioned" investigations), documentor (cite evidence when writing docs)
+- **Brief format:** JSON-fenced block for orchestrators (required fields: `query_type`, `query`); labeled-prose (`Query:`, `Query-Type:`, `Scope:`, `Output:`, `Max-Hops:`, `Max-Results:`) for humans; malformed input refused immediately with the usage card
+- **Output format:** JSON response for `/ops` Phase 2.5c orchestrator dispatches (summary + path); full inline rendered report for standalone human queries
+- Read-only on source code — writes only to `.corpus-search/**`, `docs/corpus-search/**`, and `_tmp_*`
+
 **Documentor:**
 
 - Write documentation for existing features that were never documented
@@ -414,6 +430,10 @@ No outbound handoffs. Change-analyzer returns per-stage recommendations — the 
 **Code Intel:**
 
 No outbound handoffs. Code-intel returns citable query results (callers, impact, execution flow) to the caller — the executor, debugger, code-reviewer, or `/ops` Phase 2.5b orchestrator decides what to do with the data.
+
+**Corpus Search:**
+
+No outbound handoffs. Corpus-search returns citable evidence (path:line snippets, verdicts, reference chains) to the caller — the executor, debugger, documentor, or `/ops` Phase 2.5c orchestrator decides what to do with the data.
 
 ### Parallelization
 

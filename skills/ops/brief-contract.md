@@ -115,6 +115,14 @@ The sections below are not required in every brief. Their absence is not an erro
 
 **When absent:** Proceed without it. Phase 2.5b is advisory — its absence is not a blocker.
 
+### `## Corpus Search Context`
+
+**When present:** When the Phase 2.5c corpus-search dispatch fired and produced an evidence report relevant to this task.
+
+**Content:** The path to the corpus-search report (`.corpus-search/runs/<run-id>/<query_type>-<slug>.md`) and a brief summary of its findings. See `agents/corpus-search.md` for the full JSON-fenced brief schema used to produce these reports.
+
+**When absent:** Proceed without it. Phase 2.5c is advisory — its absence is not a blocker.
+
 ### `## Project Knowledge`
 
 **When present:** When the orchestrator predicate fired AND the selector (documented in `skills/cross-memory/brief-injector.md`) returned non-empty bytes.
@@ -123,7 +131,7 @@ The sections below are not required in every brief. Their absence is not an erro
 
 **When absent:** Predicate was skipped OR the selector returned empty bytes — proceed without it. No escalation required. This section is often absent by design; predicate-gated injection means many dispatches will omit it.
 
-**Precedence:** This section sits at **tier 1.5** — below `## Acceptance Criteria` (tier 1) but above `## Scope` (tier 2), `## Constraints` (tier 3), and `## Context` / `## Code Intelligence Context` (tier 4). User-global durable rules carried here are NOT overridable by a per-task `## Constraints` bullet. See the Section Precedence section below for the full ordering and the mandatory escalation rule for security/correctness/safety contradictions.
+**Precedence:** This section sits at **tier 1.5** — below `## Acceptance Criteria` (tier 1) but above `## Scope` (tier 2), `## Constraints` (tier 3), and `## Context` / `## Code Intelligence Context` / `## Corpus Search Context` (tier 4). User-global durable rules carried here are NOT overridable by a per-task `## Constraints` bullet. See the Section Precedence section below for the full ordering and the mandatory escalation rule for security/correctness/safety contradictions.
 
 ---
 
@@ -135,7 +143,7 @@ When the brief contains an internal contradiction (for example, `## Scope` lists
 1.5. **`## Project Knowledge`** carries the user's standing durable rules from the canonical store. These rules sit above per-task scope and constraints; they are not overridable by a `## Constraints` bullet in the same brief.
 2. **`## Scope`** constrains where the work happens. It cannot expand the criteria, but it can narrow the set of files the agent touches while satisfying them.
 3. **`## Constraints`** further restricts how the work happens. Task-specific constraints narrow the allowed approach.
-4. **`## Context`** and **`## Code Intelligence Context`** inform what the agent considers. They never override the above tiers.
+4. **`## Context`**, **`## Code Intelligence Context`**, and **`## Corpus Search Context`** inform what the agent considers. They never override the above tiers.
 
 **Mandatory `NEEDS-INPUT` escalation for security/correctness/safety contradictions.** When a task-specific `## Constraints` bullet contradicts a `## Project Knowledge` rule whose body or tags signal security, correctness, or safety semantics, the agent MUST escalate via `NEEDS-INPUT` rather than silently apply the constraint. The v1 detection is body-keyword based: if the durable rule's body contains any of the following keywords — *secret*, *credential*, *token*, *redact*, *prod*, *production*, *destroy*, *drop*, *delete*, *force*, *auth* — the rule is security-flagged and the contradiction requires explicit user confirmation. The escalation message must name: (a) the conflicting durable rule (with its memory file path if available), (b) the conflicting `## Constraints` bullet, (c) an explicit ask for the user to confirm which one governs this task. Err on the side of escalating when body language is ambiguous.
 
@@ -172,6 +180,7 @@ Which governs this task — the durable rule (redact unconditionally) or the tas
 | `## Mode` | Default to `autonomous`. | No escalation. See "Mode Handling" below. Recognized values: `interactive`, `autonomous`, `supervised`, `tdd`. This closes `git-master` BLOCKER-1. |
 | `## Handoff Artifacts` | Proceed without reading handoff files. | No escalation. Often absent for first-stage dispatches. |
 | `## Code Intelligence Context` | Proceed without code-intel report. | No escalation. Phase 2.5b is advisory. |
+| `## Corpus Search Context` | Proceed without corpus-search report. | No escalation. Phase 2.5c is advisory. |
 | `## Project Knowledge` | Proceed without it. | No escalation. Often absent; predicate-gated injection means many dispatches will omit this section by design. |
 
 ---
@@ -380,4 +389,5 @@ This file is an `agent-contract` per the file-class vocabulary in the "File-Clas
 
 - `skills/ops/handoffs.md` — full handoff document format and naming convention, referenced from the `## Handoff Artifacts` optional section above.
 - `skills/ops/state-schema.md` — state file format that `/ops` uses for run tracking; the `run_id` field used in handoff paths originates here.
-- `agents/code-intel.md` — the JSON-fenced brief precedent. `code-intel` is the only agent in the fleet with a fully documented brief schema using JSON-schema validation. Its `## Brief Format` section (lines 57-117) is the positive precedent this contract generalizes for the prose-brief fleet.
+- `agents/code-intel.md` — JSON-fenced brief schema with JSON Schema validation (Phase 2.5b). Its `## Brief Format` section documents the orchestrator-path contract for impact-analysis reports.
+- `agents/corpus-search.md` — second JSON-fenced brief agent with JSON Schema validation (Phase 2.5c). Same strict `additionalProperties: false` schema pattern; its `## Brief Format` section documents the four query types and labeled-prose fallback. Together with `code-intel`, these two agents are the JSON-schema precedents; the prose-brief fleet (executor, verifier, debugger, etc.) consumes the universal contract defined in this file.
