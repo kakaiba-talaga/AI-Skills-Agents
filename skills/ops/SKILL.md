@@ -15,6 +15,7 @@ Parse arguments as follows:
 - `--agents <list>` — comma-separated agent types to include (default: auto-detect from tasks).
 - `--dry-run` — create the task board and show it, but don't start dispatching.
 - `--worktree` — spawn parallel agents in isolated git worktrees to eliminate file conflicts.
+- `--skip-baseline` — when `--worktree` is set, skip the baseline test-suite check; only the `.gitignore` enforcement runs. Default: off (baseline runs).
 - `--no-branch` — skip automatic working branch creation; work directly on the current branch.
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
@@ -224,6 +225,8 @@ Branch isolation is the default — create a working branch before agents modify
 | Work is exploratory, low-risk, or a continuation of recent commits on the current branch | **Skip branch creation.** | Creating a branch for every small task adds friction. If the current branch is already the right home for this work, stay on it. |
 
 When skipping, **always log it as an adaptation**: "Adapted: skipped branch creation — current branch `develop` already contains related Phase 1 work."
+
+**Worktree baseline gate (`--worktree` only):** When `--worktree` is set, the git-master dispatch additionally runs a Worktree Baseline check before creating the worktree — see `agents/git-master.md` § Worktree Baseline. The check runs the project test suite as a baseline; on red, the user is asked for explicit permission to proceed. Use `--skip-baseline` to opt out of the test-suite check (the `.gitignore` enforcement still runs unconditionally). When `--skip-baseline` is set, the team manager includes it in the git-master brief so the agent knows to skip the test-suite check.
 
 > **Reference:** Dispatch the **git-master** agent (see `~/.claude/agents/git-master.md`) with a branch-workflow task. The git-master's "Branch workflow" section contains the full decision matrix, uncommitted-change handling, naming conventions, completion cleanup, and worktree interaction rules.
 

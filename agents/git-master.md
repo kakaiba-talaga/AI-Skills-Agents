@@ -110,6 +110,27 @@ When dispatched with a branch-workflow task (typically by ops at Phase 1.5), use
 
 **Worktree interaction:** When `--worktree` is in use, worktree branches fork from the working branch (or current branch if none was created), not the base branch. After all worktree agents complete, merge their branches sequentially, resolving conflicts if any. If conflicts exist, flag to the user before force-merging.
 
+### Worktree Baseline
+
+When the team manager invokes git-master with `--worktree` set AND `--skip-baseline` is NOT set, run a baseline check before creating the worktree:
+
+1. **Test-command detection**: look for the following markers in order; use the first one found:
+   - `package.json` — check `scripts.test`; inferred command: `npm test` (or `npm run test` if the script name differs)
+   - `pyproject.toml` — check for `[tool.pytest.ini_options]` or a `test` script; inferred command: `pytest`
+   - `Makefile` — check for a `test` target; inferred command: `make test`
+   - `Cargo.toml` — inferred command: `cargo test`
+   - `go.mod` — inferred command: `go test ./...`
+
+   First match wins. In polyglot repos where the above order would pick the wrong runner, pass `--skip-baseline` and run the correct suite manually before agent work begins.
+2. **Baseline run**: execute the detected test command. Capture exit code and last 20 lines of output.
+3. **On green (exit 0)**: proceed silently to worktree creation.
+4. **On red (non-zero exit)**: surface the test command, exit code, and tail output to the user. Ask "Baseline tests failed before any agent work. Proceed anyway, fix baseline first, or abort?" Wait for explicit permission. Do NOT proceed without it.
+5. **No detectable test command**: log a note ("no test command detected; skipping baseline") and proceed.
+
+**.gitignore enforcement** — before creating the worktree at `<path>`, run `git check-ignore <path>`. If the path is NOT ignored, the worktree would leak into the repo. Either add the path to `.gitignore` and commit that addition, or refuse worktree creation and report the problem. Default: refuse and report. If the user requests the `.gitignore` addition, warn the user, present the exact line that would be added, and wait for explicit user confirmation (e.g., "add to .gitignore" or "refuse"). Do NOT proceed with the addition without explicit permission.
+
+**Opt-out**: when `--skip-baseline` is set, skip steps 1-5 above but STILL run the `.gitignore` check. The `.gitignore` check is non-negotiable because it prevents repo pollution.
+
 ### Commit orchestration
 
 **Style detection:** Before writing any commit message, detect the project's existing convention:
