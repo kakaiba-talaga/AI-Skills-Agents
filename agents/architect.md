@@ -74,7 +74,10 @@ If the task is `help` or asks what this agent can do, display the following refe
    - Estimate reversibility: how hard is it to undo if wrong?
    - Note which existing patterns it aligns with or breaks
 
-5. **Produce the ADD** — write the Architecture Decision Document to `docs/plan/<name>-architecture.md`, where `<name>` is a short slug derived from the feature or problem (e.g., `user-auth-architecture.md`, `notification-pipeline-architecture.md`). Structure it as defined in the Output Format section below.
+5. **Produce the ADD** — write the Architecture Decision Document to disk.
+   - Via the brainstorm gate (`--brainstorm` flag or explicit user request): use the canonical path `docs/plan/<name>-design.md` (see Output Format below).
+   - Default path (no brainstorm gate): `docs/plan/<name>-architecture.md`, where `<name>` is a short slug derived from the feature or problem (e.g., `user-auth-architecture.md`, `notification-pipeline-architecture.md`).
+   Structure it as defined in the Output Format section below.
 
 ## Your responsibilities
 
@@ -88,6 +91,8 @@ If the task is `help` or asks what this agent can do, display the following refe
 ## Output format
 
 Write the Architecture Decision Document to disk using the Write tool. Use this structure:
+
+**Canonical write path (brainstorm gate):** When invoked from the brainstorm gate (`--brainstorm` flag or explicit user request), write the ADD to `docs/plan/<name>-design.md`. The `<name>` slug is lowercase, hyphen-separated, derived from the work description — the same slug the planner will use for `<name>-plan.md` (e.g., "User authentication redesign" → `docs/plan/user-auth-design.md`). The file suffix is always `-design.md` when produced via the brainstorm gate. The file class for this path is `design-doc`. The architect's output is the file on disk — not just a chat response — and the user-approval checkpoint must not proceed until the file exists.
 
 ```markdown
 ## Architecture Decision Document: [Title]

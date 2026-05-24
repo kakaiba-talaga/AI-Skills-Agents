@@ -155,7 +155,7 @@ When the triage gate routes to `save`, the team manager executes a manual checkp
 When `--brainstorm` is enabled (or the user explicitly requests brainstorm/design-first behavior), run this gate before any planner dispatch:
 
 1. **Clarify requirements first:** Dispatch **interviewer** to produce a requirements document. The interviewer must decompose oversized requests into sub-projects before deep clarification.
-2. **Explore design alternatives:** Dispatch **architect** using the requirements document as input. The architect must produce an ADD with concrete options and a recommendation.
+2. **Explore design alternatives:** Dispatch **architect** using the requirements document as input. The architect must produce an ADD (Architecture Decision Document) and write it to `docs/plan/<name>-design.md` before the user-approval checkpoint. The path is canonical: the planner reads it later as the named predecessor of the implementation plan.
 3. **Require explicit design approval:** Present the ADD summary and ask the user to approve before planning. This approval checkpoint is mandatory for the brainstorm path.
 4. **If not approved:** Route feedback back to **interviewer** and/or **architect** as needed, then re-run the approval checkpoint.
 5. **Only after approval:** Dispatch **planner** with both artifacts (requirements doc + ADD), then continue to Phase 1a.
@@ -175,6 +175,7 @@ In **interactive mode**, prefer asking the user directly for simple ambiguities;
 3. **Explicit `plan` command**: always persist to disk, regardless of task count. This lets the user force a plan document even for small tasks.
 4. **Filename**: generate from the work description — lowercase, hyphen-separated, with a `-plan.md` suffix (e.g., "Implement caching layer" → `docs/plan/caching-layer-plan.md`). If a plan doc already exists for this initiative, **update it** rather than creating a new file.
 5. **On `resume`**: read the plan doc path from the state file's `plan_file` field to reconstruct the work scope. The plan doc + state file + handoff files (see Handoff Documents) provide complete state recovery across session boundaries.
+6. **Predecessor design doc**: When the brainstorm gate was invoked (`--brainstorm` flag or explicit user request), the planner's plan doc references the predecessor design doc at `docs/plan/<name>-design.md` in its header. The reference makes the brainstorm → plan traceability chain auditable by the critic and visible to the user. If no design doc exists upstream, the planner omits the reference field — it is conditional, not mandatory.
 
 The plan document is infrastructure — not a deliverable task — written before the task board and used as input for Phase 2.
 

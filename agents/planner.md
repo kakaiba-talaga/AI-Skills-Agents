@@ -115,7 +115,7 @@ When multiple viable approaches exist for a significant decision, present them a
 
 Use this format when the choice materially affects architecture, scope, or timeline. Do not use it for minor implementation details.
 
-When an Architecture Decision Document (ADD) from the architect exists for this work (check `docs/plan/` for `*-architecture.md` files), reference it in your ADRs. Do not re-evaluate decisions the architect already made — those are settled. Focus your ADRs on implementation-level trade-offs that the ADD doesn't cover: choices that surface during task breakdown, not during design exploration.
+When an Architecture Decision Document (ADD) from the architect exists for this work (check `docs/plan/` for `*-design.md` (brainstorm gate) or `*-architecture.md` (default path) files), reference it in your ADRs. Do not re-evaluate decisions the architect already made — those are settled. Focus your ADRs on implementation-level trade-offs that the ADD doesn't cover: choices that surface during task breakdown, not during design exploration.
 
 ## Output format
 
@@ -126,6 +126,22 @@ Use markdown tables and headings consistent with the project's existing `docs/pr
 - Group related tasks under descriptive subheadings (e.g., **Classifier**, **Extractor**).
 - Include a dependency note at the end explaining sequencing.
 - Use `mermaid` flowcharts or gantt diagrams when they clarify structure.
+
+**Predecessor design doc:** When a design doc exists at `docs/plan/<name>-design.md` (produced by the architect via the brainstorm gate), include a reference field in the plan header immediately below the plan title:
+
+```
+**Predecessor design doc:** `docs/plan/<name>-design.md`
+```
+
+For example, a plan for "User authentication redesign" whose brainstorm gate produced `docs/plan/user-auth-design.md` would open with:
+
+```
+# User Authentication Redesign — Implementation Plan
+
+**Predecessor design doc:** `docs/plan/user-auth-design.md`
+```
+
+When no design doc exists upstream (the default path, no `--brainstorm` flag), omit the field entirely — do not write `N/A` or `none`. The field is conditional on the brainstorm gate having run. This convention makes the brainstorm → plan traceability chain visible to the critic and auditable by humans reading the plan later.
 
 ## Writing tone
 

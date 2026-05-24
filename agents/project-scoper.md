@@ -69,7 +69,7 @@ The team manager dispatches the project-scoper with a brief following the univer
 
 **File-class allowlist — in-scope (Edit/Write allowed):**
 
-- `plan-doc`: `docs/plan/*.md`, `docs/plan/*-architecture.md`, `docs/plan/*-add.md`
+- `plan-doc`: `docs/plan/*.md`, `docs/plan/*-architecture.md`, `docs/plan/*-add.md` — excludes `docs/plan/*-design.md` (architect agent only — see `skills/ops/brief-contract.md` file-class table)
 - Assessment and scoping docs: `docs/*-assessment.md`, `docs/*-scoping.md`
 - Scoping-doc revision targets explicitly named in the brief's `## Scope`
 
