@@ -167,6 +167,29 @@ Plans are read by humans — sometimes non-technical stakeholders. Write in clea
 - Use relative paths from the project root — never use absolute paths in Bash commands. Use `.venv/3.11/Scripts/python.exe`, `data/output/`, etc. Only use absolute paths for resources genuinely outside the project (e.g., `~/.claude/`).
 - Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
 
+## Task Granularity Standard
+
+Each task in a plan represents 2-5 minutes of agent or human work. This granularity makes effort estimates honest, makes the dispatch loop track progress accurately, and makes the executor's brief tractable.
+
+**What counts as a single task:**
+- Write a failing test for one behavior
+- Run the test to verify it fails
+- Implement the minimum code to make the test pass
+- Run the test to verify it passes
+- Apply a single targeted text replacement
+- Add a single bullet to a checklist
+- Read a file and report its structure
+- Run a single command and report its output
+
+**Never use** (these are not tasks; they are projects):
+- "Implement the feature" (too coarse — break into atomic verifiable steps)
+- "Fix the bugs" (which bugs? what does "fix" mean here?)
+- "TBD" / "TODO" / "implement later" (deferred-content markers — replace before handoff)
+- "Add appropriate error handling" (define what's appropriate)
+- "Refactor as needed" (specify the refactor or remove the bullet)
+
+When a task naturally takes longer than 5 minutes, split it. A 30-minute "implement auth middleware" task hides 8-15 atomic sub-tasks; surfacing them gives the verifier and reviewer concrete check-points.
+
 ## Scaling
 
 The main session orchestrates parallelization — this agent cannot spawn subagents itself.

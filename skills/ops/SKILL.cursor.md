@@ -221,11 +221,13 @@ The plan document is infrastructure — not a deliverable task — written befor
 
 **Determine validation tier:**
 
+Task counts below use the 2-5 minute granularity standard (per `agents/planner.md` — Task Granularity Standard).
+
 | Tier | Criteria | Action | Cost |
 | :--- | :--- | :--- | :--- |
-| **Tier 1 — Skip** | 1-2 tasks, no architectural decisions, mechanical/trivial changes | Proceed directly to Phase 1.5. | None |
-| **Tier 2 — Scope only** | 3-5 tasks, OR clear scope but needs estimates/gap analysis, OR medium signals | Dispatch **project-scoper** via `Task(subagent_type="project-scoper")`. Proceed to Phase 1.5 after scoping. | 1 agent |
-| **Tier 3 — Scope + Critique** | >5 tasks, OR high-weight signal (architectural, security/risk), OR multiple medium signals | Dispatch **project-scoper** then **critic** via `Task(subagent_type="critic")`. | 2 agents |
+| **Tier 1 — Skip** | 1-3 tasks of finer granularity, no architectural decisions, mechanical/trivial changes | Proceed directly to Phase 1.5. | None |
+| **Tier 2 — Scope only** | 4-8 tasks, OR clear scope but needs estimates/gap analysis, OR medium signals | Dispatch **project-scoper** via `Task(subagent_type="project-scoper")`. Proceed to Phase 1.5 after scoping. | 1 agent |
+| **Tier 3 — Scope + Critique** | >8 tasks, OR high-weight signal (architectural, security/risk), OR multiple medium signals | Dispatch **project-scoper** then **critic** via `Task(subagent_type="critic")`. | 2 agents |
 
 **Display the tier decision:** Always show the tier decision to the user, regardless of autonomy mode:
 
