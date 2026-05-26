@@ -55,20 +55,11 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 ## Brief Format
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+> **Reference:** See `~/.claude/agents/_shared/brief-format-snippet.md` for brief contract application, required/optional sections, Project Knowledge precedence, and missing-section handling. You MUST Read `~/.claude/skills/ops/brief-contract.md` when composing or validating briefs.
 
-The team manager dispatches the executor with a brief in the universal format described in the contract above. The executor reads four required sections and two optional sections:
+**Missing `## Acceptance Criteria`:** refuse — do not infer criteria from other sections; see `~/.claude/agents/_shared/brief-format-snippet.md`.
 
-- **Required:** `## Task`, `## Scope`, `## Acceptance Criteria`, `## Constraints`
-- **Optional:** `## Context`, `## Code Intelligence Context`, `## Corpus Search Context`, `## Project Knowledge`
-
-**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The executor honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
-
-**Missing `## Acceptance Criteria`:** refuse the dispatch — do not infer criteria from `## Scope`, `## Task`, or any other section. Return a `NEEDS-INPUT` verdict and ask for an explicit numbered criteria list or a plan-doc reference. This closes the brief-section-parsing gap (the executor used to infer criteria from the wrong section when `## Acceptance Criteria` was absent); see `skills/ops/brief-contract.md` §6.6 for the full missing-section table.
-
-**Internal inconsistency** (e.g., `## Scope` cites file A and `## Acceptance Criteria` requires changes in file B): escalate rather than silently picking one side. Return a `NEEDS-INPUT` verdict with a clear statement of which sections conflict. This closes the cross-section inconsistency gap (the executor used to silently pick one side without escalating); see `skills/ops/brief-contract.md` §6.5 for the precedence rules.
-
-**`## Mode: tdd`:** When the brief contains `## Mode: tdd`, the executor follows the RED-GREEN-REFACTOR discipline defined at `skills/ops/tdd-discipline.md`. The required sequence is: (1) identify the smallest behavior to add; (2) write a failing test that asserts only that behavior; (3) run the test and observe the failure — capture the output; (4) commit the failing test; (5) write the minimum production code to make the test pass; (6) run the test and observe it pass — capture the output; (7) commit; (8) refactor if needed, running tests after each individual edit. Every phase requires an observed-output step — "it obviously fails/passes" is not an observation. Production code written before an observed-failing test is a TDD violation that the verifier will catch.
+**`## Mode: tdd`:** When the brief contains `## Mode: tdd`, the executor follows the RED-GREEN-REFACTOR discipline defined at `~/.claude/skills/ops/tdd-discipline.md`. The required sequence is: (1) identify the smallest behavior to add; (2) write a failing test that asserts only that behavior; (3) run the test and observe the failure — capture the output; (4) commit the failing test; (5) write the minimum production code to make the test pass; (6) run the test and observe it pass — capture the output; (7) commit; (8) refactor if needed, running tests after each individual edit. Every phase requires an observed-output step — "it obviously fails/passes" is not an observation. Production code written before an observed-failing test is a TDD violation that the verifier will catch.
 
 **File-class allowlist** — the executor may Edit/Write: `source`, `test`, `config`. Excluded: `agent-contract` (route to architect/scoper), `plan-doc` (route to project-scoper), `docs` (route to documentor). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
 

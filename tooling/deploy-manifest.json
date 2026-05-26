@@ -4,7 +4,7 @@
             "source": "agents/",
             "target": "~/.claude/agents/",
             "include": [
-                "*.md"
+                "**/*.md"
             ],
             "exclude": [
                 "README.md"
@@ -42,7 +42,7 @@
             "source": "agents/",
             "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/agents/",
             "include": [
-                "*.md"
+                "**/*.md"
             ],
             "exclude": [
                 "README.md"
@@ -80,7 +80,7 @@
             "source": "agents/",
             "target": "~/.cursor/agents/",
             "include": [
-                "*.md"
+                "**/*.md"
             ],
             "exclude": [
                 "README.md"

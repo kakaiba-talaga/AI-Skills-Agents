@@ -680,9 +680,8 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 **Step 3 — Dispatch agents.** For each task (or parallel batch):
 
 1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk.
-2. Update TodoWrite: `TodoWrite(merge=true, todos=[{id: "task-N", content: "...", status: "in_progress"}])`.
-3. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read(path="docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
-4. **Evaluate the memory-injection predicate (Lever 1) and call the selector (Lever 2).** Before spawning the agent, determine whether to inject `## Project Knowledge` into the brief.
+2. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read("docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
+3. **Evaluate the memory-injection predicate (Lever 1) and call the selector (Lever 2).** Before spawning the agent, determine whether to inject `## Project Knowledge` into the brief.
 
    **Override flag.** The run-level flag `--memory-inject=off|auto|always` controls injection:
    - `off` — skip injection unconditionally for every dispatch in this run.
@@ -739,7 +738,7 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 
    This sentinel enables the next attempt's predicate to detect that the section was carried, avoiding re-injection.
 
-   **Cursor first-time awareness banner.** Since this IS the Cursor harness, this banner FIRES on the first dispatch in the current session that fires injection (i.e., the selector returned non-empty bytes AND the banner has not yet been emitted this session). Emit the following one-line banner to the user before the dispatch:
+   **Cursor first-time awareness banner.** When the active harness is **Cursor** AND this is the first dispatch in the current session that fires injection (i.e., the selector returned non-empty bytes AND the run-level state field `memory_inject_banner_emitted` is not yet `true`), emit the following one-line banner to the user before the dispatch:
 
    > **Literal banner text — keep fenced.** The block below is the exact one-line string emitted to the user as a plain text message, not a formatted dashboard output. Do not unfence it.
 
@@ -747,9 +746,20 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
    [memory-inject] Subagent briefs now carry ## Project Knowledge from your canonical store; top-level Cursor turns do not yet see this — see adapter-cursor.md §6 for the trust-model implication.
    ```
 
-   Emit the banner exactly once per Cursor session (track via a session-level first-emission cookie — once emitted, do not emit again in the same session). The harness-conditional check still applies: suppress on any non-Cursor harness.
+   After emitting the banner, set `memory_inject_banner_emitted: true` in the state file. The banner fires exactly once per session. Under **Claude Code**, suppress this banner — the top-level turn already sees `[CROSS-MEMORY]` injected by the always-on tier, so there is no trust-model inversion to disclose. At v1.1, once Cursor's `update_sentinel_block` lands and the top-level turn also sees the canonical store, this banner becomes unnecessary; the harness-conditional remains in place but evaluates to false.
 
-5. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
+4. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file. Follow the dispatch procedure below.
+5. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
+
+**Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
+
+The Agent tool's `subagent_type` parameter accepts any agent type that has a definition file at `~/.cursor/agents/` (Claude Code) or `~/.cursor/agents/` (Cursor). All agents in this taxonomy are registered `subagent_type` values in both environments. For each dispatch:
+
+   a. **Manager read (frontmatter only):** Open `~/.cursor/agents/<agent_type>.md` for `<agent_type>` from the state file; extract `model` from YAML frontmatter **only**. Never read or retain the agent body in the team manager's context — YAML frontmatter is the sole manager read; the spawned agent loads the full definition via the self-read prompt (rule e).
+   b. **`model`**: Set from the agent's frontmatter `model` field (e.g., `"sonnet"`, `"opus"`).
+   c. **`subagent_type`**: Always set to the task's `agent_type`. All agents with definition files at `~/.cursor/agents/` are registered `subagent_type` values — no whitelist check is needed. The agent's definition still materializes via the self-read prompt (rule e) for full context.
+   d. **`description`**: Always set to just `"<task subject>"`. The UI prefixes the `subagent_type` name automatically — wrapping the description with the agent_type (e.g., `"executor(Implement auth middleware)"`) produces double-labeling: `executor(executor(Implement auth middleware))`.
+   e. **`prompt`**: Compose using the self-read template below, followed by the task brief (see Agent Briefing Format). The agent reads its full definition as its first action — self-containment is preserved because the agent body materializes in the agent's own context, not the team manager's.
 
 **Self-read prompt template** (use verbatim, substituting `<agent_type>` and `<task brief>`):
 
@@ -758,23 +768,43 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 ```
 You are running as agent type: <agent_type>.
 
-**Your first action:** Read your full agent definition from `~/.cursor/agents/<agent_type>.md`. This file contains your workflow, responsibilities, lane boundaries, and constraints. Do not proceed with the task until you have read this file in full.
+**First action:** Read `~/.cursor/agents/<agent_type>.md` in full before any other work.
 
-**Before any completion claim** — the message in which the agent declares the task done, returns a verdict, or hands off a deliverable artifact — re-read the task brief's `## Constraints` section in full. Those constraints are load-bearing for verdict and completion validity: they govern what counts as evidence, what counts as scope, and what completion looks like for this dispatch.
-
-Once you have read the agent definition, execute the task below following the agent's instructions verbatim.
+**Before any completion claim** — re-read the brief's `## Constraints` in full (load-bearing for scope, evidence, and verdict validity).
 
 ---
 
 <task brief here>
 ```
 
-5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
-6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
+**Dispatch example:**
+
+> **Code invocation example — keep fenced.** The block below is a code-style invocation example, not a user-facing UI output. Do not unfence it.
+
+```
+Agent(
+  description: "Implement auth middleware",
+  model: "sonnet",
+  subagent_type: "executor",
+  prompt: <self-read template + task brief>
+)
+UI renders: executor(Implement auth middleware)
+```
+
+DO NOT set `description: "executor(Implement auth middleware)"` when `subagent_type: "executor"` is set.
+This produces `executor(executor(Implement auth middleware))` in the UI.
+
+Use the brief format below.
 
 **Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.
+> **Reference:** See `~/.cursor/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.
+
+**Foreground vs. Background Dispatch Policy**
+
+Default dispatch is **foreground**; background criteria live in the companion.
+
+> **Reference:** You MUST Read `~/.cursor/skills/ops/dispatch-policy.md` for foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, default to **foreground** dispatch.
 
 **Nested skill invocations:** When the team manager invokes a nested skill (e.g., `/deslop`, `/clickup`) during the dispatch loop, execute the write-before / clear-after ritual to prevent the turn from ending on the nested skill's return. The ritual has eleven steps (5 write-before + 6 clear-after):
 
@@ -834,7 +864,7 @@ When every task is `completed` (check state file):
    - **Longest task** — flag the slowest task (useful for future optimization).
    - **Estimation accuracy** — overall ratio of actual to estimated. Note significant variances for future runs.
 
-   > **Reference:** You MUST Read `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, calibration, idle time). If the file is missing, proceed using the bullet points above.
+   > **Reference:** See `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the bullet points above.
 
    > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.cursor/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.
 
@@ -936,14 +966,9 @@ Enforce in every brief (in addition to the Shared Brief Constraints block):
 
 When a task completes and feeds into a downstream task, write a **handoff document** to persist context across stage transitions.
 
-- **Storage:** `.agents/handoffs/<run_id>/` — each run gets its own subdirectory.
-- **Naming:** `handoff-<task_number>-<from_stage>-to-<to_stage>.md` (e.g., `handoff-003-implement-to-verify.md`).
-- **Run ID:** `<plan-slug>-<ISO-date>` stored in the state file's root `run_id` field.
-- **Writing:** After marking a task completed, immediately write the handoff to disk. Store the path in the task's `handoff_file` field in the state file.
-- **Reading:** When briefing downstream agents, read relevant handoff files and include content in the Context section.
-- **Cleanup:** Delete this run's handoff subdirectory on successful completion (Phase 4). Keep on pause/cancel. Never delete other runs' handoffs.
+**Invariants:** `.agents/handoffs/<run_id>/`; `handoff-<task_number>-<from_stage>-to-<to_stage>.md`.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/handoffs.md` for the full handoff template, run identity rules, naming examples, accumulation rules, and cleanup lifecycle. If the file is missing, proceed using the inline summary above.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/handoffs.md` for the full handoff template, run identity rules, naming examples, accumulation rules, and cleanup lifecycle. If the file is missing, proceed using the invariant paths above.
 
 ---
 
@@ -1018,7 +1043,7 @@ After all verify tasks pass and before code review, run deslop with `--conservat
 
 **After this nested skill returns, do not end the turn and do not write "Handing control back."** A nested-skill return is a mid-loop event (see Non-negotiable #10). Before invoking, write `pending_nested_skill` to the state file with `skill: "/deslop"`, `resume_phase: "phase-3-deslop-stage"`, and `resume_notes: "integrations.md steps 5-6"`. After the skill returns, re-read the state file, follow integrations.md steps 5–6 — if deslop made changes, re-dispatch the verifier against the modified files; if deslop made no changes, proceed to the code-review stage. Either branch: do not end the turn. Then clear `pending_nested_skill` back to `null` and continue.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/integrations.md` (Deslop Integration section) for the full deslop procedure, skip conditions, dashboard display rules, and re-verification logic. If the file is missing, proceed using the inline summary above.
+> **Reference:** See `~/.cursor/skills/ops/integrations.md` (Deslop Integration section) for the full deslop procedure, skip conditions, dashboard display rules, and re-verification logic. If the file is missing, proceed using the inline summary above.
 
 ---
 
@@ -1110,7 +1135,7 @@ Past user incident: the team manager wrapped its dashboard output in fences and 
 
 The Timing section is mandatory in every dashboard display — see Non-negotiables #7. Show elapsed time for in-progress tasks and final duration for completed tasks. At completion, always include total wall time, per-stage totals, and the longest task.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, calibration, idle time). If the file is missing, proceed using the dashboard template above.
+> **Reference:** See `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the dashboard template above.
 
 ---
 

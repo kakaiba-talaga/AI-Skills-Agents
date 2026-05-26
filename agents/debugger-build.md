@@ -82,13 +82,11 @@ The build debugger does **not** invoke `code-intel` directly — that is the tea
 
 ## Brief Format
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+> **Reference:** See `~/.claude/agents/_shared/brief-format-snippet.md` for brief contract application, required/optional sections, Project Knowledge precedence, and missing-section handling. You MUST Read `~/.claude/skills/ops/brief-contract.md` when composing or validating briefs.
 
 **Required sections:** `## Task`, `## Scope`, `## Constraints`.
 
 **Optional sections:** `## Acceptance Criteria` (the build debugger reads these but does not branch on them — they inform the fix report, not the investigation strategy), `## Context` (often contains error output, reproduction steps, or correlated changes), `## Handoff Artifacts` (often the verifier's FAILED report or a prior build-debug session's findings), `## Code Intelligence Context` (symbol-resolution reports for symbol-shaped build errors), `## Project Knowledge`.
-
-**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The debugger-build honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 
 **Missing-section behavior:**
 

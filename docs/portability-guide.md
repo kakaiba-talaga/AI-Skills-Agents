@@ -26,6 +26,8 @@ The deploy script (`tooling/deploy.ps1` / `tooling/deploy.sh`) automates all tra
 2. Replace tool names in the markdown body (`Bash` → `Shell`, `Edit` → `StrReplace`, `Agent` → `Task`)
 3. Replace `~/.claude/` paths with `~/.cursor/`
 
+Companion files under `agents/_shared/` (for example `brief-format-snippet.md`) deploy with the same agents manifest rule (`**/*.md`); they are not top-level agent definitions but shared snippets referenced by `See` pointers in pipeline agents. On Cursor deploy, paths inside those files rewrite like any other agent markdown. See [`agents/README.md`](../agents/README.md) § Shared snippets.
+
 ### Skills
 
 1. Derive `name` from the skill's directory name (e.g., `skills/clickup/` → `clickup`)

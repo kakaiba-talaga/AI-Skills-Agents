@@ -20,7 +20,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
-| `agents/README.md` | `agents/*.md` (22 agent definitions) |
+| `agents/README.md` | `agents/_shared/**`, `agents/*.md` (agent definitions + shared snippets) |
 | `agents/code-intel.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
 | `agents/corpus-search.md` | `agents/corpus-search.md`, `skills/ops/SKILL.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
 | `docs/code-intel-integration-test.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b, Phase 3 state cache, Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |

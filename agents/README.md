@@ -54,6 +54,12 @@ Cursor's `Task` tool also includes all agent types as `subagent_type` values nat
 
 Agents are invoked automatically by Claude Code when a task matches their description. You can also request them explicitly by name or by describing the task.
 
+### Shared snippets (`agents/_shared/`)
+
+Pipeline agents share brief-format boilerplate in [`_shared/brief-format-snippet.md`](_shared/brief-format-snippet.md) instead of duplicating it in every contract. Each agent's `## Brief Format` subsection keeps agent-specific overrides only and points at the snippet with a **`See`** line (for example, `See ~/.claude/agents/_shared/brief-format-snippet.md`). Agents that compose or validate briefs still use **`You MUST Read`** on `~/.claude/skills/ops/brief-contract.md` for the canonical contract.
+
+Deploy includes nested markdown: [`tooling/deploy-manifest.json`](../tooling/deploy-manifest.json) uses `"include": ["**/*.md"]` for agents (both Claude Code and Cursor targets), so `_shared/` ships to `~/.claude/agents/_shared/` and, on Cursor deploy, `~/.cursor/agents/_shared/` with path rewrite. `agents/README.md` stays repo-only (`exclude: ["README.md"]`). See [`skills/ops/pointer-format.md`](../skills/ops/pointer-format.md) for MUST vs See tiering.
+
 ### Architect
 
 - _"Use the architect to explore design options for the new caching layer"_

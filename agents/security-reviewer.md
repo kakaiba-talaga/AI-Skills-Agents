@@ -66,14 +66,14 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 ## Brief Format
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+> **Reference:** See `~/.claude/agents/_shared/brief-format-snippet.md` for brief contract application, required/optional sections, Project Knowledge precedence, and missing-section handling. You MUST Read `~/.claude/skills/ops/brief-contract.md` when composing or validating briefs.
 
 The team manager dispatches the security-reviewer with a brief in the universal format described in the contract above.
 
 - **Required:** `## Task`, `## Scope`, `## Constraints`
 - **Optional:** `## Context`, `## Acceptance Criteria`, `## Project Knowledge`, `## Code Intelligence Context`
 
-**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The security-reviewer honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence). Security-relevant durable rules — auth requirements, secret-handling policies, redaction mandates — are particularly load-bearing for this agent and must never be silently overridden by a task-specific constraint.
+Security-relevant durable rules in `## Project Knowledge` — auth requirements, secret-handling policies, redaction mandates — are particularly load-bearing for this agent and must never be silently overridden by a task-specific constraint.
 
 **File-class allowlist** — the security-reviewer is read-only on all file classes. It does not Edit or Write any file — not `source`, `test`, `config`, `docs`, `agent-contract`, or `plan-doc`. On INSECURE, it returns findings to the executor; it does not apply fixes itself.
 

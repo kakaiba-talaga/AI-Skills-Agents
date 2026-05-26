@@ -57,18 +57,14 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 ## Brief Format
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+> **Reference:** See `~/.claude/agents/_shared/brief-format-snippet.md` for brief contract application, required/optional sections, Project Knowledge precedence, and missing-section handling. You MUST Read `~/.claude/skills/ops/brief-contract.md` when composing or validating briefs.
 
 The team manager dispatches the documentor with a brief in the universal format described in the contract above. The documentor reads three required sections and six optional sections:
 
 - **Required:** `## Task`, `## Scope`, `## Constraints`
 - **Optional:** `## Context`, `## Acceptance Criteria`, `## Handoff Artifacts`, `## Code Intelligence Context`, `## Corpus Search Context`, `## Project Knowledge`
 
-**`## Project Knowledge`:** (i) The section informs but does not override `## Acceptance Criteria` or `## Scope`. (ii) The documentor honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
-
 **Missing `## Acceptance Criteria`:** note the absence and proceed — the documentor is not a pass/fail verifier. When `## Acceptance Criteria` is present, use it as the contractual bar for declaring the documentation complete. When absent, derive the completion bar from `## Task` and `## Scope`.
-
-**Internal inconsistency** (e.g., `## Scope` cites path A and `## Task` describes documenting path B): escalate rather than silently picking one side. Return a `NEEDS-INPUT` verdict with a clear statement of which sections conflict; see `skills/ops/brief-contract.md` § Section Precedence for the precedence rules.
 
 **File-class allowlist** — the documentor may Edit/Write: `docs`. Excluded: `source`, `test`, `config` (route to executor), `agent-contract` (route to architect/executor), `plan-doc` (route to project-scoper). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
 

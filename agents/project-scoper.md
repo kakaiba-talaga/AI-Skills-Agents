@@ -59,17 +59,15 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 ## Brief Format
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+> **Reference:** See `~/.claude/agents/_shared/brief-format-snippet.md` for brief contract application, required/optional sections, Project Knowledge precedence, and missing-section handling. You MUST Read `~/.claude/skills/ops/brief-contract.md` when composing or validating briefs.
 
 The team manager dispatches the project-scoper with a brief following the universal format in the contract above. Required sections: `## Task`, `## Scope`, `## Constraints`. Optional sections: `## Acceptance Criteria` (rare for scoping work), `## Context` (often contains the critic finding being addressed in revise-mode), `## Project Knowledge`.
-
-**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The project-scoper honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence).
 
 **Mode handling:** The scoper defaults to `autonomous` and does not branch on the `## Mode` field. Read it; ignore it; proceed.
 
 **File-class allowlist — in-scope (Edit/Write allowed):**
 
-- `plan-doc`: `docs/plan/*.md`, `docs/plan/*-architecture.md`, `docs/plan/*-add.md` — excludes `docs/plan/*-design.md` (architect agent only — see `skills/ops/brief-contract.md` file-class table)
+- `plan-doc`: `docs/plan/*.md`, `docs/plan/*-architecture.md`, `docs/plan/*-add.md` — excludes `docs/plan/*-design.md` (architect agent only — see `~/.claude/skills/ops/brief-contract.md` file-class table)
 - Assessment and scoping docs: `docs/*-assessment.md`, `docs/*-scoping.md`
 - Scoping-doc revision targets explicitly named in the brief's `## Scope`
 

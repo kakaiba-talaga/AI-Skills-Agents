@@ -33,6 +33,7 @@ All files live in `~/.claude/skills/ralph-loop/`. The main file orchestrates; co
 | :--- | ---: | :--- | :--- |
 | `SKILL.md` | 333 | Argument parsing, workflow, stage discipline, all cross-references | Every invocation |
 | `SKILL.cursor.md` | 337 | Cursor variant (drift baseline) | Cursor-side invocation |
+| `active-loop.md` | — | Active-loop invalidation, template read cadence, resume rules, headless state snapshot | Part A re-read / continuation (pointer from `SKILL.md`) |
 | `template-system.md` | 157 | Template resolution, YAML schema, template fields, read cadence | `--template` is used |
 | `state-schema.md` | 112 | Complete JSON schema, field types, pruning policy | State init or troubleshooting |
 | `execution-extras.md` | 87 | Rollback/undo, fan-out Verify, acceptance-criteria auto-evaluation | `rollback` command, or template defines `acceptance_criteria` / `hooks.verify.for_each` |
@@ -110,6 +111,7 @@ Every turn during an active loop opens with the **`Ralph Loop`** badge and a 6-s
 | Topic | File |
 | :--- | :--- |
 | Full argument parsing, stage rules, workflow, all constraints | `SKILL.md` |
+| Active-loop invalidation, resume, Part A re-read detail | `active-loop.md` |
 | Template YAML schema, resolution order, parameter reference | `template-system.md` |
 | Cleanup stage: linter rules, deslop escalation, regression procedure | `cleanup-deslop.md` |
 | State JSON schema, field types, pruning policy | `state-schema.md` |

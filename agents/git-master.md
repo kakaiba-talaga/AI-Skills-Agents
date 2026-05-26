@@ -55,19 +55,19 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 ## Brief Format
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract.
+> **Reference:** See `~/.claude/agents/_shared/brief-format-snippet.md` for brief contract application, required/optional sections, Project Knowledge precedence, and missing-section handling. You MUST Read `~/.claude/skills/ops/brief-contract.md` when composing or validating briefs.
 
 The team manager dispatches git-master with a brief containing these sections.
 
 **Required:** `## Task`, `## Scope`, `## Constraints`.
 **Optional:** `## Mode`, `## Acceptance Criteria` (rare for git operations), `## Project Knowledge`.
 
-**`## Project Knowledge`:** The section informs but does not override `## Acceptance Criteria` or `## Scope`. The git-master honors the mandatory `NEEDS-INPUT` escalation when a `## Constraints` bullet contradicts a security/correctness/safety-flagged durable rule in `## Project Knowledge` (keyword heuristic per `skills/ops/brief-contract.md` § Section Precedence). The commit-trailer rule and `.gitignore` boundary are example durable rules; a `## Constraints` bullet that asks for either to be bypassed must escalate.
+The commit-trailer rule and `.gitignore` boundary are example durable rules; a `## Constraints` bullet that asks for either to be bypassed must escalate.
 
 **Mode handling** (closes the runtime-undetectable mode gap — the agent used to fork on `interactive` vs `autonomous` without a contractual source for the field):
 
 - Read `## Mode` from the brief. Values: `interactive | autonomous | supervised | tdd`.
-  - `tdd` — discipline overlay; treat as `autonomous` for uncommitted-change handling. See `skills/ops/tdd-discipline.md`.
+  - `tdd` — discipline overlay; treat as `autonomous` for uncommitted-change handling. See `~/.claude/skills/ops/tdd-discipline.md`.
 - Absent → default `autonomous`.
 - In `autonomous` mode with uncommitted changes on `main`: stash with ISO-timestamped descriptive label (`git stash push -m "<task description> - <ISO-timestamp>"`); emit the stash ref in the response.
 - In `interactive` mode: ask the user — stash, WIP commit, or include in new branch.

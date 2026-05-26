@@ -378,6 +378,8 @@ You can interact with the team manager at any point between agent dispatches:
 
 The skill uses companion files for conditional sections, loaded on demand via Read instead of being inlined in SKILL.md. This keeps the core file lean — sections are only loaded when the relevant workflow branch is reached.
 
+**Pointer tiers:** Always-hot companions use **`You MUST Read`**; branch-only or opt-in companions use **`See`**. Canonical rules and templates live in [`pointer-format.md`](pointer-format.md) (MUST vs See, fallback sentences, downgrade criteria).
+
 | File | Content | Loaded when |
 | :--- | :--- | :--- |
 | `help-card.md` | Quick-reference card for commands, flags, and mid-run actions | `help` command |

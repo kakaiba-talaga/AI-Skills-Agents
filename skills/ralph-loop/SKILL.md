@@ -42,10 +42,11 @@ If `--lightweight` is provided, set `lightweight_mode: true` in state. Implies `
 ## Stage Execution Discipline
 
 0. **Re-read before every response.** Non-negotiable — skipping this is the leading cause of drift. Before generating any response during an active loop:
-   1. Re-read **Part A of this file** (everything above the `# Part B` separator: Stage Execution Discipline, Headless Gate, Checklist Format, Workflow condensed, Cleanup Stage safety rails, Constraints, Output Tagging). Part B and the preamble are loaded once at start; re-read them only if you need argument-parsing details or a pointer block.
-   2. Re-read the task's state JSON **only on these invalidation events**: (a) the task first resumes (`resume` subcommand or context recovery); (b) you have just written new fields to it (persist-before-proceed — always read back after a write); (c) the user sent new input that may have amended it; (d) on iteration increment (boundary between iterations); (e) after a `rollback` sub-command completes (rollback mutates state out-of-band). Between events, operate on the last-read snapshot. If a second process edits the state file mid-run, the change won't be picked up until a trigger fires — acceptable because concurrent-writer workflows are not supported.
-   3. If `template_id` is present, read the template YAML **once per iteration**, at Frame or on first Reflect-side evaluation — not before every stage message. Between those read points, operate on the cached snapshot. Invalidate on event (d) iteration increment (same as sub-step 2). The resolved `<task_id>.template.yaml` is frozen at task creation and never re-resolved (see template-system.md, "Never re-resolve" and "Read cadence").
-   4. Resume from `next_step` in the state file.
+   - Re-read **Part A of this file** (everything above `# Part B`; preamble and Part B load once at start).
+   - Re-read state JSON only on invalidation events; operate on the last-read snapshot between events.
+   - If `template_id` is present: read template YAML once per iteration (Frame or first Reflect-side evaluation).
+   - Resume from `next_step` in the state file.
+   > **Reference:** See `~/.claude/skills/ralph-loop/active-loop.md` for invalidation events, template read cadence, and resume rules. If the file is missing, follow the bullets above.
 1. **One stage per message.** Complete at most ONE stage per message. Every stage message MUST open with: (a) badge line, (b) progress checklist, (c) stage content. Completed stages: `✅`; remaining (including current): `🟦` (current stays unchecked — not yet done). After completing a stage, persist state, then continue to the next stage in a new message automatically — do NOT stop and wait for user input unless the stage requires it (e.g., Verify needs user to check results).
    - **Auto-advance exception (resume only).** When resuming a paused task where `next_step` is concrete and actionable AND the template (or state) has `auto_advance.frame_plan_combine: true`, Frame and Plan MAY be combined into a single message. Applies ONLY on resume, ONLY when `next_step` is unambiguous, and ONLY for Frame+Plan (never skip Execute, Verify, Cleanup, or Reflect). The combined message must still show the full checklist with both Frame and Plan addressed. After auto-advance, persist state with `current_stage: Execute`.
 2. **Badge per turn.** First line of each turn MUST begin with **`Ralph Loop`**. Continuation lines do not repeat it.
@@ -69,7 +70,7 @@ If `--lightweight` is provided, set `lightweight_mode: true` in state. Implies `
 
 Before EVERY user-facing prompt, structured choice, confirmation request, approval step, or question during an active loop:
 
-1. Check `headless_mode` in your in-memory state snapshot (per rule 0 sub-step 2 — do not re-read the state file unless an invalidation event has fired).
+1. Check `headless_mode` in your in-memory state snapshot (per `~/.claude/skills/ralph-loop/active-loop.md` state invalidation rules — do not re-read the state file unless an invalidation event has fired).
 2. Check `headless_mode`.
 3. If `true`: **DO NOT PROMPT.** Auto-decide per the template's headless config and proceed. Log the auto-decision in `context.notes`. This applies to ALL decision points with zero exceptions:
    - Work item scaffold approval (Frame) -- auto-approve immediately
@@ -147,6 +148,7 @@ Format: Use **`Ralph Loop`** (bold backtick-wrapped) as the first element on the
 
 | File | Read when |
 | :--- | :--- |
+| `~/.claude/skills/ralph-loop/active-loop.md` | Active loop continuation, context recovery, or full Part A re-read detail (rule 0) |
 | `template-system.md` | `--template` present, or resume with `template_id` |
 | `execution-extras.md` | Reflect stage (git snapshot creation), OR `rollback` sub-command, OR template defines `acceptance_criteria`, OR template defines `hooks.verify.for_each` (fan-out Verify) |
 | `cleanup-deslop.md` | Cleanup Stage runs (`deslop_enabled: true`), especially for escalation/regression detail |
