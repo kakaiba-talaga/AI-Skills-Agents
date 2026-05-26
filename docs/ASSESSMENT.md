@@ -40,7 +40,7 @@
 
 ### Skills (`skills/`)
 
-12 multi-file skills. 6 converted from single-file commands in the initial restructure; 1 added in the ops decoupling; 1 added as the kickoff skill; 1 added in the cross-memory v1 ship.
+13 multi-file skills. 6 converted from single-file commands in the initial restructure; 1 added in the ops decoupling; 1 added as the kickoff skill; 1 added in the cross-memory v1 ship; 1 added as `using-ai-skills-agents`.
 
 | Skill | Directory | Files | SKILL.md Lines | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
@@ -603,7 +603,7 @@ The Tier A Opus 4.7 audit (`docs/agent-audits/tier-a-opus-4-7-audit.md`) produce
 
 ### Strengths
 
-- **Unified skill structure:** All 12 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
+- **Unified skill structure:** All 13 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
 - **Consistent structure** across all 22 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
 - **Clean separation of concerns:** The ops decoupling moved operational logic (preflight, rollback, work verification, change analysis, timing calibration) out of skill companion files and into standalone agents/skills where it belongs. This reduces ops context pressure and makes each capability independently dispatchable.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
@@ -683,4 +683,4 @@ Skills invoked within pipeline stages:
 
 ---
 
-*Assessment updated 2026-05-24 (corpus-search v1 ship). Files assessed: 22 agents, 12 skills (74 skill files, incl. 3 SKILL.cursor.md + 1 SKILL.cursor.additions.md + 1 brief-contract.md + 1 verification-gate.md + 5 kickoff templates + 7 cross-memory files), 1 agents README, 8 docs (3 top-level docs/, 1 docs/agent-audits/, 3 docs/code-intel/, 1 docs/corpus-search/), 1 cursor rule, 9 tooling, 2 hooks, 29 plans, 1 root README, 1 CLAUDE.md, 1 settings.json, 1 .gitignore, 1 .markdownlint.json. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*
+*Assessment updated 2026-05-26 (token-efficiency Phase B + doc-sync). Files assessed: 22 agents, 13 skills (ops phase companions `phase-intake.md` / `phase-dispatch.md` / `phase-completion.md`; `agents/_shared/` orchestrator briefs; prior corpus-search v1 ship baseline). See `CLAUDE.md` Documentation Sync map for doc-to-code links. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*

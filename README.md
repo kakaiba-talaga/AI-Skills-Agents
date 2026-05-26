@@ -21,7 +21,7 @@ Initially, these should work on Claude Code and Cursor. Other AI development too
 The project is organized into the following directories:
 
 - `/agents` — 22 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
-- `/skills` — 12 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
+- `/skills` — 13 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
 - `/hooks` — Event hooks (e.g., post-compaction context re-injection).
 - `/docs` — Assessment and portability guide.
 - `/tooling` — Deploy script and manifest for syncing to global directories.

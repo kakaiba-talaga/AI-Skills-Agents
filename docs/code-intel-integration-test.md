@@ -10,7 +10,7 @@
 - **Git repository:** working tree inside a git repo (`git rev-parse HEAD` succeeds) — required for `db_indexed_sha` stamping and staleness checks.
 - **Indexer runtime:** at least one Tier-1 or Tier-2 language runtime available for this repo (Python is sufficient for AI-Skills-Agents).
 - **SQLite:** `sqlite3` CLI available on PATH for index inspection during manual tests.
-- **Ops skill:** `/ops` skill deployed and Phase 2.5b wired in `skills/ops/SKILL.md`.
+- **Ops skill:** `/ops` skill deployed; Phase 2.5b advisory preflight is implemented in `skills/ops/phase-dispatch.md` (loaded from the ops hub after triage routes to pipeline).
 
 ---
 
@@ -60,7 +60,7 @@ Report file exists on disk; header fields populated; index database present.
 
 **Purpose:** Confirm `/ops` Phase 2.5b fires during Phase 3 Step 2 and attaches `Code Intelligence Context` to the executor brief.
 
-> **Trivial-path limitation:** Trivial Dispatch skips Phase 2.5 entirely. Phase 2.5b cannot be exercised via trivial dispatch — use the **pipeline path** below.
+> **Trivial-path limitation:** Trivial Dispatch skips Phase 2.5 entirely (see `skills/ops/phase-intake.md` § Trivial Dispatch). Phase 2.5b cannot be exercised via trivial dispatch — use the **pipeline path** below.
 
 ### Steps
 

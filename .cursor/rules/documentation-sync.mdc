@@ -18,11 +18,19 @@ alwaysApply: false
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
+| `tooling/README.md` | `tooling/transform-cursor-{ops,deploy,ralph-loop}.{ps1,sh}`, `.github/workflows/transform-drift.yml` (CI drift gate when tracked) |
+| `skills/ops/phase-intake.md` | `skills/ops/SKILL.md` (Triage Gate → pipeline/trivial/save; Phase 1–2, LB1), `tooling/transform-cursor-ops.{ps1,sh}` |
+| `skills/ops/phase-dispatch.md` | `skills/ops/SKILL.md` (Phase 2.5b/2.5c/2.5/3, LB2, memory injection), `tooling/transform-cursor-ops.{ps1,sh}` |
+| `skills/ops/phase-completion.md` | `skills/ops/SKILL.md` (Phase 4, status dashboard), `tooling/transform-cursor-ops.{ps1,sh}` |
+| `docs/plan/token-efficiency-recommendations.md` | Phase A/B recommendations; links to `docs/plan/token-efficiency-phase-{a,b}-execute-plan.md` |
+| `docs/plan/token-efficiency-phase-b-execute-plan.md` | B1–B6 implementation checklist (executed 2026-05-26) |
+| `docs/plan/token-efficiency-phase-a-projection.md` | Post–Phase A measured/projected savings (proxy tokens); methodology aligned with TE-M1 |
 | `agents/README.md` | `agents/_shared/**`, `agents/*.md` (agent definitions + shared snippets) |
-| `agents/code-intel.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
-| `agents/corpus-search.md` | `agents/corpus-search.md`, `skills/ops/SKILL.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
-| `docs/code-intel-integration-test.md` | `agents/code-intel.md`, `skills/ops/SKILL.md` (Phase 2.5b, Phase 3 state cache, Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
-| `docs/corpus-search-integration-test.md` | `agents/corpus-search.md`, `skills/ops/SKILL.md` (Phase 2.5c, Phase 3 state cache, Phase 4 cleanup) |
+| `docs/agents-guide.md` | `agents/README.md` (runtime catalog + dispatch tables; extended usage, workflow, permissions - repo-only, not deployed) |
+| `agents/code-intel.md` | `agents/code-intel.md`, `agents/_shared/code-intel-orchestrator-brief.md`, `skills/ops/phase-dispatch.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
+| `agents/corpus-search.md` | `agents/corpus-search.md`, `agents/_shared/corpus-search-orchestrator-brief.md`, `skills/ops/phase-dispatch.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
+| `docs/code-intel-integration-test.md` | `agents/code-intel.md`, `skills/ops/phase-dispatch.md` (Phase 2.5b), `skills/ops/phase-completion.md` (Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
+| `docs/corpus-search-integration-test.md` | `agents/corpus-search.md`, `skills/ops/phase-dispatch.md` (Phase 2.5c), `skills/ops/phase-intake.md` (Trivial Dispatch), `skills/ops/phase-completion.md` (Phase 4 cleanup) |
 | `agents/cross-memory.md` | `agents/cross-memory.md`, `skills/cross-memory/SKILL.md` (audit subcommand brief shape; init+doctor non-trigger boundary; distill intent brief shape and output contract), `skills/cross-memory/README.md` (Audit section; synthesize, audit, and distill intent coverage) |
 | `docs/cross-memory/v1-shipped.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/*.md`, `agents/cross-memory.md` (v1 traceability — shipped surface, deferred items, SC verification map) |
 | `docs/cross-memory/v1.1-shipped.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/*.md`, `agents/cross-memory.md` (v1.1 traceability — shipped surface, deferred items, verifier closures) |
