@@ -378,6 +378,16 @@ You can interact with the team manager at any point between agent dispatches:
 
 The skill uses companion files for conditional sections, loaded on demand via Read instead of being inlined in SKILL.md. This keeps the core file lean — sections are only loaded when the relevant workflow branch is reached.
 
+**Phase companions (B1 hub):** After the Triage Gate classifies the invocation, pipeline work loads phase-scoped modules instead of keeping the full workflow inline in `SKILL.md`:
+
+| File | Content | Loaded when |
+| :--- | :--- | :--- |
+| `phase-intake.md` | Phase 1 intake, trivial dispatch (**LB1**), save subcommand, brainstorm gate, plan persistence, Phase 1a/1.5/2 task board | Triage routes to `pipeline`, `trivial`, or `save` |
+| `phase-dispatch.md` | Phase 2.5b/2.5c advisory preflight, Phase 2.5 validation, Phase 3 dispatch loop (**LB2**, memory injection, agent dispatch) | Task board ready; through dispatch |
+| `phase-completion.md` | Phase 4 completion ceremony, status dashboard, cleanup | All tasks done; `status` route |
+
+The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase pointer index. See the **Companion index** table in `SKILL.md` for MUST vs See on branch-only companions.
+
 **Pointer tiers:** Always-hot companions use **`You MUST Read`**; branch-only or opt-in companions use **`See`**. Canonical rules and templates live in [`pointer-format.md`](pointer-format.md) (MUST vs See, fallback sentences, downgrade criteria).
 
 | File | Content | Loaded when |

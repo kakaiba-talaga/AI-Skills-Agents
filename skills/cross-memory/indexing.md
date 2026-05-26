@@ -78,3 +78,36 @@ Re-sort runs in-place: read all lines, sort by `updated_at` of the referenced fi
 - **Storage layout and scope paths:** Three scope directories (`user-global/`, `projects/`, `harnesses/`), the `archive/` directory, and the no-global-aggregate rule are described in `SKILL.md` → `## Config` → Lazy-provisioning sequence.
 - **Slug derivation** for the `<slug>` portion in scope 2 (`projects/<slug>/`): replace each occurrence of any character in `{:, \, /, space, .}` with a single `-`; letter case preserved; leading dashes preserved. When the Claude Code adapter runs, it confirms its derived slug matches an entry in `~/.claude/projects/` before writing; if the slug does not match, the adapter halts and emits a structured violation report.
 - **Harness detection** (which harness-scoped `MEMORY.md` is updated for a given session): hybrid detection with explicit precedence: CLI flag > `~/.cross-memory/config.yaml` `current_harness:` > `CROSS_MEMORY_HARNESS` env var > adapter manifest probe > generic fallback.
+- **Skill companion index** (which extracted skill files load per subcommand): § 6 below; hub rule in `SKILL.md` → `## Companion loading`.
+
+## 6. Skill companion index
+
+Tiered companion loading for `~/.claude/skills/cross-memory/SKILL.md`. The hub file stays in context; companions load **only** when the active invocation matches a row below. Do not bulk-read all `skills/cross-memory/*.md` files on every invocation.
+
+**Bare invocation and `help`:** load **no** rows from this table — hub `SKILL.md` only (bare probe steps are inline in `SKILL.md` § Bare-invocation sequence). In particular, do **not** load `subcommand-doctor.md`, `subcommand-reflect.md`, or other subcommand companions.
+
+**Active subcommand:** MUST Read only the companion file(s) in that row before executing the subcommand body. When a row names a section within a shared file (e.g. `subcommand-recall-list-search.md` § Subcommand: recall), read that section only — not sibling sections in the same file.
+
+| Active subcommand | Companion file(s) | Hard MUST |
+| :--- | :--- | :--- |
+| *(none — bare invocation)* | — | — |
+| `help` | — | — |
+| `init` | `adapter-selection.md`, `subcommand-init.md`, `always-on-tier.md`, `injection-block.md` | `always-on-tier.md`, `injection-block.md` |
+| `save` | `adapter-selection.md`, `schema-validator.md`, `redaction.md`, `subcommand-save.md` | `schema-validator.md` |
+| `recall` | `subcommand-recall-list-search.md` (§ Subcommand: recall only) | — |
+| `list` | `subcommand-recall-list-search.md` (§ Subcommand: list only) | — |
+| `search` | `subcommand-recall-list-search.md` (§ Subcommand: search only) | — |
+| `forget` | `adapter-selection.md`, `subcommand-forget.md` | — |
+| `audit` | `subcommand-audit.md` | — |
+| `doctor` | `adapter-selection.md`, `subcommand-doctor.md` | — |
+| `reflect` | `adapter-selection.md`, `reflect-decline-ledger.md`, `subcommand-reflect.md` | — |
+
+**Orchestrator-only (never on `/cross-memory`):**
+
+| Consumer | Companion | Load when |
+| :--- | :--- | :--- |
+| `/ops` Phase 3 dispatch | `brief-injector.md` | Subagent brief injection per `brief-injector.md`; not on any `/cross-memory` subcommand, bare invocation, or `help` |
+
+**Missing file:** use the inline summary on the subcommand's hub `> **Reference:**` line in `SKILL.md` if present; otherwise stop with an error. Rows marked **Hard MUST** must not proceed without the companion file.
+
+**Injection safety:** `always-on-tier.md` behavior is unchanged — it is consumed only on the `init` path (session-bootstrap filter + formatter input). `recall` / `list` / `search` do not load `always-on-tier.md`, `injection-block.md`, `subcommand-doctor.md`, or `subcommand-reflect.md`.

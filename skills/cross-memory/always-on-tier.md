@@ -91,6 +91,7 @@ This list is consumed by the injection-block formatter, which formats the entrie
 - **Slug derivation rule** (how the active project slug is computed from the current working directory): `adapter-claude-code.md` § 2.
 - **Claude Code slug derivation and pre-flight confirmation**: `adapter-claude-code.md` § 2.
 - **Scope index file layout** (which paths carry a `MEMORY.md` and the line format used): `~/.claude/skills/cross-memory/indexing.md` § 1–2.
+- **Skill companion index** (this file loads only on `/cross-memory init`, not on bare invocation, `help`, `recall`, or other subcommands): `indexing.md` § 6.
 - **`staleness_threshold_days` config field**: `## Config` section above.
 - **Injection-block formatter** (consumes this filter's output list and produces the `[CROSS-MEMORY]` block bytes, including sub-section layout, size-budget enforcement, and sentinel-bounded write): see `injection-block.md`.
 - **Adapter interfaces** (how the filter's output is handed off to the harness-specific sentinel write): `adapter-claude-code.md` § 6 (`update_sentinel_block`).

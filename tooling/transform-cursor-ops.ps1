@@ -134,13 +134,55 @@ text = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n").decode("utf-8")
 
 # ---------------------------------------------------------------------------
 # Helper: replace first occurrence of old with new
+# Post-B1: many anchors moved to skills/ops/phase-*.md companions.
 # ---------------------------------------------------------------------------
+def _companion_patch(old):
+    """Return True when the anchor lives in phase companions, not the hub."""
+    first = old.split("\n", 1)[0]
+    return first.startswith((
+        "| Spec or requirement text |",
+        "| `resume` |",
+        "| `status` |",
+        "1. **Create state file (LB1",
+        "4. **Dispatch:** Spawn the agent via the Agent tool",
+        "5. **On result:** Mark task `completed`",
+        "**Spec clarity evaluation (default path",
+        "The plan doc + state file + handoff files (see Handoff Documents)",
+        "**ClickUp context enrichment:**",
+        "**Also skip when:** `resume`, `status`",
+        "Parse the plan into discrete, assignable tasks. Create the state file.",
+        "1. Run `Bash(command=\"mkdir -p .ops-state\")`.",
+        "2. Use the Write tool to create `.ops-state/<run-id>-board.json`",
+        "3. Verify the file exists by reading it back. If the read fails",
+        "**4. Write state file to disk:**",
+        "**When genuinely in doubt**, dispatch an **interviewer**",
+        "**Display the task board after creation.** After the state file is written",
+        "Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`)",
+        "2. **Resolve description_ref (LB2",
+        "**Your first action:** Read your full agent definition",
+        "**Dispatch example:**",
+        "After updating timing, check elapsed time of all in-progress background agents",
+        "| **Passed**",
+        "| **Failed — 2nd attempt**",
+        "| **Failed — 3rd attempt**",
+        "| **Blocked**",
+        "Orphan detection is handled by the **work-verifier** agent",
+        "When every task is `completed`:",
+        "dispatch a **verifier** agent to run the full test suite",
+        "   - **Estimation accuracy**",
+        "   > **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` fo",
+        "> **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` for t",
+        "   > **Reference:** Invoke the `/timing-calibrator capture` skill",
+        "## Team Manager — Status",
+    ))
+
 def rep(old, new):
     global text
     idx = text.find(old)
     if idx < 0:
-        first = old.split("\n")[0][:80]
-        print(f"WARNING: PATCH NOT FOUND: {first}...", file=sys.stderr)
+        if not _companion_patch(old):
+            first = old.split("\n")[0][:80]
+            print(f"WARNING: PATCH NOT FOUND: {first}...", file=sys.stderr)
         return
     text = text[:idx] + new + text[idx + len(old):]
 

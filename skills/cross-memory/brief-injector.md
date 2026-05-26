@@ -145,6 +145,7 @@ When an executor is dispatched to modify `brief-injector.md` itself — for exam
 - **Always-on tier filter** (four inclusion rules, dedup, staleness banner, output tuple shape): `skills/cross-memory/always-on-tier.md`.
 - **Injection-block formatter** (sub-section layout, 120-character bullet cap, `max_inject_chars` budget, drop priority, within-sub-section trimming, empty-list behavior): `skills/cross-memory/injection-block.md`.
 - **Canonical store layout** (scope paths, archive exclusion, `MEMORY.md` index file structure): `skills/cross-memory/indexing.md`.
+- **Skill companion index** (this file is orchestrator-only — never loaded by `/cross-memory` subcommands): `skills/cross-memory/indexing.md` § 6.
 - **Frontmatter schema and `tags[]` array** (field definitions, type and scope enums, reject behavior for malformed files): `skills/cross-memory/schema-validator.md`.
 - **Atomic write contract** (write-to-temp-then-rename semantics at every canonical-store write site): `skills/cross-memory/subcommand-save.md`.
 - **Cursor adapter trust-model disclosure** (subagents see `## Project Knowledge` even though `update_sentinel_block` is a no-op at v1; the brief injector bypasses that surface entirely): `skills/cross-memory/adapter-cursor.md`.

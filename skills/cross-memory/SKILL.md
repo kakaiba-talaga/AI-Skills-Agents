@@ -52,9 +52,20 @@ When invoked with no subcommand, the skill:
 
 **Probe scope:** the probe inspects only the **current** harness's sentinel block, not other harnesses' blocks. The harness is determined once at the start of step 1 and honored throughout.
 
+## Companion loading
+
+Resolve skill companions using `indexing.md` § 6 — Skill companion index. **Do not** bulk-load all `skills/cross-memory/*.md` companions on every invocation.
+
+| Rule | Behavior |
+| :--- | :--- |
+| Bare invocation / `help` | Load **no** companions from the index — hub `SKILL.md` only. |
+| Active subcommand | MUST Read **only** the companion file(s) listed for that subcommand in the index. |
+
+> **Reference:** See `~/.claude/skills/cross-memory/indexing.md` § 6 — Skill companion index for the authoritative subcommand → companion map.
+
 ## Schema validator
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/schema-validator.md` when the active subcommand is `save` (not on bare invocation or other subcommands) for the canonical frontmatter schema (required fields, optional fields, enum values, default rules, and literal reject error strings emitted by the validator). If the file is missing, proceed using the inline summary: every memory write validates `name`, `description`, `type`, `scope`, `tags`, `created_at`, `updated_at`; `type` ∈ {feedback, project, preference, fact, rule}; `scope` matches `user-global`, `project:<slug>`, or `harness:<name>`; reject with `validation error: ...` and abort the write.
+> **Reference:** You MUST Read `~/.claude/skills/cross-memory/schema-validator.md` when the active subcommand is `save` (per `indexing.md` § 6 — Hard MUST; not on bare invocation, `help`, or other subcommands) for the canonical frontmatter schema (required fields, optional fields, enum values, default rules, and literal reject error strings emitted by the validator). If the file is missing, proceed using the inline summary: every memory write validates `name`, `description`, `type`, `scope`, `tags`, `created_at`, `updated_at`; `type` ∈ {feedback, project, preference, fact, rule}; `scope` matches `user-global`, `project:<slug>`, or `harness:<name>`; reject with `validation error: ...` and abort the write.
 
 ---
 
@@ -160,18 +171,6 @@ The skill (the `/cross-memory` command implementation) writes this file at the e
 
 ---
 
-## Reflect decline ledger
-
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/reflect-decline-ledger.md` when the active subcommand is `reflect` (not on bare invocation or other subcommands) for the per-project decline-ledger schema, file path, lazy-create semantics, append-only contract, and matching strategy. If the file is missing, proceed using the inline summary: the ledger lives at `~/.cross-memory/projects/<slug>/reflect_declined.md`; each decline appends one `---`-delimited entry with `declined_at`, `candidate_id`, `proposed_name`, `category`, `scope`, `tags`, `body_preview`, `source_evidence`, `run_id`; the skill writes the ledger, the agent reads it as Reference Set C.
-
----
-
-## Adapter selection
-
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/adapter-selection.md` when the active subcommand is present (not bare invocation or `help`) for the five-step adapter-selection precedence chain (CLI flag → config field → env var → adapter probe → generic fallback), per-step error and warning behavior, the first-claim-wins probe rule, detection-timeout semantics, selection logging vocabulary, and edge cases. If the file is missing, proceed using the inline summary: parse `--harness` first (fail fast on invalid values); then check `current_harness` in `~/.cross-memory/config.yaml`; then `CROSS_MEMORY_HARNESS` env var; then probe registered adapters in order (`claude-code`, then `cursor`) with a 250 ms timeout each; fall back to `generic`. Selection records the winning step (`cli flag` / `config field` / `env var` / `adapter probe` / `generic fallback`) and surfaces it via `--verbose` and the audit environment block.
-
----
-
 ## Shared flag parsing
 
 The following flags are accepted by `init` and `doctor` (and may appear on other subcommands where noted). They are defined once here; per-subcommand `### Command syntax` sections reference this section rather than redefining semantics.
@@ -217,19 +216,19 @@ Requests additional diagnostic output. When present, the harness selection step 
 
 ## Subcommand: init
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-init.md` when the active subcommand is `init` (not on bare invocation or other subcommands) for the full init flow (Steps 1–5 — provisioning, adapter detection, reachability probe, always-on filter + sentinel write, reflect-staleness check, summary output in human / JSON / verbose), the per-harness behavior tables, idempotency contract, the "what init does NOT do" boundary list, and the reuse-of-doctor's-check-primitives section. If the file is missing, proceed using the inline summary: init delegates to the lazy-provisioning sequence in `## Config`, runs the adapter-selection chain, probes the harness-native `MEMORY.md` for reachability, invokes the always-on tier filter and injection-block formatter, dispatches `active_adapter.update_sentinel_block(content)` (no-op on cursor/generic at v1), reads the per-project `state.toml` to fire the reflect-staleness hint when `delta_days > reflect_staleness_threshold_days`, and emits a one-line summary (or schema-version-1 JSON under `--json`). Init is additive only — never deletes, overwrites, or repairs.
+> **Reference:** See `indexing.md` § 6 — load companions for `init`. You MUST Read `always-on-tier.md` and `injection-block.md` (Hard MUST). See `subcommand-init.md` for the full init flow (Steps 1–5 — provisioning, adapter detection, reachability probe, always-on filter + sentinel write, reflect-staleness check, summary output in human / JSON / verbose), the per-harness behavior tables, idempotency contract, the "what init does NOT do" boundary list, and the reuse-of-doctor's-check-primitives section. If companions are missing, proceed using the inline summary: init delegates to the lazy-provisioning sequence in `## Config`, runs the adapter-selection chain, probes the harness-native `MEMORY.md` for reachability, invokes the always-on tier filter and injection-block formatter, dispatches `active_adapter.update_sentinel_block(content)` (no-op on cursor/generic at v1), reads the per-project `state.toml` to fire the reflect-staleness hint when `delta_days > reflect_staleness_threshold_days`, and emits a one-line summary (or schema-version-1 JSON under `--json`). Init is additive only — never deletes, overwrites, or repairs.
 
 ---
 
 ## Subcommand: doctor
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-doctor.md` when the active subcommand is `doctor` (not on bare invocation or other subcommands). Invariant: read-only health check; no agent dispatch; PASS/WARN/FAIL/NOT-APPLICABLE per section plus aggregated verdict (`--json` exit codes only). If the file is missing, run checks by name from `## Check-name vocabulary` only.
+> **Reference:** See `indexing.md` § 6 — load companions for `doctor` (not on bare invocation, `help`, or other subcommands). See `subcommand-doctor.md`. Invariant: read-only health check; no agent dispatch; PASS/WARN/FAIL/NOT-APPLICABLE per section plus aggregated verdict (`--json` exit codes only). If the file is missing, run checks by name from `## Check-name vocabulary` only.
 
 ---
 
 ## Subcommand: reflect
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-reflect.md` when the active subcommand is `reflect` (not on bare invocation or other subcommands). Invariant: dispatches `cross-memory` with `intent: distill`; skill writes `state.toml` on successful `done`. If the file is missing, stop — do not run reflect without the companion.
+> **Reference:** See `indexing.md` § 6 — load companions for `reflect` (includes `reflect-decline-ledger.md`; not on bare invocation, `help`, or other subcommands). See `subcommand-reflect.md`. Invariant: dispatches `cross-memory` with `intent: distill`; skill writes `state.toml` on successful `done`. If the file is missing, stop — do not run reflect without the companion.
 
 ---
 
@@ -245,37 +244,37 @@ Two dispatch points invoke adapter operations: the `save` subcommand calls `mirr
 
 ## Subcommand: save
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-save.md` when the active subcommand is `save` (not on bare invocation or other subcommands) for the full save flow (Gates 1–4 parse / redact / confirm / write, the supersede branch with collision detection through Step 7 mirror hook, the standard-save mirror hook, and the auto-propose flow with its enumerated cue patterns). If the file is missing, proceed using the inline summary: save runs four sequential gates and never writes without an explicit `[y/N]` confirmation. Defaults: `--scope user-global`, `--type feedback`, `--tags []`, redaction on. Pass A `<private>` strip runs unconditionally; Pass B regex denylist requires the typed phrase `save unredacted` to bypass when patterns match. The mirror hook fires `active_adapter.mirror_write(memory)` after Gate 4 and follows canonical-first failure-isolation per `## Mirror failure handling`.
+> **Reference:** See `indexing.md` § 6 — load companions for `save` (includes Hard MUST `schema-validator.md`). See `subcommand-save.md` for the full save flow (Gates 1–4 parse / redact / confirm / write, the supersede branch with collision detection through Step 7 mirror hook, the standard-save mirror hook, and the auto-propose flow with its enumerated cue patterns). If the file is missing, proceed using the inline summary: save runs four sequential gates and never writes without an explicit `[y/N]` confirmation. Defaults: `--scope user-global`, `--type feedback`, `--tags []`, redaction on. Pass A `<private>` strip runs unconditionally; Pass B regex denylist requires the typed phrase `save unredacted` to bypass when patterns match. The mirror hook fires `active_adapter.mirror_write(memory)` after Gate 4 and follows canonical-first failure-isolation per `## Mirror failure handling`.
 
 ---
 
 ## Subcommand: recall
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-recall-list-search.md` § Subcommand: recall when the active subcommand is `recall` (not on bare invocation or other subcommands) for the full recall reference (case-insensitive substring match across name / description / tags / body, filter flags, output ordering, staleness banner, body rendering rules including the `[REDACTED:private]` → `…` cosmetic transform, empty-result messages). If the file is missing, proceed using the inline summary: recall takes a required `<topic>` positional, walks `~/.cross-memory/` excluding `archive/`, returns matched memories sorted by `updated_at` descending, applies a `(stale: last verified N days ago)` banner when `verified_at` exceeds the staleness threshold.
+> **Reference:** See `indexing.md` § 6 — load **only** `subcommand-recall-list-search.md` § Subcommand: recall for `recall` (not `subcommand-doctor.md` or other companions; not on bare invocation, `help`, or other subcommands). If the file is missing, proceed using the inline summary: recall takes a required `<topic>` positional, walks `~/.cross-memory/` excluding `archive/`, returns matched memories sorted by `updated_at` descending, applies a `(stale: last verified N days ago)` banner when `verified_at` exceeds the staleness threshold.
 
 ---
 
 ## Subcommand: list
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-recall-list-search.md` § Subcommand: list when the active subcommand is `list` (not on bare invocation or other subcommands) for the full list reference (no positional argument, `--stale-only` flag, output format `<name> — <description> — <scope> — <tags> — <staleness>`, archive exclusion). If the file is missing, proceed using the inline summary: list returns one-line summaries of all memories that pass the applied filters, sorted by `updated_at` descending, with no body rendering and `~/.cross-memory/archive/` excluded.
+> **Reference:** See `indexing.md` § 6 — load **only** `subcommand-recall-list-search.md` § Subcommand: list for `list` (not on bare invocation, `help`, or other subcommands). If the file is missing, proceed using the inline summary: list returns one-line summaries of all memories that pass the applied filters, sorted by `updated_at` descending, with no body rendering and `~/.cross-memory/archive/` excluded.
 
 ---
 
 ## Subcommand: search
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-recall-list-search.md` § Subcommand: search when the active subcommand is `search` (not on bare invocation or other subcommands) for the full search reference (grep-style match style, `<path>:<line>: <text>` triple output, two-flag filter set `--scope` and `--type`, archive exclusion, empty-result messages). If the file is missing, proceed using the inline summary: search takes a required `<query>` positional, scans body content only (not frontmatter), returns raw matched lines with canonical path and 1-based line number, excludes `~/.cross-memory/archive/` by default.
+> **Reference:** See `indexing.md` § 6 — load **only** `subcommand-recall-list-search.md` § Subcommand: search for `search` (not on bare invocation, `help`, or other subcommands). If the file is missing, proceed using the inline summary: search takes a required `<query>` positional, scans body content only (not frontmatter), returns raw matched lines with canonical path and 1-based line number, excludes `~/.cross-memory/archive/` by default.
 
 ---
 
 ## Subcommand: forget
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-forget.md` when the active subcommand is `forget` (not on bare invocation or other subcommands) for the full forget flow (Step 1 lookup, Step 2 confirmation, Step 3 archive to `~/.cross-memory/archive/<stem>-<YYYYMMDDTHHMMSSZ>.md`, Step 4 MEMORY.md index removal, Step 5 mirror-remove hook with sentinel-block update). If the file is missing, proceed using the inline summary: forget takes a required `<name>` positional, defaults `--scope user-global`, prompts `Forget memory '<name>'? It will be archived but not auto-deleted. [y/N]`, archives via move (never hard-delete), does NOT set `superseded_by` on the archive copy (that field is supersede-only), and dispatches `active_adapter.mirror_remove(memory)` after the canonical archive succeeds.
+> **Reference:** See `indexing.md` § 6 — load companions for `forget` (not on bare invocation, `help`, or other subcommands). See `subcommand-forget.md`. If the file is missing, proceed using the inline summary: forget takes a required `<name>` positional, defaults `--scope user-global`, prompts `Forget memory '<name>'? It will be archived but not auto-deleted. [y/N]`, archives via move (never hard-delete), does NOT set `superseded_by` on the archive copy (that field is supersede-only), and dispatches `active_adapter.mirror_remove(memory)` after the canonical archive succeeds.
 
 ---
 
 ## Subcommand: audit
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/subcommand-audit.md` when the active subcommand is `audit` (not on bare invocation or other subcommands) for the full audit flow (Step 1 build the agent brief with `intent: audit` and the effective staleness threshold, Step 2 dispatch the `cross-memory` agent, Step 3 render the five-section report (Stale memories / Duplicates / Contradictions / Redaction misses / Recommended actions), Step 4 per-finding actions `refresh` / `archive` / `forget` / `redact-now` / `categorize` each gated by standard write-path confirmation). If the file is missing, proceed using the inline summary: audit takes only `--staleness-days <N>` as an override flag, dispatches the agent with the labeled-prose brief documented in `agents/cross-memory.md`, renders the agent's report directly to chat without writing to disk, and applies no action without explicit user confirmation.
+> **Reference:** See `indexing.md` § 6 — load companions for `audit` (not on bare invocation, `help`, or other subcommands). See `subcommand-audit.md`. If the file is missing, proceed using the inline summary: audit takes only `--staleness-days <N>` as an override flag, dispatches the agent with the labeled-prose brief documented in `agents/cross-memory.md`, renders the agent's report directly to chat without writing to disk, and applies no action without explicit user confirmation.
 
 ---
 
@@ -339,19 +338,19 @@ Each name belongs to one of five groups. Checks within a group run in declared o
 
 ## Always-on tier
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/always-on-tier.md` when the active subcommand is `init` (not on bare invocation or other subcommands) for the always-on tier filter spec (trigger conditions, inputs, the four inclusion rules — user-global by type, project by type, harness by type, `tag=always-on` opt-in — deduplication, staleness banner application, output tuple shape `(scope, type, name, description_with_banner, tags)`, and edge cases). If the file is missing, proceed using the inline summary: the filter fires once at session bootstrap after adapter detection, walks the three canonical scope index files, merges and dedups by canonical path, applies a staleness banner to entries whose `verified_at` exceeds the threshold, and produces an ordered list consumed by the injection-block formatter.
+> **Reference:** See `indexing.md` § 6 — `always-on-tier.md` loads **only** on `init` (Hard MUST; not on bare invocation, `help`, `recall`, or other subcommands). You MUST Read `always-on-tier.md` on the `init` path for the always-on tier filter spec (trigger conditions, inputs, the four inclusion rules — user-global by type, project by type, harness by type, `tag=always-on` opt-in — deduplication, staleness banner application, output tuple shape `(scope, type, name, description_with_banner, tags)`, and edge cases). If the file is missing, proceed using the inline summary: the filter fires once at session bootstrap after adapter detection, walks the three canonical scope index files, merges and dedups by canonical path, applies a staleness banner to entries whose `verified_at` exceeds the threshold, and produces an ordered list consumed by the injection-block formatter.
 
 ---
 
 ## Injection block
 
-> **Reference:** You MUST Read `~/.claude/skills/cross-memory/injection-block.md` when the active subcommand is `init` (not on bare invocation or other subcommands) for the injection-block formatter spec (output contract — bytes go between sentinel markers, formatter does not emit the markers — block structure with `User Profile:` and `Project Knowledge:` sub-sections, sub-section sourcing rules, bullet format with the 120-character cap including staleness-banner truncation rule, size-budget enforcement via `max_inject_chars` with drop priority, sub-section atomicity, within-sub-section bullet trimming, and edge cases). If the file is missing, proceed using the inline summary: the formatter is a renderer only — it consumes the ordered entry list from the always-on tier filter and produces UTF-8 bytes constrained by `max_inject_chars` (default 2048); it never emits the sentinel-marker lines themselves; Project Knowledge drops before User Profile when the budget is exceeded; bullets within a sub-section drop bottom-to-top before whole-sub-section drop.
+> **Reference:** See `indexing.md` § 6 — `injection-block.md` loads **only** on `init` (Hard MUST; not on bare invocation, `help`, `recall`, or other subcommands). You MUST Read `injection-block.md` on the `init` path for the injection-block formatter spec (output contract — bytes go between sentinel markers, formatter does not emit the markers — block structure with `User Profile:` and `Project Knowledge:` sub-sections, sub-section sourcing rules, bullet format with the 120-character cap including staleness-banner truncation rule, size-budget enforcement via `max_inject_chars` with drop priority, sub-section atomicity, within-sub-section bullet trimming, and edge cases). If the file is missing, proceed using the inline summary: the formatter is a renderer only — it consumes the ordered entry list from the always-on tier filter and produces UTF-8 bytes constrained by `max_inject_chars` (default 2048); it never emits the sentinel-marker lines themselves; Project Knowledge drops before User Profile when the budget is exceeded; bullets within a sub-section drop bottom-to-top before whole-sub-section drop.
 
 ---
 
 ## Brief-time injection
 
-> **Reference:** See `~/.claude/skills/cross-memory/brief-injector.md` for the brief-time injection spec (ops orchestrator only — do not load on `/cross-memory` subcommand invocations, including bare invocation) (parameterized selector function signature with all seven context-object parameters, Lever 1 — the orchestrator predicate that decides WHEN to inject by checking whether `## Project Knowledge` is already present in the outbound brief, Lever 2 — the D2-B agent-type tag intersection that decides WHAT to include by filtering the always-on tier output through the dispatched agent's type tags, the `## Project Knowledge` output destination in the subagent brief, the header-strip rule, the budget rule using `max_brief_inject_chars`, the selector timeout rule, the sentinel-marker emission rule, and the twelve failure-mode scenarios). If the file is missing, proceed using the inline summary: the selector is called by the orchestrator before each subagent dispatch; Lever 1 fires only when the outbound brief does not already contain a `<!-- project-knowledge:carried -->` sentinel; Lever 2 filters the always-on tier entry list to entries whose tags do not include `exclude:<agent-type>` for the dispatched agent type; the result renders under a `## Project Knowledge` heading appended to the brief, with the sentinel on its own line at the bottom.
+> **Reference:** See `indexing.md` § 6 — orchestrator-only row. See `brief-injector.md` for the brief-time injection spec (`/ops` only — do not load on `/cross-memory` subcommand invocations, including bare invocation and `help`) (parameterized selector function signature with all seven context-object parameters, Lever 1 — the orchestrator predicate that decides WHEN to inject by checking whether `## Project Knowledge` is already present in the outbound brief, Lever 2 — the D2-B agent-type tag intersection that decides WHAT to include by filtering the always-on tier output through the dispatched agent's type tags, the `## Project Knowledge` output destination in the subagent brief, the header-strip rule, the budget rule using `max_brief_inject_chars`, the selector timeout rule, the sentinel-marker emission rule, and the twelve failure-mode scenarios). If the file is missing, proceed using the inline summary: the selector is called by the orchestrator before each subagent dispatch; Lever 1 fires only when the outbound brief does not already contain a `<!-- project-knowledge:carried -->` sentinel; Lever 2 filters the always-on tier entry list to entries whose tags do not include `exclude:<agent-type>` for the dispatched agent type; the result renders under a `## Project Knowledge` heading appended to the brief, with the sentinel on its own line at the bottom.
 
 ---
 
@@ -359,7 +358,7 @@ Each name belongs to one of five groups. Checks within a group run in declared o
 
 If the conversation thread is summarized, compacted, or interrupted mid-flow, recover by:
 
-1. **Re-read this file** at `~/.claude/skills/cross-memory/SKILL.md` to restore the full subcommand specifications and gate semantics.
+1. **Re-read this file** at `~/.claude/skills/cross-memory/SKILL.md` to restore hub rules and gate semantics; reload active-subcommand companions per `indexing.md` § 6 only (do not bulk-read the full skill tree).
 2. **If a save was in progress** (Gate 3 confirmation pending or Gate 4 write underway), do NOT assume the file was written. Re-examine `~/.cross-memory/<scope-dir>/` for partial files or stale staging artifacts. If the canonical file exists with the expected `name` slug, the save completed; if not, treat the prior invocation as aborted.
 3. **If `MEMORY.md` appears out of sync** (an entry references a file that no longer exists, or a file is on disk but absent from the index), regenerate the affected scope's `MEMORY.md` from the files actually present per `~/.claude/skills/cross-memory/indexing.md` line format.
 4. **Emit a recovery message** with the **`Cross-Memory`** badge naming what was recovered and what is still in flight.

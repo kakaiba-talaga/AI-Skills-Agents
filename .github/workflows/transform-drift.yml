@@ -1,0 +1,33 @@
+name: Transform drift
+
+on:
+  push:
+    paths:
+      - 'skills/ops/**'
+      - 'skills/deploy/**'
+      - 'skills/ralph-loop/**'
+      - 'tooling/transform-cursor-*.sh'
+      - 'tooling/transform-cursor-*.ps1'
+  pull_request:
+    paths:
+      - 'skills/ops/**'
+      - 'skills/deploy/**'
+      - 'skills/ralph-loop/**'
+      - 'tooling/transform-cursor-*.sh'
+      - 'tooling/transform-cursor-*.ps1'
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Drift-check ops transform
+        run: ./tooling/transform-cursor-ops.sh </dev/null
+
+      - name: Drift-check deploy transform
+        run: ./tooling/transform-cursor-deploy.sh </dev/null
+
+      - name: Drift-check ralph-loop transform
+        run: ./tooling/transform-cursor-ralph-loop.sh </dev/null

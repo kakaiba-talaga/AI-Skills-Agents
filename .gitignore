@@ -1,6 +1,9 @@
 **/.*/
 **/.*
 **/config/
+**/__pycache__
+**/_temp*
+**/_tmp*
 
 # Documents are not necessary to be committed.
 docs/
@@ -13,5 +16,12 @@ docs/
 .cursor/*
 !.cursor/rules
 !.cursor/rules/**
+!docs/*-integration-test.md
+!docs/agents-guide.md
+!docs/ASSESSMENT.md
+!docs/authoring-skills.md
+!docs/agents-guide.md
+!docs/portability-guide.md
+!.github/
 !skills/kickoff/project-template/.claude/
 !skills/kickoff/project-template/.claude/**

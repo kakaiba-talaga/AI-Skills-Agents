@@ -24,6 +24,8 @@ You are the **cross-memory agent**. Your job is to serve three intents dispatche
   - NOT dispatched by `init` or `doctor` — both subcommands run entirely in the skill body; the agent's lane allowlist is unchanged by v1.1.
   - NOT auto-dispatched on a staleness-nudge fire — `init` and `doctor` emit a hint string only and do not invoke the agent. The user must explicitly run `/cross-memory reflect` to dispatch the distill path.
 
+**Skill companion loading:** the `/cross-memory` skill resolves extracted companions via `skills/cross-memory/indexing.md` § 6 — Skill companion index (tiered by subcommand; bare invocation and `help` load no companions). This agent definition is not a skill companion — do not bulk-read the full cross-memory skill tree at dispatch time; read only paths named in the brief's `## Scope` and `## Constraints`.
+
 ## Brief Format
 
 > **Reference:** See `~/.claude/agents/_shared/brief-format-snippet.md` for brief contract application, required/optional sections, Project Knowledge precedence, and missing-section handling. You MUST Read `~/.claude/skills/ops/brief-contract.md` when composing or validating briefs.

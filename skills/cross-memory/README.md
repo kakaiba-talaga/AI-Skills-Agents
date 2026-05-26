@@ -84,6 +84,22 @@ cross-memory initialized: harness=claude-code, store=provisioned, sentinel=updat
 
 See [subcommand-init.md](subcommand-init.md) for full step definitions, per-harness behavior tables, JSON schema, and the idempotency contract.
 
+## Skill companion index
+
+Tiered companion loading keeps the hub `SKILL.md` in context while subcommand bodies load **only** when the active invocation matches a row in the index. Bare invocation and `help` load **no** subcommand companions (do not bulk-read `subcommand-doctor.md`, `subcommand-reflect.md`, or other large files on every call).
+
+| Active subcommand | Typical companions | Notes |
+| :--- | :--- | :--- |
+| `init` | `adapter-selection.md`, `subcommand-init.md`, `always-on-tier.md`, `injection-block.md` | Hard MUST on tier + injection block |
+| `save` | `adapter-selection.md`, `schema-validator.md`, `redaction.md`, `subcommand-save.md` | Hard MUST on `schema-validator.md` |
+| `recall` / `list` / `search` | `subcommand-recall-list-search.md` (one § only) | Section-scoped read |
+| `forget` | `adapter-selection.md`, `subcommand-forget.md` | |
+| `audit` | `subcommand-audit.md` | Dispatches cross-memory agent |
+| `doctor` | `adapter-selection.md`, `subcommand-doctor.md` | |
+| `reflect` | `adapter-selection.md`, `reflect-decline-ledger.md`, `subcommand-reflect.md` | |
+
+`/ops` Phase 3 dispatch loads `brief-injector.md` for per-brief injection — never on `/cross-memory` subcommands. Full table, orchestrator-only rows, and missing-file rules: [indexing.md §6 — Skill companion index](indexing.md#6-skill-companion-index).
+
 ## Storage Layout
 
 ```

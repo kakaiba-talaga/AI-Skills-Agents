@@ -48,7 +48,7 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 ## When You Are Dispatched
 
-**Orchestrator path** (`/ops` Phase 2.5b, executor, debugger, code-reviewer): the team manager or consumer agent embeds a JSON-fenced brief in the dispatch prompt. Detect this by the presence of a fenced `json` block. Validate it strictly per the schema below, then proceed. Return a JSON-fenced response.
+**Orchestrator path** (`/ops` Phase 2.5b, executor, debugger, code-reviewer): the team manager or consumer agent embeds a JSON-fenced brief in the dispatch prompt. Detect this by the presence of a fenced `json` block. Validate it strictly per `~/.claude/agents/_shared/code-intel-orchestrator-brief.md`, then proceed. Return a JSON-fenced response.
 
 **Standalone / human path**: the user sends a labeled-prose message with `Query:`, `Symbol:`, etc. lines. Return the full rendered report inline.
 
@@ -60,57 +60,15 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 Briefs may technically present both formats — for example, a labeled-prose brief that contains an example ` ```json ``` ` block, or a JSON brief preceded by hand-written prose that mentions a `Query:` line. Resolve the collision deterministically:
 
-1. **JSON-fenced wins when present.** If the input contains a fenced `json` block whose decoded object matches the schema below, treat the JSON as the authoritative brief and ignore any `Query:`/`Symbol:`/etc. lines outside the fence (they are example prose, not signal).
+1. **JSON-fenced wins when present.** If the input contains a fenced `json` block whose decoded object matches the schema in `~/.claude/agents/_shared/code-intel-orchestrator-brief.md`, treat the JSON as the authoritative brief and ignore any `Query:`/`Symbol:`/etc. lines outside the fence (they are example prose, not signal).
 2. **Labeled-prose only when there is no schema-matching JSON.** If the input has a `Query:` line outside any code fence and no JSON-fenced object that satisfies the schema, treat it as a labeled-prose brief.
 3. **Refuse only when neither pattern matches**, *or* when both patterns appear in the input but the JSON-fenced object fails schema validation. A schema-failing JSON-fenced brief is never silently downgraded to labeled-prose — that would mask orchestrator bugs.
 
 ### JSON-fenced (orchestrator)
 
-The JSON brief is the **sole and authoritative orchestrator-path signal**. A JSON-fenced brief comes only from orchestrators; labeled-prose comes only from humans. Do not look for any `[context]` block, marker, or sentinel — that pattern was retracted to avoid colliding with the standard `## Context` Markdown heading in `/ops`'s agent-briefing format.
+> **Reference:** See `~/.claude/agents/_shared/code-intel-orchestrator-brief.md` for orchestrator-path semantics, the JSON Schema, validation pseudocode, and strict-cap refusal rules.
 
-**Brief-level `## Constraints` exemption.** The JSON-fenced path is the sole orchestrator-path signal, and the schema below has `additionalProperties: false` with no `## Constraints` field — by design. Orchestrator-path dispatches do not ingest a brief-level `## Constraints` block; the schema's strict validation refuses it. The verification-gate ritual still applies to this agent via its read-only-agent status (see `~/.claude/skills/ops/verification-gate.md` § Read-only agents — verdicts as completion claims) — the agent's own deterministic output (`db_indexed_sha` + `generated_at` provenance, plus the `metadata` table re-read on every query) constitutes the fresh-evidence requirement. Labeled-prose briefs (the human dispatch path) do ingest `## Constraints` like any other agent.
-
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "code-intel brief",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["query_type", "symbol"],
-  "properties": {
-    "query_type": {
-      "type": "string",
-      "enum": [
-        "find_definition", "find_callers", "find_dependencies",
-        "impact_analysis", "find_implementations", "execution_flow",
-        "reindex", "clean"
-      ]
-    },
-    "symbol":           { "type": "string", "minLength": 1 },
-    "scope":            { "type": "string" },
-    "depth":            { "type": "integer", "minimum": 1, "maximum": 5 },
-    "output_mode":      { "type": "string", "enum": ["inline", "disk", "both"] },
-    "max_results":      { "type": "integer", "minimum": 1, "maximum": 200 },
-    "max_depth":        { "type": "integer", "minimum": 1, "maximum": 5 },
-    "max_files":        { "type": "integer", "minimum": 1, "maximum": 5000 },
-    "max_wall_clock_s": { "type": "integer", "minimum": 1, "maximum": 600 }
-  }
-}
-```
-
-Validation pseudocode:
-
-```python
-brief = parse_json_fenced_block(input)
-if brief is None:
-    refuse_with_usage_card("malformed: no JSON-fenced block found")
-violations = validate_against_schema(brief, BRIEF_SCHEMA)
-if violations:
-    refuse_with_usage_card(f"malformed: {violations}")
-# proceed
-```
-
-Unknown fields, missing required fields, and type mismatches are all refused — not silently clamped. A request to set `max_files: 10000` is refused at validation time (the schema's `maximum: 5000` is enforced strictly).
+**Orchestrator invariant:** Dispatch must include a fenced `json` block whose object validates against that schema (`query_type` and `symbol` required). Unknown fields and out-of-range numerics are refused — not silently clamped.
 
 ### Labeled-prose (human)
 
