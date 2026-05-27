@@ -5,9 +5,6 @@
             "target": "~/.claude/agents/",
             "include": [
                 "**/*.md"
-            ],
-            "exclude": [
-                "README.md"
             ]
         },
         "skills": {
@@ -43,9 +40,6 @@
             "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/agents/",
             "include": [
                 "**/*.md"
-            ],
-            "exclude": [
-                "README.md"
             ]
         },
         "skills": {
@@ -81,9 +75,6 @@
             "target": "~/.cursor/agents/",
             "include": [
                 "**/*.md"
-            ],
-            "exclude": [
-                "README.md"
             ],
             "transform": true
         },
