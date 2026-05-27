@@ -79,6 +79,10 @@ The team manager auto-detects which agent to assign based on task content:
 
 ## Key Features
 
+### Cursor state file sync
+
+On **Cursor**, `/ops` uses `.ops-state/<run-id>-board.json` as the source of truth and `TodoWrite` only as an IDE display layer. After board creation, the team manager must **Write → Read verify → TodoWrite** on every status change — updating `TodoWrite` alone breaks `resume`, timing, and handoffs. See `phase-dispatch.md` § **Cursor: state file sync (mandatory)**.
+
 ### Branch Isolation
 
 By default, the team manager creates a working branch before any agents modify code. This protects the base branch and makes the team's work easy to review, revert, or PR. The branch follows the project's naming convention (detected from git log) — e.g., `feature/<task>`, `fix/<task>`, or `team/<task>`.
@@ -383,7 +387,7 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | File | Content | Loaded when |
 | :--- | :--- | :--- |
 | `phase-intake.md` | Phase 1 intake, trivial dispatch (**LB1**), save subcommand, brainstorm gate, plan persistence, Phase 1a/1.5/2 task board | Triage routes to `pipeline`, `trivial`, or `save` |
-| `phase-dispatch.md` | Phase 2.5b/2.5c advisory preflight, Phase 2.5 validation, Phase 3 dispatch loop (**LB2**, memory injection, agent dispatch) | Task board ready; through dispatch |
+| `phase-dispatch.md` | Phase 2.5b/2.5c advisory preflight, Phase 2.5 validation, Phase 3 dispatch loop (**LB2**, memory injection, agent dispatch); **Cursor:** § state file sync (Write → verify → TodoWrite) | Task board ready; through dispatch |
 | `phase-completion.md` | Phase 4 completion ceremony, status dashboard, cleanup | All tasks done; `status` route |
 
 The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase pointer index. See the **Companion index** table in `SKILL.md` for MUST vs See on branch-only companions.

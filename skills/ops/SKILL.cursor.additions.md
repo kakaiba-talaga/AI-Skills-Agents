@@ -106,6 +106,8 @@ status: "pending"
 ```
 
 The format is `[agent_type][stage] subject`. The ops skill updates both the state file and TodoWrite on every status change.
+
+> **Cursor dispatch ritual:** Before Phase 3, read `~/.cursor/skills/ops/phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Never call `TodoWrite` until the board file `Write` + `Read` verify succeed in the same turn.
 @@END
 
 @@PATCH
@@ -331,16 +333,7 @@ ANCHOR: After the task board is created and before the first dispatch, run a pre
 After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **preflight** agent (see `~/.cursor/agents/preflight.md`) via `Task(subagent_type="generalPurpose")`. If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 @@END
 
-@@PATCH
-ACTION: replace_through
-ANCHOR: 2. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read("docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
-@@STOP
-> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.
-@@CONTENT
-2. Update TodoWrite: `TodoWrite(merge=true, todos=[{id: "task-N", content: "...", status: "in_progress"}])`.
-3. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read(path="docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
-4. **Compose the self-read prompt:** Read `~/.cursor/agents/<agent_type>.md` frontmatter **only** (for the `model` field — do NOT store the agent body in the task manager's context). Construct the prompt using the self-read template below, then append the task brief.
-@@END
+<!-- PATCH 21 removed: Phase 3 dispatch + Cursor state sync live in phase-dispatch.md (B1 companions). Do not re-insert TodoWrite-only hub steps here. -->
 
 @@PATCH
 ACTION: replace_line
@@ -697,6 +690,7 @@ These limitations are inherent to the Cursor platform and cannot be worked aroun
 - **No tool enforcement** — Agent tool restrictions in briefs are advisory only. A critic *could* still call StrReplace; it's just instructed not to. The deploy script's agent hardening adds explicit constraint sections to mitigate this.
 - **No custom agent definitions** — Cursor's `Task(subagent_type=...)` uses a fixed enum of built-in agent types. Custom agent `.md` definitions are not loadable as subagent prompts.
 - **TodoWrite limitations** — TodoWrite items only have `id`, `content`, and `status` fields. All rich metadata (dependencies, timing, estimates) lives in the state file on disk.
+- **TodoWrite drift** — Models often update TodoWrite without writing `.ops-state/<run-id>-board.json`. The board file is mandatory on every status change; see `phase-dispatch.md` § **Cursor: state file sync (mandatory)**.
 @@END
 
 @@PATCH

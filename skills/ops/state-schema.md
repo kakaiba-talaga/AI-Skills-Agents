@@ -2,6 +2,10 @@
 
 # State File Schema
 
+## Cursor: dual-layer board
+
+When the active harness is **Cursor**, ops uses a JSON board file plus `TodoWrite` for IDE display. **Only the board file is authoritative** for `resume`, timing, dependencies, and handoffs. Every status mutation must follow the Write → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Updating `TodoWrite` without writing the board file in the same turn is a protocol violation.
+
 ## Directory Conventions
 
 - `.ops-state/` holds one board file per run (supports concurrent/sequential runs without collision)

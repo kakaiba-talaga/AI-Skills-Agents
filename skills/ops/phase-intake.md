@@ -18,15 +18,15 @@ If no arguments are given, ask the user what they want to manage.
 
 When the triage gate routes to `trivial`, execute these steps and stop — do not proceed to Phase 1a, Phase 2.5, or the full Phase 4 ceremony:
 
-> **Harness note:** LB1/LB2 below are harness-agnostic. Claude Code uses `Bash` / `Agent`; Cursor uses `Shell` / `Task` plus `TodoWrite` for the IDE task board. Hub-specific Cursor wording lives in `SKILL.cursor.md` (regenerate with `tooling/transform-cursor-ops.ps1 -Force`); phase companions receive tool/path rewrites on Cursor deploy per `docs/portability-guide.md`.
+> **Harness note:** LB1/LB2 below are harness-agnostic. Claude Code uses `Bash` / `Agent`; Cursor uses `Shell` / `Task` plus `TodoWrite` as a **display layer only**. On Cursor, every status change must follow the Write → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)** — never update `TodoWrite` without writing the board file first. Hub-specific Cursor wording lives in `SKILL.cursor.md` (regenerate with `tooling/transform-cursor-ops.ps1 -Force`); phase companions receive tool/path rewrites on Cursor deploy per `docs/portability-guide.md`.
 
-1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Ensure `.ops-state/` exists (create the directory if missing). Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with Read. **Cursor only:** also call `TodoWrite(merge=false)` with the single task item.
+1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Ensure `.ops-state/` exists (create the directory if missing). Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with Read.
 2. **Assign agent type:** Apply the Agent Assignment Rules table (Phase 2) — same lookup, same precedence rules. No manual override.
 3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. Use `description_inline` directly to compose the Context, Scope, and Acceptance Criteria sections. The agent has no conversation history — the prompt must be fully self-contained.
 
    **Memory-injection predicate (trivial path).** Trivial runs always have `attempt=1` and `prior_handoff=None`, so the sentinel-marker handoff-detection branch never applies. The only gates are the override flag and the `MECHANICAL_AGENTS` list: skip injection when `--memory-inject=off` or when `agent_type` ∈ `MECHANICAL_AGENTS`; otherwise call the selector with `enable_agent_type_intersection=true` (or `false` when `--memory-inject=always`). If the selector returns non-empty bytes, render `## Project Knowledge` **between `## Context` and `## Scope`** in the brief and append the sentinel marker `<!-- project-knowledge:carried -->` at the bottom of that section. If empty bytes are returned, omit the section. The selector call references `skills/cross-memory/brief-injector.md` for the full function signature. The Cursor first-time awareness banner rule from Phase 3 Step 3 applies here as well — check `memory_inject_banner_emitted` and emit the banner once if appropriate.
-4. **Dispatch:** Spawn the assigned agent using the Agent Dispatch Procedure in `phase-dispatch.md` Step 3 — the agent reads its own definition as its first action. **Claude Code:** `Agent` tool with frontmatter `model`. **Cursor:** `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`; use `generalPurpose` when the type is not in the built-in enum.
-5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** update TodoWrite. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+4. **Dispatch:** Set the task to `in_progress` in the board file first (`phase-dispatch.md` Step 3 item 1; **Cursor:** include Write → verify → `TodoWrite`). Then spawn the assigned agent using the Agent Dispatch Procedure in `phase-dispatch.md` Step 3 — the agent reads its own definition as its first action. **Claude Code:** `Agent` tool with frontmatter `model`. **Cursor:** `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`; use `generalPurpose` when the type is not in the built-in enum.
+5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
 
@@ -134,7 +134,7 @@ Create the directory and file using these exact steps:
 
 1. Ensure `.ops-state/` exists (create the directory if missing).
 2. Use the Write tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.
-3. Verify the file exists by reading it back with Read. If the read fails, the state file was not created — stop and fix before proceeding. **Cursor only:** after the state file is verified, call `TodoWrite(merge=false)` with all tasks.
+3. Verify the file exists by reading it back with Read. If the read fails, the state file was not created — stop and fix before proceeding.
 
 **2. Parse and populate tasks:**
 
@@ -173,6 +173,7 @@ Before displaying the task board, confirm the state file exists and is valid:
 1. Read `.ops-state/<run-id>-board.json` — verify the file contains valid JSON with a non-empty `tasks` array.
 2. If the file is missing or empty, **stop and re-create it**. Do not proceed to dispatch without a valid state file on disk.
 3. Check whether `.ops-state/` is in `.gitignore`. If not, add it.
+4. **Cursor only:** After steps 1–3 pass, call `TodoWrite(merge=false)` with all tasks (display layer). Follow `phase-dispatch.md` § **Cursor: state file sync** — the board file must already contain the full task list before `TodoWrite`.
 
 **Agent Assignment Rules** — auto-detect from task content when `--agents` is not specified:
 

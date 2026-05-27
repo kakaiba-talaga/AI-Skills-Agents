@@ -245,6 +245,33 @@ Phase 4 step 9 cleans `.corpus-search/runs/<run-id>/` (ephemeral, this run only)
 
 After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`). If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 
+### Cursor: state file sync (mandatory)
+
+> Applies only when the active harness is **Cursor**. Claude Code has no `TodoWrite` tool — skip this section there.
+
+Cursor exposes `TodoWrite` for an IDE-visible task list. Models often update `TodoWrite` alone and **never** write `.ops-state/<run-id>-board.json` after the initial board creation. That breaks `resume`, `status`, timing, handoffs, and nested-skill recovery.
+
+| Layer | Role |
+| :--- | :--- |
+| `.ops-state/<run-id>-board.json` | **Source of truth** — dependencies, timing, `blocked_by`, adaptations, `pending_nested_skill` |
+| `TodoWrite` | **Display only** — mirrors status for the IDE; never authoritative |
+
+**Forbidden:** Calling `TodoWrite` for a status change without completing **Write → Read verify** on the board file in the **same assistant turn** first.
+
+**Required ritual** (every status change: `pending` → `in_progress`, completion, failure, new task, cancel, adaptation):
+
+1. `Read` the board file (or use cache only if this turn already wrote and verified it).
+2. Mutate the JSON in memory (`status`, `started_at`, `completed_at`, `duration_seconds`, `attempts`, etc.).
+3. `Write` the **full** board JSON to `.ops-state/<run-id>-board.json`.
+4. `Read` the file back; confirm the mutated field(s) match. If not, stop and rewrite — **do not** call `TodoWrite` until verify passes.
+5. **Then** `TodoWrite(merge=true, todos=[{id, content, status}])` (or `merge=false` when recreating the full board after `resume`).
+
+Use **separate tool calls** for steps 3–5. Never treat `TodoWrite` as satisfying Non-negotiable #1 or #3.
+
+**Before every subagent spawn:** If the board file does not show the task as `in_progress` with a fresh `started_at`, run the ritual for that transition first.
+
+**Dashboard and `/ops status`:** Derive timing, dependencies, and progress from the board file — not from `TodoWrite`.
+
 ### Phase 3 — Dispatch Loop
 
 This is the core orchestration loop. Repeat until all tasks are completed or the user intervenes:
@@ -266,7 +293,7 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 
 **Step 3 — Dispatch agents.** For each task (or parallel batch):
 
-1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk.
+1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk. **Cursor only:** follow § **Cursor: state file sync** (Write → Read verify → then `TodoWrite`) in the same turn before step 2.
 2. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read("docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
 3. **Evaluate the memory-injection predicate (Lever 1) and call the selector (Lever 2).** Before spawning the agent, determine whether to inject `## Project Knowledge` into the brief.
 
@@ -398,13 +425,13 @@ Default dispatch is **foreground**; background criteria live in the companion.
 - **Write-before** (immediately before the nested-skill call): (1) build the `pending_nested_skill` record with fields `skill`, `invoked_at`, `resume_phase`, `resume_notes`; (2) read the state file from disk; (3) set the `pending_nested_skill` field on the root object; (4) write the state file to disk; (5) issue the nested-skill call.
 - **Clear-after** (immediately after the nested skill returns, in the same turn): (1) read the state file from disk (cache was invalidated — see Step 1); (2) read `pending_nested_skill.resume_phase` and `resume_notes` to identify where to resume and how to proceed; (3) capture any output the nested skill produced that downstream phases need — write it into a handoff file where one exists, or hold it in-turn for the next agent's brief when no handoff procedure applies; (4) set `pending_nested_skill` back to `null`; (5) write the state file to disk; (6) execute the `resume_phase`-specified next action. **Do not end the turn.** See Non-negotiable #10.
 
-**Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. (Non-negotiable — see #3.)
+**Step 4 — Process results.** When an agent returns, **immediately** update the state file: record `completed_at` with ISO-8601 timestamp, calculate and store `duration_seconds`, increment `attempts`. Write the state file to disk. **Cursor only:** after Write, Read-verify per § **Cursor: state file sync**, then update `TodoWrite` for any `status` change in the outcome table below. `TodoWrite` alone does not satisfy Non-negotiable #3. (Non-negotiable — see #3.)
 
 After updating timing, check elapsed time of all in-progress background agents against their estimates. Emit a `⚠️ SLOW` warning when elapsed exceeds 1.5× estimate, or `🔴 OVERRUN` when elapsed exceeds 2.5× estimate. Warnings are emitted once per threshold crossing per task. For tasks with `estimate_source: "ops"` (rough estimates), suppress SLOW and emit OVERRUN only.
 
 | Outcome | Action |
 | :--- | :--- |
-| **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
+| **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. **Cursor:** Write → verify → `TodoWrite`, then write handoff (see Handoff Documents). Check for newly unblocked tasks. |
 | **Failed — 1st attempt** | Re-dispatch with the error appended to the brief. Narrow the scope or add constraints based on what went wrong. |
 | **Failed — 2nd attempt** | Dispatch a **debugger** agent (or **debugger-build** if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
 | **Failed — 3rd attempt** | Escalate model (e.g., sonnet → opus) and re-dispatch with full error history. Skip if already on opus. See Model Escalation in Adaptability. |

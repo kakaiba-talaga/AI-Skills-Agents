@@ -72,6 +72,8 @@ All task board operations use the state file as the primary store. **Every mutat
 | **Resume** | Read file from disk — full state recovered |
 | **Report** | Read file from disk, compute timing/estimates/variance |
 
+> **Cursor:** `TodoWrite` is a display layer only. Dispatch and status rituals live in `phase-dispatch.md` § **Cursor: state file sync (mandatory)** — read that section before Phase 3.
+
 ---
 
 ## Non-negotiables

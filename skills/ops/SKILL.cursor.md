@@ -98,6 +98,10 @@ status: "pending"
 
 The format is `[agent_type][stage] subject`. The ops skill updates both the state file and TodoWrite on every status change.
 
+> **Cursor dispatch ritual:** Before Phase 3, read `~/.cursor/skills/ops/phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Never call `TodoWrite` until the board file `Write` + `Read` verify succeed in the same turn.
+
+> **Cursor:** `TodoWrite` is a display layer only. Dispatch and status rituals live in `phase-dispatch.md` § **Cursor: state file sync (mandatory)** — read that section before Phase 3.
+
 ---
 
 ## Non-negotiables
@@ -530,3 +534,4 @@ These limitations are inherent to the Cursor platform and cannot be worked aroun
 - **No tool enforcement** — Agent tool restrictions in briefs are advisory only. A critic *could* still call StrReplace; it's just instructed not to. The deploy script's agent hardening adds explicit constraint sections to mitigate this.
 - **No custom agent definitions** — Cursor's `Task(subagent_type=...)` uses a fixed enum of built-in agent types. Custom agent `.md` definitions are not loadable as subagent prompts.
 - **TodoWrite limitations** — TodoWrite items only have `id`, `content`, and `status` fields. All rich metadata (dependencies, timing, estimates) lives in the state file on disk.
+- **TodoWrite drift** — Models often update TodoWrite without writing `.ops-state/<run-id>-board.json`. The board file is mandatory on every status change; see `phase-dispatch.md` § **Cursor: state file sync (mandatory)**.
