@@ -267,19 +267,66 @@ function Get-SourceFiles {
     return $files | Sort-Object FullName -Unique
 }
 
+function Get-RenameMap {
+    param([PSCustomObject]$Config)
+    $map = @{}
+    if ($Config.PSObject.Properties['rename'] -and $Config.rename) {
+        foreach ($prop in $Config.rename.PSObject.Properties) {
+            $map[$prop.Name.Replace('\', '/')] = $prop.Value
+        }
+    }
+    return $map
+}
+
+function Resolve-DeployRelativePath {
+    param(
+        [string]$SourceRelativePath,
+        [hashtable]$RenameMap
+    )
+    $normalized = $SourceRelativePath.Replace('\', '/')
+    if ($RenameMap.ContainsKey($normalized)) {
+        return $RenameMap[$normalized]
+    }
+    return $SourceRelativePath
+}
+
+function Get-DeployDisplayPath {
+    param(
+        [string]$SourceRelativePath,
+        [string]$DestRelativePath
+    )
+    if ($DestRelativePath -ne $SourceRelativePath) {
+        return ('{0} (from {1})' -f $DestRelativePath, $SourceRelativePath)
+    }
+    return $DestRelativePath
+}
+
+function Get-DeployDestinationPath {
+    param(
+        [string]$TargetDir,
+        [string]$DestRelativePath
+    )
+    $normalizedTarget = $TargetDir
+    if (Test-Path -LiteralPath $TargetDir -PathType Container) {
+        $normalizedTarget = (Resolve-Path -LiteralPath $TargetDir).ProviderPath
+    }
+    return [System.IO.Path]::GetFullPath((Join-Path $normalizedTarget $DestRelativePath))
+}
+
 function Get-ExpectedRelativePaths {
     param(
         [string]$SourceDir,
         [string[]]$Include,
         [string[]]$Exclude,
-        [string]$CategoryType
+        [string]$CategoryType,
+        [hashtable]$RenameMap = @{}
     )
     $fullSource = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $SourceDir))
     $files = Get-SourceFiles -SourceDir $SourceDir -Include $Include -Exclude $Exclude -CategoryType $CategoryType
     $relPaths = @()
     foreach ($file in $files) {
         $rel = $file.FullName.Substring($fullSource.Length).TrimStart('\', '/')
-        $relPaths += $rel
+        $relPaths += (Resolve-DeployRelativePath -SourceRelativePath $rel -RenameMap $RenameMap)
     }
     return $relPaths
 }
@@ -318,8 +365,10 @@ function Invoke-PruneSection {
         return @{ Pruned = 0; WouldPrune = 0 }
     }
 
+    $renameMap = Get-RenameMap -Config $Config
+
     # Build expected set
-    $expectedPaths = Get-ExpectedRelativePaths -SourceDir $source -Include $include -Exclude $exclude -CategoryType $CategoryName
+    $expectedPaths = Get-ExpectedRelativePaths -SourceDir $source -Include $include -Exclude $exclude -CategoryType $CategoryName -RenameMap $renameMap
     $expectedSet   = @{}
     foreach ($p in $expectedPaths) {
         # Normalize to forward slashes and lower-case for comparison on Windows
@@ -444,6 +493,7 @@ function Deploy-Section {
     $include = @($Config.include)
     $exclude = if ($Config.PSObject.Properties['exclude']) { @($Config.exclude) } else { @() }
     $shouldTransform = $Config.transform
+    $renameMap = Get-RenameMap -Config $Config
 
     $files = Get-SourceFiles -SourceDir $source -Include $include -Exclude $exclude -CategoryType $CategoryName
     if ($files.Count -eq 0) {
@@ -456,7 +506,9 @@ function Deploy-Section {
 
     foreach ($file in $files) {
         $relativePath = $file.FullName.Substring($sourceRoot.Length).TrimStart('\', '/')
-        $destPath = Join-Path $target $relativePath
+        $destRelativePath = Resolve-DeployRelativePath -SourceRelativePath $relativePath -RenameMap $renameMap
+        $displayPath = Get-DeployDisplayPath -SourceRelativePath $relativePath -DestRelativePath $destRelativePath
+        $destPath = Get-DeployDestinationPath -TargetDir $target -DestRelativePath $destRelativePath
 
         # Read source content
         $sourceContent = Get-Content $file.FullName -Raw -Encoding UTF8
@@ -487,17 +539,17 @@ function Deploy-Section {
 
         # Diff mode
         if ($Diff) {
-            if (Test-Path $destPath) {
-                $existingContent = Get-Content $destPath -Raw -Encoding UTF8
+            if (Test-Path -LiteralPath $destPath) {
+                $existingContent = Get-Content -LiteralPath $destPath -Raw -Encoding UTF8
                 if ($outputContent -ne $existingContent) {
-                    Write-Host "  CHANGED: $relativePath" -ForegroundColor Yellow
+                    Write-Host "  CHANGED: $displayPath" -ForegroundColor Yellow
                     $stats.Updated++
                 } else {
-                    Write-Host "  OK:      $relativePath" -ForegroundColor DarkGray
+                    Write-Host "  OK:      $displayPath" -ForegroundColor DarkGray
                     $stats.Skipped++
                 }
             } else {
-                Write-Host "  NEW:     $relativePath" -ForegroundColor Green
+                Write-Host "  NEW:     $displayPath" -ForegroundColor Green
                 $stats.Copied++
             }
             continue
@@ -505,17 +557,17 @@ function Deploy-Section {
 
         # DryRun mode
         if ($DryRun) {
-            if (Test-Path $destPath) {
-                $existingContent = Get-Content $destPath -Raw -Encoding UTF8
+            if (Test-Path -LiteralPath $destPath) {
+                $existingContent = Get-Content -LiteralPath $destPath -Raw -Encoding UTF8
                 if ($outputContent -ne $existingContent) {
-                    Write-Host "  WOULD UPDATE: $relativePath" -ForegroundColor Yellow
+                    Write-Host "  WOULD UPDATE: $displayPath" -ForegroundColor Yellow
                     $stats.Updated++
                 } else {
-                    Write-Host "  UP TO DATE:   $relativePath" -ForegroundColor DarkGray
+                    Write-Host "  UP TO DATE:   $displayPath" -ForegroundColor DarkGray
                     $stats.Skipped++
                 }
             } else {
-                Write-Host "  WOULD CREATE: $relativePath" -ForegroundColor Green
+                Write-Host "  WOULD CREATE: $displayPath" -ForegroundColor Green
                 $stats.Copied++
             }
             continue
@@ -527,19 +579,19 @@ function Deploy-Section {
             New-Item -ItemType Directory -Path $destDir -Force | Out-Null
         }
 
-        if (Test-Path $destPath) {
-            $existingContent = Get-Content $destPath -Raw -Encoding UTF8
+        if (Test-Path -LiteralPath $destPath) {
+            $existingContent = Get-Content -LiteralPath $destPath -Raw -Encoding UTF8
             if ($outputContent -ne $existingContent) {
-                Set-Content -Path $destPath -Value $outputContent -Encoding UTF8 -NoNewline
-                Write-Host "  UPDATED: $relativePath" -ForegroundColor Yellow
+                Set-Content -LiteralPath $destPath -Value $outputContent -Encoding UTF8 -NoNewline
+                Write-Host "  UPDATED: $displayPath" -ForegroundColor Yellow
                 $stats.Updated++
             } else {
-                Write-Host "  OK:      $relativePath" -ForegroundColor DarkGray
+                Write-Host "  OK:      $displayPath" -ForegroundColor DarkGray
                 $stats.Skipped++
             }
         } else {
-            Set-Content -Path $destPath -Value $outputContent -Encoding UTF8 -NoNewline
-            Write-Host "  CREATED: $relativePath" -ForegroundColor Green
+            Set-Content -LiteralPath $destPath -Value $outputContent -Encoding UTF8 -NoNewline
+            Write-Host "  CREATED: $displayPath" -ForegroundColor Green
             $stats.Copied++
         }
     }

@@ -14,7 +14,17 @@ This document describes the format differences between Claude Code and Cursor, w
 | Subagent spawning | `Agent` tool (`subagent_type` covers all agents with definitions in `~/.claude/agents/`; self-read prompt for full context) | `Task` tool (`subagent_type` enum covers all 19 agent types natively plus utility types; `model` limited to `"fast"`) |
 | Invocation | `/skill-name args` with `$ARGUMENTS` | Description-matched by IDE; no slash commands |
 | Config/state paths | `~/.claude/config/`, `.claude/state/` | `~/.cursor/config/`, `.cursor/state/` |
+| Global instructions | `~/.claude/CLAUDE.md` (from repo `CLAUDE-root.md`) | Project `.cursor/rules/` (not deployed from this repo) |
 | Size limits | No formal limit | SKILL.md under 500 lines; use companion files |
+
+### Settings and global `CLAUDE.md`
+
+The **settings** manifest category copies repo-root files into `~/.claude/` (and the WSL equivalent):
+
+- `settings.json` — deployed as-is.
+- `CLAUDE-root.md` — deployed as `CLAUDE.md` via the manifest `rename` map.
+
+The repo keeps **`CLAUDE.md`** for project instructions (doc-sync map, repo context). **`CLAUDE-root.md`** is the user-global harness file so the two names do not collide in git. Pruning is disabled for this category because its target directory is shared with agents, skills, and hooks.
 
 ## Transform Rules
 

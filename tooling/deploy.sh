@@ -229,6 +229,44 @@ find_source_files() {
     done <<< "$includes"
 }
 
+# --- Deploy path rename (manifest "rename" map) ---
+
+resolve_deploy_relative_path() {
+    local source_rel="$1"
+    local tool_key="$2"
+    local cat_key="$3"
+    local mapped
+    mapped=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" --arg p "$source_rel" \
+        '.[$tk][$ck].rename[$p] // empty' "$MANIFEST")
+    if [[ -n "$mapped" ]]; then
+        echo "$mapped"
+    else
+        echo "$source_rel"
+    fi
+}
+
+resolve_deploy_destination_path() {
+    local target="$1"
+    local dest_rel="$2"
+    local path="$target/$dest_rel"
+    if [[ -d "$target" ]]; then
+        local resolved_target
+        resolved_target=$(cd "$target" && pwd -P)
+        path="$resolved_target/$dest_rel"
+    fi
+    echo "$path"
+}
+
+deploy_display_path() {
+    local source_rel="$1"
+    local dest_rel="$2"
+    if [[ "$dest_rel" != "$source_rel" ]]; then
+        echo "$dest_rel (from $source_rel)"
+    else
+        echo "$dest_rel"
+    fi
+}
+
 # --- Expected set helper ---
 
 get_expected_relative_paths() {
@@ -263,7 +301,7 @@ get_expected_relative_paths() {
         $skip && continue
         [[ "$filename" == "SKILL.cursor.md" ]] && continue
         rel_path="${rel_path#/}"
-        echo "$rel_path"
+        resolve_deploy_relative_path "$rel_path" "$tool_key" "$cat_key"
     done <<< "$files"
 }
 
@@ -462,7 +500,10 @@ deploy_section() {
         $skip && continue
         [[ "$filename" == "SKILL.cursor.md" ]] && continue
 
-        local dest_path="$target/$rel_path"
+        local dest_rel display_path dest_path
+        dest_rel=$(resolve_deploy_relative_path "$rel_path" "$tool_key" "$cat_key")
+        display_path=$(deploy_display_path "$rel_path" "$dest_rel")
+        dest_path=$(resolve_deploy_destination_path "$target" "$dest_rel")
         local source_content output_content
         source_content=$(cat "$file")
         output_content="$source_content"
@@ -495,17 +536,17 @@ deploy_section() {
                 local existing
                 existing=$(cat "$dest_path")
                 if [[ "$output_content" != "$existing" ]]; then
-                    echo -e "  ${YELLOW}CHANGED: $rel_path${NC}"
+                    echo -e "  ${YELLOW}CHANGED: $display_path${NC}"
                     ((TOTAL_UPDATED++)) || true
                 else
-                    echo -e "  ${DIM}OK:      $rel_path${NC}"
+                    echo -e "  ${DIM}OK:      $display_path${NC}"
                     ((TOTAL_SKIPPED++)) || true
                 fi
             else
-                echo -e "  ${GREEN}NEW:     $rel_path${NC}"
+                echo -e "  ${GREEN}NEW:     $display_path${NC}"
                 ((TOTAL_CREATED++)) || true
             fi
-            return 0 2>/dev/null || true
+            continue
         fi
 
         if $DRY_RUN; then
@@ -513,17 +554,17 @@ deploy_section() {
                 local existing
                 existing=$(cat "$dest_path")
                 if [[ "$output_content" != "$existing" ]]; then
-                    echo -e "  ${YELLOW}WOULD UPDATE: $rel_path${NC}"
+                    echo -e "  ${YELLOW}WOULD UPDATE: $display_path${NC}"
                     ((TOTAL_UPDATED++)) || true
                 else
-                    echo -e "  ${DIM}UP TO DATE:   $rel_path${NC}"
+                    echo -e "  ${DIM}UP TO DATE:   $display_path${NC}"
                     ((TOTAL_SKIPPED++)) || true
                 fi
             else
-                echo -e "  ${GREEN}WOULD CREATE: $rel_path${NC}"
+                echo -e "  ${GREEN}WOULD CREATE: $display_path${NC}"
                 ((TOTAL_CREATED++)) || true
             fi
-            return 0 2>/dev/null || true
+            continue
         fi
 
         # Actual deploy
@@ -536,15 +577,15 @@ deploy_section() {
             existing=$(cat "$dest_path")
             if [[ "$output_content" != "$existing" ]]; then
                 printf '%s' "$output_content" > "$dest_path"
-                echo -e "  ${YELLOW}UPDATED: $rel_path${NC}"
+                echo -e "  ${YELLOW}UPDATED: $display_path${NC}"
                 ((TOTAL_UPDATED++)) || true
             else
-                echo -e "  ${DIM}OK:      $rel_path${NC}"
+                echo -e "  ${DIM}OK:      $display_path${NC}"
                 ((TOTAL_SKIPPED++)) || true
             fi
         else
             printf '%s' "$output_content" > "$dest_path"
-            echo -e "  ${GREEN}CREATED: $rel_path${NC}"
+            echo -e "  ${GREEN}CREATED: $display_path${NC}"
             ((TOTAL_CREATED++)) || true
         fi
     done <<< "$files"

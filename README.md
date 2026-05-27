@@ -26,6 +26,7 @@ The project is organized into the following directories:
 - `/docs` — Assessment and portability guide.
 - `/tooling` — Deploy script and manifest for syncing to global directories.
 - `settings.json` — Claude Code settings (permissions, preferences). Deployed to `~/.claude/` via the deploy script.
+- `CLAUDE-root.md` — User-global Claude Code instructions (skill badges, conventions). Deployed as `~/.claude/CLAUDE.md`. Repo `CLAUDE.md` is project-only and is not deployed.
 
 ## Deployment
 
@@ -42,6 +43,9 @@ By default, the script prompts for confirmation before writing files. Use `-Forc
 
 # Deploy only skills to Cursor
 .\tooling\deploy.ps1 -Target cursor -Category skills
+
+# Deploy only Claude Code settings + global CLAUDE.md
+.\tooling\deploy.ps1 -Target claude -Category settings
 
 # Deploy to WSL only
 .\tooling\deploy.ps1 -Target wsl -Force

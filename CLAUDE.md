@@ -18,6 +18,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | :--- | :--- |
 | `CLAUDE.md` (Documentation Sync) | `.cursor/rules/documentation-sync.mdc` (mirror) |
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
+| `CLAUDE-root.md` | `tooling/deploy-manifest.json` (settings → `~/.claude/CLAUDE.md`), `~/.claude/CLAUDE.md` (deployed global instructions) |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
 | `tooling/README.md` | `tooling/transform-cursor-{ops,deploy,ralph-loop}.{ps1,sh}`, `.github/workflows/transform-drift.yml` (CI drift gate when tracked) |

@@ -29,8 +29,12 @@
             "source": ".",
             "target": "~/.claude/",
             "include": [
-                "settings.json"
+                "settings.json",
+                "CLAUDE-root.md"
             ],
+            "rename": {
+                "CLAUDE-root.md": "CLAUDE.md"
+            },
             "prune": false
         }
     },
@@ -64,8 +68,12 @@
             "source": ".",
             "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/",
             "include": [
-                "settings.json"
+                "settings.json",
+                "CLAUDE-root.md"
             ],
+            "rename": {
+                "CLAUDE-root.md": "CLAUDE.md"
+            },
             "prune": false
         }
     },
