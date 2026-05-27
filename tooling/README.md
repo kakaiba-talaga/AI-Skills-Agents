@@ -56,3 +56,5 @@ After ops modularization (B1), `transform-cursor-ops` drift-check compares **`sk
 ## Deploy
 
 See repository `README.md` and `docs/portability-guide.md` for `deploy.ps1` / `deploy.sh` usage.
+
+`tooling/deploy-manifest.json` excludes build-only skill artifacts from every target: `**/SKILL.cursor.additions.md` (transform patch source). The Cursor target also excludes `**/SKILL.cursor.md` — deploy writes that content as `SKILL.md` at the destination only.

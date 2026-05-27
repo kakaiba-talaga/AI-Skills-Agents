@@ -85,7 +85,9 @@
                 "**/*"
             ],
             "exclude": [
-                "kickoff/**"
+                "kickoff/**",
+                "**/SKILL.cursor.additions.md",
+                "**/SKILL.cursor.md"
             ],
             "transform": true
         }

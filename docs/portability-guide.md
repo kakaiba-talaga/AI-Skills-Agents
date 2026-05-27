@@ -86,13 +86,16 @@ When mechanical transformation of `SKILL.md` produces a non-functional result (e
 
 ```text
 skills/<name>/
-  SKILL.md            # Claude Code version
-  SKILL.cursor.md     # Cursor-native version (used for Cursor deployments)
-  README.md           # Shared
-  *.md                # Companion files (shared, transformed by deploy script)
+  SKILL.md                    # Claude Code version
+  SKILL.cursor.md             # Cursor hub (committed; deployed as SKILL.md at target)
+  SKILL.cursor.additions.md   # Transform patch source (repo only — never deployed)
+  README.md                   # Shared
+  *.md                        # Companion files (shared, transformed by deploy script)
 ```
 
 The deploy script detects `SKILL.cursor.md` and uses it instead of transforming `SKILL.md`. The file is deployed as `SKILL.md` at the target — `SKILL.cursor.md` never appears at the destination.
+
+`SKILL.cursor.additions.md` is input for `tooling/transform-cursor-*.ps1` / `.sh` (and embedded patch lists). It is excluded from all deploy targets in `tooling/deploy-manifest.json` — keep it in git for maintainers and CI, not under `~/.cursor/skills/`.
 
 **When to create a `SKILL.cursor.md`:**
 
