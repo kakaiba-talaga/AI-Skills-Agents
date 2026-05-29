@@ -317,7 +317,7 @@ These agents operate independently of the pipeline and can be invoked at any sta
 **Change Analyzer:**
 
 - Diff classification by type: code, config, docs, tests
-- Per-stage skip/run recommendations for verify, deslop, review
+- Per-stage skip/run recommendations for verify, deslop, review, security-review
 - NEVER-skip rules take precedence over skip conditions
 
 ### Utility Agent Handoffs
