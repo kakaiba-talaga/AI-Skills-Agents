@@ -207,7 +207,7 @@ After the canonical supersede completes successfully (Steps 4–6 done), the sav
 2. Call `active_adapter.mirror_write(successor)` to write the successor's mirror file and update the sidecar manifest. The direction is canonical → mirror; the canonical write has already committed before this call is made.
 3. Invoke the always-on tier filter to produce the updated entry list, invoke the injection-block formatter on the filter's output to produce the updated content bytes, and call `active_adapter.update_sentinel_block(content)` to refresh the sentinel-bounded `MEMORY.md` region.
 
-All three dispatches follow the same canonical-first failure-isolation rules as the standard-save mirror hook: a failure at any step is a structured warning, not an error, and the canonical supersede is not rolled back.
+All three dispatches follow the same canonical-first failure-isolation rules as the standard-save mirror hook: a failure at any step is a structured warning, not an error, and the canonical supersede is not rolled back. The third dispatch (the `update_sentinel_block` splice) is mandatory and non-deferrable for the same reasons stated in `#### Sentinel block update (save)` below — a successful supersede must not skip it.
 
 ---
 
@@ -242,13 +242,17 @@ The save subcommand returns success.
 
 #### Sentinel block update (save)
 
-After `active_adapter.mirror_write(memory)` succeeds, the save flow updates the harness-native `MEMORY.md` sentinel region:
+After `active_adapter.mirror_write(memory)` succeeds, the save flow **must** update the harness-native `MEMORY.md` sentinel region. This refresh is a **required step of every successful save** — it is not optional and must not be deferred to `/cross-memory init` or any other command. Skipping or deferring it leaves the always-on injection block stale, meaning newly saved memories will not surface in session context until the next write event that does perform the refresh.
 
 1. Invoke the always-on tier filter to produce the updated entry list (the newly saved memory may now qualify for the always-on tier).
 2. Invoke the injection-block formatter on the filter's output to produce the updated content bytes.
 3. Call `active_adapter.update_sentinel_block(content)` to splice those bytes into the harness-native `MEMORY.md`.
 
-This call follows the same canonical-first failure-isolation rules as `mirror_write`: a failure here is a structured warning, not an error. The canonical save still succeeds and `mirror_write` is not rolled back.
+**Native-line preservation is already guaranteed.** The concern that calling `update_sentinel_block` might overwrite user-authored native index lines in `MEMORY.md` is addressed by two mechanisms in `adapter-claude-code.md § 6`: the SHA-256 byte-identical region check (which verifies that bytes outside the sentinel-bounded region are unchanged after every rewrite) and the no-marker-append case (which preserves all pre-existing content above the appended sentinel block when cross-memory is first installed). These guarantees are unconditional — concern about native lines is therefore not a valid reason to skip or defer the splice.
+
+**`update_sentinel_block` is deterministic and idempotent.** Calling it twice with the same content produces the same bytes between the sentinel markers. It is invoked by `save`, `forget`, audit-refresh, and `init` alike — `init` is not the sole owner of this operation; it is one of several callers.
+
+**Failure isolation — the only non-execution case.** If `update_sentinel_block` itself errors (for example, a corrupted sentinel state that causes a refuse-and-halt), the failure degrades to a structured warning and the canonical save is not rolled back. This error path is the only case in which the splice does not execute on a successful save. A successful save must not choose to defer the splice — the error path is not a discretionary exit.
 
 #### Ordering guarantee
 

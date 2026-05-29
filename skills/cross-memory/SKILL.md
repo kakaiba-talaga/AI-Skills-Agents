@@ -5,6 +5,7 @@ Parse the arguments as follows:
 - The first token after `/cross-memory` is the **subcommand**. Accepted values: `init`, `save`, `recall`, `list`, `forget`, `search`, `audit`, `doctor`, `reflect`. Any other first token is an error: emit `unknown subcommand: '<token>'. Valid subcommands: init, save, recall, list, forget, search, audit, doctor, reflect.` and stop.
 - `help` — emit the structured usage block below, then stop. No hint is appended (regardless of canonical-store or sentinel-block state).
 - Remaining tokens are parsed per the subcommand's `### Command syntax` section below.
+- For all subcommands except `init`, `help`, and `doctor`: run the **subcommand preflight** (see `## Subcommand preflight`) before any subcommand output.
 
 Default behavior when no subcommand is given: run the bare-invocation sequence described below.
 
@@ -51,6 +52,26 @@ When invoked with no subcommand, the skill:
 4. **Stops.** The skill never auto-runs init from bare invocation. State changes always require an explicit subcommand.
 
 **Probe scope:** the probe inspects only the **current** harness's sentinel block, not other harnesses' blocks. The harness is determined once at the start of step 1 and honored throughout.
+
+## Subcommand preflight
+
+**Applies to:** all subcommands **except** `init` (bootstraps the store — no store yet), `help` (no state interaction), and `doctor` (already reports store and sentinel health in its own output — emitting a duplicate notice here would be redundant).
+
+When a subcommand that is not `init`, `help`, or `doctor` begins execution, run the preflight **before** any subcommand output or main work:
+
+1. **Run the same read-only probe as the bare-invocation sequence** (see `### Bare-invocation sequence`, step 1): directory-existence check plus, on Claude-Code-class harnesses, a single sentinel-block read. The probe makes no writes, no network calls, no state changes, and MUST NOT trigger loading any subcommand companion files.
+
+2. **Apply the same predicate as the bare-invocation sequence** (see `### Bare-invocation sequence`, step 3):
+   - **Claude-Code-class harnesses:** predicate fires if `~/.cross-memory/` is absent **or** the active harness's sentinel block is missing or empty.
+   - **Cursor-class and generic harnesses:** predicate fires only if `~/.cross-memory/` is absent (sentinel-block predicate suppressed).
+
+3. **If the predicate fires**, emit the init-status notice **as the first output of the turn**, before any subcommand-specific output:
+   - **Under Claude-Code-class harnesses:** `Note: cross-memory may not be fully set up. Tip: run /cross-memory init to bootstrap this project.`
+   - **Under Cursor-class and generic harnesses:** `Note: cross-memory may not be fully set up. Tip: run /cross-memory init to bootstrap (Cursor injection surface deferred to post-v1).`
+
+4. **Proceed** with the subcommand normally regardless of whether the notice fired. This is a soft, non-blocking notice — do not stop, do not require confirmation, do not gate the subcommand on init having been run. Lazy provisioning (if applicable to the subcommand) continues as today.
+
+If the predicate does not fire, emit nothing — proceed silently to the subcommand's main work.
 
 ## Companion loading
 
