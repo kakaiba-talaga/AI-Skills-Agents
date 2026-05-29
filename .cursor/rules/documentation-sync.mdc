@@ -16,30 +16,28 @@ alwaysApply: false
 | :--- | :--- |
 | `CLAUDE.md` § Documentation Sync | `.cursor/rules/documentation-sync.mdc` (mirror) |
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
+| `CLAUDE-root.md` | `tooling/deploy-manifest.json` (settings → `~/.claude/CLAUDE.md`; `cursor` → `rules`), `~/.claude/CLAUDE.md` (deployed global instructions), `.cursor/rules/*.mdc` (one rule mirror per section, excl. Maintenance Note + `documentation-sync.mdc`) |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
 | `tooling/README.md` | `tooling/transform-cursor-{ops,deploy,ralph-loop}.{ps1,sh}`, `.github/workflows/transform-drift.yml` (CI drift gate when tracked) |
+| `agents/README.md` | `agents/_shared/**`, `agents/*.md` (agent definitions + shared snippets) |
+| `docs/agents-guide.md` | `agents/README.md` (runtime catalog + dispatch tables; extended usage, workflow, permissions — repo-only, not deployed) |
 | `skills/ops/phase-intake.md` | `skills/ops/SKILL.md` (Triage Gate → pipeline/trivial/save; Phase 1–2, LB1), `tooling/transform-cursor-ops.{ps1,sh}` |
 | `skills/ops/phase-dispatch.md` | `skills/ops/SKILL.md` (Phase 2.5b/2.5c/2.5/3, LB2, memory injection), `tooling/transform-cursor-ops.{ps1,sh}` |
 | `skills/ops/phase-completion.md` | `skills/ops/SKILL.md` (Phase 4, status dashboard), `tooling/transform-cursor-ops.{ps1,sh}` |
 | `docs/plan/token-efficiency-recommendations.md` | Phase A/B recommendations; links to `docs/plan/token-efficiency-phase-{a,b}-execute-plan.md` |
 | `docs/plan/token-efficiency-phase-b-execute-plan.md` | B1–B6 implementation checklist (executed 2026-05-26) |
 | `docs/plan/token-efficiency-phase-a-projection.md` | Post–Phase A measured/projected savings (proxy tokens); methodology aligned with TE-M1 |
-| `agents/README.md` | `agents/_shared/**`, `agents/*.md` (agent definitions + shared snippets) |
-| `docs/agents-guide.md` | `agents/README.md` (runtime catalog + dispatch tables; extended usage, workflow, permissions - repo-only, not deployed) |
 | `agents/code-intel.md` | `agents/code-intel.md`, `agents/_shared/code-intel-orchestrator-brief.md`, `skills/ops/phase-dispatch.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
 | `agents/corpus-search.md` | `agents/corpus-search.md`, `agents/_shared/corpus-search-orchestrator-brief.md`, `skills/ops/phase-dispatch.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
 | `docs/code-intel-integration-test.md` | `agents/code-intel.md`, `skills/ops/phase-dispatch.md` (Phase 2.5b), `skills/ops/phase-completion.md` (Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
 | `docs/corpus-search-integration-test.md` | `agents/corpus-search.md`, `skills/ops/phase-dispatch.md` (Phase 2.5c), `skills/ops/phase-intake.md` (Trivial Dispatch), `skills/ops/phase-completion.md` (Phase 4 cleanup) |
 | `agents/cross-memory.md` | `agents/cross-memory.md`, `skills/cross-memory/SKILL.md` (audit subcommand brief shape; init+doctor non-trigger boundary; distill intent brief shape and output contract), `skills/cross-memory/README.md` (Audit section; synthesize, audit, and distill intent coverage) |
-| `docs/cross-memory/v1-shipped.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/*.md`, `agents/cross-memory.md` (v1 traceability — shipped surface, deferred items, SC verification map) |
-| `docs/cross-memory/v1.1-shipped.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/*.md`, `agents/cross-memory.md` (v1.1 traceability — shipped surface, deferred items, verifier closures) |
-| `docs/cross-memory/v1.2-shipped.md` | `skills/cross-memory/SKILL.md` (reflect subcommand, staleness nudge, state.toml and reflect_declined.md substrate), `agents/cross-memory.md` (distill intent), `skills/cross-memory/README.md` (Reflect section) — v1.2 traceability: shipped surface, deferred items, SC verification closures |
 | `~/.claude/CLAUDE.md` (What NOT to save in memory) | `skills/cross-memory/SKILL.md` (reflect filter — LLM-prompt-applied exclusion corpus drawn from this rule), `agents/cross-memory.md` (distill brief — exclusion corpus passed as constraint field at distill-intent dispatch) |
 | `skills/clickup/README.md` | `skills/clickup/SKILL.md` |
 | `skills/cross-memory/brief-injector.md` | `skills/ops/SKILL.md` (Phase 3 Step 3), `skills/deslop/SKILL.md` (steps 5c and 7), `skills/deploy/SKILL.md` (Phase 4), `skills/ralph-loop/SKILL.md` (fan-out sites), `skills/ops/brief-contract.md` (Optional Sections + § Section Precedence) |
-| `skills/cross-memory/README.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/schema-validator.md`, `skills/cross-memory/adapter-selection.md`, `skills/cross-memory/reflect-decline-ledger.md`, `skills/cross-memory/subcommand-init.md`, `skills/cross-memory/subcommand-doctor.md`, `skills/cross-memory/subcommand-reflect.md`, `skills/cross-memory/subcommand-save.md`, `skills/cross-memory/subcommand-recall-list-search.md`, `skills/cross-memory/subcommand-forget.md`, `skills/cross-memory/subcommand-audit.md`, `skills/cross-memory/always-on-tier.md`, `skills/cross-memory/injection-block.md`, `skills/cross-memory/redaction.md`, `skills/cross-memory/indexing.md`, `skills/cross-memory/adapter-claude-code.md`, `skills/cross-memory/adapter-cursor.md`, `skills/cross-memory/adapter-generic.md`, `agents/cross-memory.md` (full nine-subcommand surface; README mirrors the post-optimization sub-file layout — twelve new extraction targets plus the original six adapter / redaction / indexing files) |
-| `skills/cross-memory/SKILL.md` (§ Per-project state file) and `skills/cross-memory/reflect-decline-ledger.md` | `skills/cross-memory/SKILL.md` (§ Per-project state file) — state.toml schema (fields: `last_reflect_at`, `reflect_count`); `skills/cross-memory/reflect-decline-ledger.md` — decline-ledger schema (fields: `declined_at`, `candidate_id`, `proposed_name`, `category`, `scope`, `tags`, `body_preview`, `source_evidence`, `run_id`); both consumed by `skills/cross-memory/README.md` (Reflect section) and `docs/cross-memory/v1.2-shipped.md` (SC verification map) |
+| `skills/cross-memory/README.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/schema-validator.md`, `skills/cross-memory/adapter-selection.md`, `skills/cross-memory/reflect-decline-ledger.md`, `skills/cross-memory/subcommand-init.md`, `skills/cross-memory/subcommand-doctor.md`, `skills/cross-memory/subcommand-reflect.md`, `skills/cross-memory/subcommand-save.md`, `skills/cross-memory/subcommand-recall-list-search.md`, `skills/cross-memory/subcommand-forget.md`, `skills/cross-memory/subcommand-audit.md`, `skills/cross-memory/always-on-tier.md`, `skills/cross-memory/injection-block.md`, `skills/cross-memory/redaction.md`, `skills/cross-memory/indexing.md` (§6 skill companion index — tiered subcommand loads), `skills/cross-memory/adapter-claude-code.md`, `skills/cross-memory/adapter-cursor.md`, `skills/cross-memory/adapter-generic.md`, `agents/cross-memory.md` (full nine-subcommand surface; README mirrors the post-optimization sub-file layout) |
+| `skills/cross-memory/SKILL.md` (§ Per-project state file) and `skills/cross-memory/reflect-decline-ledger.md` | `skills/cross-memory/SKILL.md` (§ Per-project state file) — state.toml schema (fields: `last_reflect_at`, `reflect_count`); `skills/cross-memory/reflect-decline-ledger.md` — decline-ledger schema (fields: `declined_at`, `candidate_id`, `proposed_name`, `category`, `scope`, `tags`, `body_preview`, `source_evidence`, `run_id`); both consumed by `skills/cross-memory/README.md` (Reflect section) |
 | `skills/code-review/README.md` | `skills/code-review/SKILL.md` |
 | `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |
 | `skills/deploy/README.md` | `skills/deploy/SKILL.md`, `skills/deploy/SKILL.cursor.md`, `skills/deploy/*.md` |
@@ -57,7 +55,7 @@ alwaysApply: false
 | `skills/ralph-loop/SKILL.cursor.md` | `skills/ralph-loop/SKILL.md`, `tooling/transform-cursor-ralph-loop.{ps1,sh}` |
 | `skills/timing-calibrator/README.md` | `skills/timing-calibrator/SKILL.md` |
 | `skills/ralph-loop/templates/README.md` | `skills/ralph-loop/templates/*.yaml` |
-| `docs/agent-audits/tier-a-opus-4-7-audit.md` | `agents/{executor,verifier,debugger,git-master,project-scoper}.md` (Opus 4.7 critic audit, 2026-05-04) |
+| `docs/authoring-skills.md` | `skills/*/SKILL.md` (file layout, flat-markdown convention, output tagging, sub-file extraction, transform-regen rule — contributor conventions derived from existing skills) |
 
 ## Rules
 

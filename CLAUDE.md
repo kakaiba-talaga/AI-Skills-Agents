@@ -16,9 +16,9 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 
 | Documentation | Code / Config |
 | :--- | :--- |
-| `CLAUDE.md` (Documentation Sync) | `.cursor/rules/documentation-sync.mdc` (mirror) |
+| `CLAUDE.md` § Documentation Sync | `.cursor/rules/documentation-sync.mdc` (mirror) |
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
-| `CLAUDE-root.md` | `tooling/deploy-manifest.json` (settings → `~/.claude/CLAUDE.md`), `~/.claude/CLAUDE.md` (deployed global instructions) |
+| `CLAUDE-root.md` | `tooling/deploy-manifest.json` (settings → `~/.claude/CLAUDE.md`; `cursor` → `rules`), `~/.claude/CLAUDE.md` (deployed global instructions), `.cursor/rules/*.mdc` (one rule mirror per section, excl. Maintenance Note + `documentation-sync.mdc`) |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
 | `tooling/README.md` | `tooling/transform-cursor-{ops,deploy,ralph-loop}.{ps1,sh}`, `.github/workflows/transform-drift.yml` (CI drift gate when tracked) |
@@ -34,11 +34,12 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `agents/corpus-search.md` | `agents/corpus-search.md`, `agents/_shared/corpus-search-orchestrator-brief.md`, `skills/ops/phase-dispatch.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
 | `docs/code-intel-integration-test.md` | `agents/code-intel.md`, `skills/ops/phase-dispatch.md` (Phase 2.5b), `skills/ops/phase-completion.md` (Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
 | `docs/corpus-search-integration-test.md` | `agents/corpus-search.md`, `skills/ops/phase-dispatch.md` (Phase 2.5c), `skills/ops/phase-intake.md` (Trivial Dispatch), `skills/ops/phase-completion.md` (Phase 4 cleanup) |
-| `agents/cross-memory.md` | `skills/cross-memory/SKILL.md` (audit subcommand brief shape; init+doctor non-trigger boundary; distill intent brief shape and output contract), `skills/cross-memory/README.md` (Audit section; synthesize, audit, and distill intent coverage) |
+| `agents/cross-memory.md` | `agents/cross-memory.md`, `skills/cross-memory/SKILL.md` (audit subcommand brief shape; init+doctor non-trigger boundary; distill intent brief shape and output contract), `skills/cross-memory/README.md` (Audit section; synthesize, audit, and distill intent coverage) |
 | `~/.claude/CLAUDE.md` (What NOT to save in memory) | `skills/cross-memory/SKILL.md` (reflect filter — LLM-prompt-applied exclusion corpus drawn from this rule), `agents/cross-memory.md` (distill brief — exclusion corpus passed as constraint field at distill-intent dispatch) |
 | `skills/clickup/README.md` | `skills/clickup/SKILL.md` |
 | `skills/cross-memory/brief-injector.md` | `skills/ops/SKILL.md` (Phase 3 Step 3), `skills/deslop/SKILL.md` (steps 5c and 7), `skills/deploy/SKILL.md` (Phase 4), `skills/ralph-loop/SKILL.md` (fan-out sites), `skills/ops/brief-contract.md` (Optional Sections + § Section Precedence) |
 | `skills/cross-memory/README.md` | `skills/cross-memory/SKILL.md`, `skills/cross-memory/schema-validator.md`, `skills/cross-memory/adapter-selection.md`, `skills/cross-memory/reflect-decline-ledger.md`, `skills/cross-memory/subcommand-init.md`, `skills/cross-memory/subcommand-doctor.md`, `skills/cross-memory/subcommand-reflect.md`, `skills/cross-memory/subcommand-save.md`, `skills/cross-memory/subcommand-recall-list-search.md`, `skills/cross-memory/subcommand-forget.md`, `skills/cross-memory/subcommand-audit.md`, `skills/cross-memory/always-on-tier.md`, `skills/cross-memory/injection-block.md`, `skills/cross-memory/redaction.md`, `skills/cross-memory/indexing.md` (§6 skill companion index — tiered subcommand loads), `skills/cross-memory/adapter-claude-code.md`, `skills/cross-memory/adapter-cursor.md`, `skills/cross-memory/adapter-generic.md`, `agents/cross-memory.md` (full nine-subcommand surface; README mirrors the post-optimization sub-file layout) |
+| `skills/cross-memory/SKILL.md` (§ Per-project state file) and `skills/cross-memory/reflect-decline-ledger.md` | `skills/cross-memory/SKILL.md` (§ Per-project state file) — state.toml schema (fields: `last_reflect_at`, `reflect_count`); `skills/cross-memory/reflect-decline-ledger.md` — decline-ledger schema (fields: `declined_at`, `candidate_id`, `proposed_name`, `category`, `scope`, `tags`, `body_preview`, `source_evidence`, `run_id`); both consumed by `skills/cross-memory/README.md` (Reflect section) |
 | `skills/code-review/README.md` | `skills/code-review/SKILL.md` |
 | `skills/commit-message/README.md` | `skills/commit-message/SKILL.md` |
 | `skills/deploy/README.md` | `skills/deploy/SKILL.md`, `skills/deploy/SKILL.cursor.md`, `skills/deploy/*.md` |
@@ -50,6 +51,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `skills/ops/brief-contract.md` | `skills/ops/SKILL.md` (Agent Briefing Format), `agents/{executor,verifier,debugger,git-master,project-scoper}.md` (`## Brief Format` subsections) |
 | `skills/ops/README.md` | `skills/ops/SKILL.md`, `skills/ops/SKILL.cursor.md`, `skills/ops/*.md` |
 | `skills/ops/SKILL.cursor.md` | `skills/ops/SKILL.md`, `tooling/transform-cursor-ops.{ps1,sh}` |
+| `skills/ops/verification-gate.md` | `skills/ops/SKILL.md` (§ Shared Brief Constraints — references `verification-gate.md` as the canonical ritual source) |
 | `skills/ops/subcommand-save.md` | `skills/ops/SKILL.md` (Save Subcommand subsection + Phase 4 cleanup paragraph), `skills/ops/state-schema.md` (resume_phase open-set list), `skills/ops/interruption-recovery.md` (Pause vs Save subsection), `skills/cross-memory/redaction.md` (Pass A + Pass B reuse — read-only) |
 | `skills/ralph-loop/README.md` | `skills/ralph-loop/SKILL.md`, `skills/ralph-loop/*.md` |
 | `skills/ralph-loop/SKILL.cursor.md` | `skills/ralph-loop/SKILL.md`, `tooling/transform-cursor-ralph-loop.{ps1,sh}` |
