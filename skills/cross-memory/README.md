@@ -37,9 +37,20 @@ Running `/cross-memory` with no subcommand prints the structured usage block (sa
 Tip: run /cross-memory init to bootstrap this project.
 ```
 
-The hint is harness-aware. Under Cursor and generic harnesses (where the sentinel block is a documented v1 no-op), the hint fires only when `~/.cross-memory/` itself is absent, not on every post-init invocation. The skill never auto-runs `init` from bare invocation — state changes always require an explicit subcommand.
+The hint text shown above is the Claude-Code-class variant. Under Cursor and generic harnesses the hint text differs: `Tip: run /cross-memory init to bootstrap (Cursor injection surface deferred to post-v1).` The hint is also harness-aware in *when* it fires: under Cursor and generic harnesses (where the sentinel block is a documented v1 no-op), it fires only when `~/.cross-memory/` itself is absent, not on every post-init invocation. The skill never auto-runs `init` from bare invocation — state changes always require an explicit subcommand.
 
 See [SKILL.md → Bare-invocation sequence](SKILL.md#bare-invocation-sequence) for the full predicate.
+
+### Subcommand init-status notice
+
+When you run any subcommand other than `init`, `help`, or `doctor` before cross-memory is fully set up, the skill emits an init-status notice **at the top of the response**, before any subcommand output, then proceeds normally. The notice uses the same harness-aware hint text as bare invocation:
+
+- **Claude Code:** `Note: cross-memory may not be fully set up. Tip: run /cross-memory init to bootstrap this project.`
+- **Cursor / generic:** `Note: cross-memory may not be fully set up. Tip: run /cross-memory init to bootstrap (Cursor injection surface deferred to post-v1).`
+
+`doctor` is excluded because it already reports store and sentinel health in its own output. `init` is excluded because it bootstraps the store. The notice is soft and non-blocking — the subcommand proceeds regardless (lazy provisioning still applies).
+
+See [SKILL.md → Subcommand preflight](SKILL.md#subcommand-preflight) for the full probe and predicate rules.
 
 ## Init
 
@@ -138,10 +149,12 @@ The entire directory tree is provisioned lazily on first use — no manual setup
 Every memory body passes through a three-stage redaction pipeline before any disk write:
 
 1. **Pass A — `<private>` strip.** Any content wrapped in `<private>...</private>` is replaced with `[REDACTED:private]`. This pass always runs; no flag can disable it.
-2. **Pass B — regex denylist.** Eight pattern categories are detected and replaced automatically: `api-key`, `password`, `bearer-token`, `jwt`, `aws-secret`, `env-block`, `private-key-header`, `user-tagged-secret`.
+2. **Pass B — regex denylist.** Eight pattern categories are defined: `api-key`, `password`, `bearer-token`, `jwt`, `aws-secret`, `env-block`, `private-key-header`, `user-tagged-secret`. **Seven** fire automatically at save time; `user-tagged-secret` is **advisory** — it fires only via an `audit` re-run, not at save time.
 3. **Confirmation gate.** The post-redaction candidate is displayed before any write is committed. When redaction fired, the default answer is N; you must type `y` or `Y` to proceed.
 
 The **`--no-redact`** flag bypasses Pass B (the regex layer) for the current save only. It has no effect on Pass A — `<private>` markup is always honored. When `--no-redact` is set and Pass B would have matched, you must type the exact phrase `save unredacted` to confirm; a simple `y` does not suffice. This friction is intentional: pattern false-positives are real, but the confirmation phrase makes accidental bypass of a genuine secret structurally difficult.
+
+On the `recall` render path, a `[REDACTED:private]` placeholder is displayed as a `…` (U+2026) ellipsis for readability; the on-disk bytes remain `[REDACTED:private]` (the audit engine and supersede path use the on-disk form).
 
 See [redaction.md](redaction.md) for the full pattern table, the bounded-fallback rule for unmatched `<private>` open tags, and the `--no-redact` typed-phrase flow.
 
@@ -163,6 +176,8 @@ Project Knowledge:
 
 The adapter owns only the bytes between the sentinel markers. Content outside those markers is preserved byte-identically across all cross-memory operations.
 
+A third sub-section, `Relevant Memories:`, is **reserved in the block design but not emitted at v1** — its header line and bullets are not written. It will be populated post-v1 by a relevance-ranking step and inserted after `Project Knowledge:`.
+
 **Default-on filter rules** — memories are selected automatically when they match any of these:
 
 - `user-global` scope, type in `{preference, rule, fact}` → appears in **User Profile**.
@@ -171,6 +186,8 @@ The adapter owns only the bytes between the sentinel markers. Content outside th
 - Any memory tagged `always-on` across any scope → included regardless of type.
 
 The block is capped at `max_inject_chars` (default 2048 bytes). When the block would exceed the budget, sub-sections are dropped in priority order: Project Knowledge drops before User Profile; the `[CROSS-MEMORY]` header is never dropped.
+
+**Staleness banner.** When a selected memory's `verified_at` is older than `staleness_threshold_days`, the filter appends an inline `(stale: last verified <N> days ago)` annotation to that entry's description as it builds the block. The banner is a rendering-time annotation only — it travels into the injection block but is never written to the memory's frontmatter on disk. A memory with no `verified_at` is treated as not stale.
 
 See [always-on-tier.md](always-on-tier.md) for the full filter spec and size-budget drop protocol.
 
@@ -207,7 +224,7 @@ See [brief-injector.md](brief-injector.md) for the full function signature, comp
 | `archive` | Moves the memory to `~/.cross-memory/archive/`. |
 | `forget` | Runs the full `/cross-memory forget` flow. |
 | `redact-now` | Re-runs the redaction pipeline and supersedes the memory with the redacted version. |
-| `categorize` | Sets the memory's `category` field to a value from the category enum. |
+| `categorize` | Sets the memory's `category` field to a value from the `category` enum (defined in `schema-validator.md`). |
 
 Every action goes through the standard write-path confirmation gate before any change is applied. The agent never auto-applies recommendations.
 
@@ -238,7 +255,7 @@ See [agents/cross-memory.md](../../agents/cross-memory.md) and [subcommand-audit
 | D | `redaction-surface` | 3 | Denylist parse, sampling scan, override-flag audit |
 | E | `deploy-target-prep` + `cross-harness-validation` | 2 + 3 | Manifest coverage, stale artifacts; cross-harness round-trip, adapter detection, SC behavioral walk |
 
-**JSON output.** Pass `--json` for a machine-readable report (schema version 1) with `overall`, per-section verdicts, and per-check findings. The top-level `harness` and `harness_selection_step` fields use the same shape as init's JSON output.
+**JSON output.** Pass `--json` for a machine-readable report (schema version 1). It has eight top-level keys, in order: `schema_version`, `timestamp_utc`, `harness`, `harness_selection_step`, `active_project_slug`, `overall`, `sections` (one object per check group, each with `name`/`verdict`/`findings`), and `reflect_staleness_hint` (the staleness-nudge state — always present; its `message` is omitted when `fired` is `false`). The `harness`, `harness_selection_step`, and `timestamp_utc` fields use the same shape as init's JSON output.
 
 **Exit codes** (meaningful only when `--json` is set):
 
@@ -276,10 +293,10 @@ Reflect ingests up to four source types per run. Sources 3, 4, and 5 are availab
 
 | Source | What it reads | How to activate | Harness |
 | :--- | :--- | :--- | :--- |
-| Source 1 — session transcripts | `.jsonl` session files from `~/.claude/projects/<active-slug>/` | `--from-session <id>` or `--since-last-reflect` | Claude Code only |
-| Source 3 — git history + working tree | `git log`, `git diff --stat`, documentation-convention log, directory layout probe; working-tree config files (`pyproject.toml`, `package.json`, etc.) | Always active | All harnesses |
+| Source 1 — session transcripts | `.jsonl` session files from `~/.claude/projects/<active-slug>/`; `--since-last-reflect` is bounded to the 20 most-recent qualifying sessions | `--from-session <id>` or `--since-last-reflect` | Claude Code only |
+| Source 3 — git history + working tree | `git log`, `git diff --stat`, documentation-convention log, directory layout probe; working-tree config files (`pyproject.toml`, `package.json`, etc.); git scans bounded to the last 90 days or 200 commits, whichever is fewer | Always active | All harnesses |
 | Source 4 — plan docs, handoffs, dispatch logs | Globs `docs/plan/**/*.md`, `docs/cross-memory/handoff*`, `docs/ops-dispatch-log*`; bounded to 50 files per glob | Always active | All harnesses |
-| Source 5 — explicit seed | File or directory passed via `--from <path>`; multiple `--from` flags union into one set | `--from <path>` | All harnesses |
+| Source 5 — explicit seed | File or directory passed via `--from <path>`; multiple `--from` flags union into one set; bounded to 100 paths or 10 MB total content, whichever is hit first | `--from <path>` | All harnesses |
 
 When no flags are passed, reflect ingests Sources 3 and 4 only. Passing `--from-session` or `--since-last-reflect` adds Source 1; passing `--from` adds Source 5.
 
@@ -332,6 +349,15 @@ After the report renders, the skill enters a command loop. Every action requires
 
 Candidates neither saved nor declined before `done` are not written anywhere and receive no special treatment on subsequent runs.
 
+### Edge cases
+
+Two terminal cases skip the interactive loop entirely:
+
+- **Empty project** (zero raw candidates — no source had distillable content): the skill prints `No candidates surfaced…` and exits. `state.toml` is **not** written and `last_reflect_at` does **not** advance.
+- **All filtered** (raw candidates > 0 but every one dropped by the anti-redundancy filter): the skill prints a redundancy summary (`All N candidates were filtered out as redundant: …`) and exits. Unlike the empty-project case, `state.toml` **is** written and `last_reflect_at` advances — the filter ran, so the run counts as a completed reflect. This is why the staleness clock can reset even on a run that surfaced nothing.
+
+In both cases the decline ledger (`reflect_declined.md`) is untouched.
+
 ### Anti-redundancy filter
 
 Before surfacing candidates, the skill applies a deterministic post-generation filter. The filter measures three overlap signals between each candidate and each reference entry. A candidate is dropped when **any one** signal crosses its threshold against **any one** reference entry.
@@ -341,6 +367,8 @@ Before surfacing candidates, the skill applies a deterministic post-generation f
 | Slug overlap | Character-level similarity between the candidate slug and the reference slug, normalized to `[0.0, 1.0]`. | `0.85` | `reflect.slug_overlap_threshold` |
 | Tag overlap | Jaccard similarity: `\|A ∩ B\| / \|A ∪ B\|` over the candidate and reference tag sets. | `0.8` | `reflect.tag_overlap_threshold` |
 | Body-token Jaccard | Jaccard over the first 200 lowercased, stopword-filtered tokens of each body. | `0.7` | `reflect.body_token_jaccard_threshold` |
+
+Body-token Jaccard tokenizes on whitespace and punctuation, lowercases, strips the stopword list (`the, a, of, to, in, and, is, it, that, this, on, for, as, with`), then keeps the first 200 tokens.
 
 The filter runs against **three deterministic reference sets** and applies **one LLM-prompt-applied exclusion corpus** at a separate stage before deterministic scoring begins.
 
@@ -364,7 +392,7 @@ When the agent detects that a candidate closely overlaps an existing canonical e
 | Decline ledger | `~/.cross-memory/projects/<slug>/reflect_declined.md` | Lazily on the first `decline <id>` action |
 | Per-project state | `~/.cross-memory/projects/<slug>/state.toml` | At the end of the first successful reflect run |
 
-The decline ledger stores: `declined_at`, `candidate_id`, `proposed_name`, `category`, `scope`, `tags`, `body_preview`, `source_evidence`, `run_id`. It is append-only; no pruning mechanism exists at v1.2.
+The decline ledger stores: `declined_at`, `candidate_id`, `proposed_name`, `category`, `scope`, `tags`, `body_preview`, `source_evidence`, `run_id`. It is append-only; no pruning mechanism exists.
 
 The state file stores `reflect.last_reflect_at`, `reflect.last_reflect_candidate_count`, and `reflect.last_reflect_run_id`. Both `init` (Step 4.5) and `doctor` (footer) read `last_reflect_at` to decide whether to emit a staleness hint.
 
@@ -407,7 +435,7 @@ See [subcommand-reflect.md](subcommand-reflect.md) for full flag definitions, so
 | :--- | :--- | :--- | :--- |
 | `staleness_threshold_days` | integer | `90` | Memories with `verified_at` older than this many days are flagged stale by `recall`, the always-on tier, and `audit`. |
 | `max_inject_chars` | integer | `2048` | Maximum bytes for the `[CROSS-MEMORY]` injection block. |
-| `adapter` | string | (auto-detected) | Override harness auto-detection. Accepted values: `claude-code`, `cursor`, `generic`. |
+| `current_harness` | string | (auto-detected) | Override harness auto-detection. Accepted values: `claude-code`, `cursor`, `generic`. Read at Step 2 of the five-step adapter-selection chain. |
 
 **reflect: namespace** — groups the three anti-redundancy filter thresholds and the staleness-hint threshold used by the `reflect` subcommand:
 
