@@ -26,6 +26,11 @@ The **settings** manifest category copies repo-root files into `~/.claude/` (and
 
 The repo keeps **`CLAUDE.md`** for project instructions (doc-sync map, repo context). **`CLAUDE-root.md`** is the user-global harness file so the two names do not collide in git. Pruning is disabled for this category because its target directory is shared with agents, skills, and hooks.
 
+## Prerequisites
+
+- **PowerShell 7+ (`pwsh`)** — required to run `tooling/deploy.ps1`. Windows PowerShell 5.1 is not supported; the script fails to parse under 5.1 due to characters in the source that the legacy parser does not handle. On Windows, install [PowerShell 7+](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows) and invoke via `pwsh`, not `powershell`.
+- **bash + `jq`** — required to run `tooling/deploy.sh` on Linux/macOS.
+
 ## Transform Rules
 
 The deploy script (`tooling/deploy.ps1` / `tooling/deploy.sh`) automates all transforms when deploying to Cursor. See the deploy script for the implementation. The rules are:

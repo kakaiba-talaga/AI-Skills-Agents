@@ -32,6 +32,8 @@ The project is organized into the following directories:
 
 The deploy script syncs repo files to the correct global directories for each tool.
 
+**Prerequisites:** `deploy.ps1` requires PowerShell 7+ (`pwsh`). Windows PowerShell 5.1 is not supported. `deploy.sh` requires bash and `jq`.
+
 By default, the script prompts for confirmation before writing files. Use `-Force` to skip the prompt, or `-DryRun` to preview without writing.
 
 ```powershell
