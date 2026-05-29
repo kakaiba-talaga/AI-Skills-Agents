@@ -135,10 +135,20 @@
             }
           ]
         }
+      ],
+      "PostToolUse": [
+        {
+          "matcher": "Edit|Write|MultiEdit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash \"$HOME/.claude/hooks/security-pattern-warn.sh\""
+            }
+          ]
+        }
       ]
     },
     "effortLevel": "xhigh",
     "autoUpdatesChannel": "latest",
-    "skipDangerousModePermissionPrompt": true,
-    "model": "opus[1m]"
+    "skipDangerousModePermissionPrompt": true
 }

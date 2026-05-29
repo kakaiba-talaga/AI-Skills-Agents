@@ -64,7 +64,7 @@ Implement the `## Brief Format` subsection in `agents/executor.md` per ADD §7.1
 
 **Shape:** Prose or bulleted list. Opens with a reference to the Shared Brief Constraints block.
 
-**Content:** Task-specific constraints that are additive to the seven shared rules. The `## Constraints` section in every brief MUST reference the Shared Brief Constraints block defined at `skills/ops/SKILL.md` (anchor `#shared-brief-constraints`). Do not duplicate those seven bullets here — reference them. Task-specific constraints follow: scope boundaries (what NOT to touch), codebase conventions, active file conflicts, and any restriction that applies to this task only.
+**Content:** Task-specific constraints that are additive to the eight shared rules. The `## Constraints` section in every brief MUST reference the Shared Brief Constraints block defined at `skills/ops/SKILL.md` (anchor `#shared-brief-constraints`). Do not duplicate those eight bullets here — reference them. Task-specific constraints follow: scope boundaries (what NOT to touch), codebase conventions, active file conflicts, and any restriction that applies to this task only. The shared rules include a standing secret-handling mandate: agents must never hardcode secrets, credentials, tokens, or keys, and must never write a secret value into any file, log, or report they produce.
 
 **Example:**
 

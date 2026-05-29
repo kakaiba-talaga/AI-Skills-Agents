@@ -26,6 +26,7 @@
   --cost           Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default)
   --brainstorm     Run interviewer → architect and require design approval before planning
   --dispatch-log   Opt-in audit log: append each dispatch to docs/ops-dispatch-log.md (off by default)
+  --security-review  off|always  Auto-fire security review by diff content (default: predicate; off disables; always forces)
 
 ### Mid-run actions (say these during a run)
   stop / cancel    Stop dispatching, preserve task list

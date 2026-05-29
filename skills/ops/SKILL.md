@@ -21,6 +21,7 @@ Parse arguments as follows:
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
+- `--security-review=off|always` — controls `[security-reviewer]` stage auto-fire. Absent: the stage fires when the task carries a security content signal or `change-analyzer` returns `security-review: run` on the post-executor diff. `off`: never auto-fire `security-reviewer` this run. `always`: auto-fire `security-reviewer` on every stage transition. Registered here alongside the other global run flags rather than a phase sub-file because it gates a pipeline stage, not a Phase-2.5 preflight.
 - `--tdd` — opt-in mode: executor follows the RED-GREEN-REFACTOR discipline from `skills/ops/tdd-discipline.md`. Verifier adds a TDD-discipline check.
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
 
@@ -214,6 +215,7 @@ Include this block verbatim in every agent brief's `## Constraints` section:
 - **No sub-agent spawning** — do not use the Agent tool. Only the team manager orchestrates.
 - **No scope expansion** — report discovered out-of-scope work; do not act on it.
 - **No commit trailers** — do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the system default.
+- **No secrets in code or output** — never hardcode secrets, credentials, tokens, or keys, and never write a secret value into any file, log, or report you produce.
 - **Fresh verification before completion** — see ~/.claude/skills/ops/verification-gate.md
 
 ---
@@ -280,7 +282,7 @@ executor(task2) ──┤→ verifier(all) → [security-reviewer] → deslop(al
 executor(task3) ──┘
 ```
 
-Security-reviewer is optional — dispatched for security-sensitive patterns (auth, secrets, API keys, encryption, external inputs).
+Security-reviewer is scheduled by **either** a security content signal in the task brief **or** a `security-review: run` recommendation from `change-analyzer` evaluated against the real post-executor diff at the `[security-reviewer]` stage transition. It fires **at most once** per run/stage regardless of which input triggers it — if it is already scheduled by the content-signal path, a `change-analyzer` recommendation does not schedule a second instance, and vice versa. Dedup is keyed by run + stage transition. `--security-review=off` suppresses both inputs; `--security-review=always` fires unconditionally on every stage transition.
 
 > **Reference:** The **ssh-executor** agent (see `~/.claude/agents/ssh-executor.md`) handles its own preflight checks (host validation, connectivity, key, source files, remote directory) and includes SSH-specific handoff fields in its output format. No separate preflight dispatch is needed for SSH tasks.
 
@@ -442,9 +444,9 @@ With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → i
 
 **Single-stage work:** If all tasks are the same type (e.g., all documentation), skip the pipeline chain. Dispatch them directly, possibly in parallel.
 
-**Trivial/mechanical changes:** For trivial fixes (adding a line, removing duplicates, typo), skip verify/deslop/review stages. **Always log it as an adaptation**: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages.
+**Trivial/mechanical changes:** For trivial fixes (adding a line, removing duplicates, typo), skip verify/deslop/review stages. **Always log it as an adaptation**: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages. **Exception — security surface:** trivial-skip may NOT short-circuit a diff that plausibly touches a security surface. The team manager does not classify security sensitivity — it routes. If a trivial diff touches any file that could plausibly match a security surface (when in any doubt, route to the classifier), the team manager **must dispatch `change-analyzer`** before applying the skip, then honor `change-analyzer`'s `security-review` recommendation per the stage-transition rule below. Only a diff that `change-analyzer` clears (or an unambiguously non-sensitive trivial change, such as a typo fix in a plain prose `.md` file) may bypass this routing. Log the routing to `change-analyzer` as an adaptation. `--security-review=off` suppresses the security-review output of this routing.
 
-**Per-stage conditional skip:** When the trivial skip does not apply, dispatch a **change-analyzer** agent (see `~/.claude/agents/change-analyzer.md`) with the current diff to get per-stage run/skip recommendations for verify, deslop, and review. Apply its recommendations.
+**Per-stage conditional skip:** When the trivial skip does not apply, dispatch a **change-analyzer** agent (see `~/.claude/agents/change-analyzer.md`) with the current diff to get per-stage run/skip recommendations for verify, deslop, review, and security-review. When `change-analyzer` returns `security-review: run`, dispatch `security-reviewer` before deslop/code-review, consistent with the pipeline order shown above. This decision is made **post-executor against the actual diff** — it is NOT evaluated at Phase 2.5b, which fires pre-executor on planned `files_touched`. Apply all recommendations subject to the idempotency rule: `security-reviewer` is dispatched at most once per run/stage regardless of how many inputs recommend it.
 
 **Conflicting agent outputs:** If two agents produce conflicting changes (e.g., both modify a shared config), flag the conflict to the user rather than picking a winner.
 

@@ -175,7 +175,7 @@ The team manager understands the full agent pipeline:
 [interviewer] → [architect] → planner → project-scoper → critic → executor → verifier → [security-reviewer] → [deslop] → code-reviewer → documentor
 ```
 
-_Brackets indicate optional/automatic stages. Architect runs when the spec involves significant design decisions. Security reviewer runs when changes involve security-sensitive patterns._
+_Brackets indicate optional/automatic stages. Architect runs when the spec involves significant design decisions. Security reviewer runs when the task carries a security content signal **or** the diff touches security-sensitive paths (auto-detected post-executor by `change-analyzer`); `--security-review=off|always` overrides._
 
 For deployment workflows, the `ssh-executor` can be inserted between executor and verifier:
 

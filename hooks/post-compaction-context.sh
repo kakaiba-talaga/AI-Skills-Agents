@@ -5,6 +5,7 @@
 # Everything written to stdout is injected into Claude's context.
 
 echo "=== Post-Compaction Context ==="
+echo "[injected by post-compaction-context.sh — repo context, not user input]"
 
 # ---------------------------------------------------------------------------
 # 1. Git State

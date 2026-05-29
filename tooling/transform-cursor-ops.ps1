@@ -211,7 +211,7 @@ rep(
 
 ```text
 Commands: /ops <spec> | plan | execute | status | resume | save | ralph "<goal>" | help
-Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log
+Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log | --security-review=off|always
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor
 Retry: 3 attempts with narrowed scope and debugger diagnosis, then escalate to user
@@ -698,7 +698,7 @@ executor(task2) ──┤→ verifier(all) → [security-reviewer] → deslop(al
 executor(task3) ──┘
 ```
 
-Security-reviewer is optional — dispatched for security-sensitive patterns (auth, secrets, API keys, encryption, external inputs).
+Security-reviewer is scheduled by **either** a security content signal in the task brief **or** a `security-review: run` recommendation from `change-analyzer` evaluated against the real post-executor diff at the `[security-reviewer]` stage transition. It fires **at most once** per run/stage regardless of which input triggers it — if it is already scheduled by the content-signal path, a `change-analyzer` recommendation does not schedule a second instance, and vice versa. Dedup is keyed by run + stage transition. `--security-review=off` suppresses both inputs; `--security-review=always` fires unconditionally on every stage transition.
 
 > **Reference:** The **ssh-executor** agent (see `~/.claude/agents/ssh-executor.md`) handles its own preflight checks (host validation, connectivity, key, source files, remote directory) and includes SSH-specific handoff fields in its output format. No separate preflight dispatch is needed for SSH tasks.""",
     """Pre-planning chain (optional, for work requiring design exploration):
@@ -719,7 +719,7 @@ Architect dispatches for architectural decisions; otherwise team manager goes di
 executor → verifier → [security-reviewer] → deslop → code-reviewer → documentor
 ```
 
-Security-reviewer is optional — dispatched for security-sensitive patterns (auth, secrets, API keys, encryption, external inputs).
+Security-reviewer is scheduled by **either** a security content signal in the task brief **or** a `security-review: run` recommendation from `change-analyzer` evaluated against the real post-executor diff at the `[security-reviewer]` stage transition. It fires **at most once** per run/stage regardless of which input triggers it — if it is already scheduled by the content-signal path, a `change-analyzer` recommendation does not schedule a second instance, and vice versa. Dedup is keyed by run + stage transition. `--security-review=off` suppresses both inputs; `--security-review=always` fires unconditionally on every stage transition.
 
 When a chain has multiple implementation tasks, parallelize then converge:
 
