@@ -283,11 +283,11 @@ Shape:
 <finding per check, one line each>
 verdict: PASS
 
-### sentinel-hygiene
+### sentinel-markers
 <finding per check, one line each>
 verdict: WARN  — <brief reason>
 
-### adapter-wiring
+### sentinel-markers
 verdict: NOT-APPLICABLE  — cursor injection surface is a documented v1 no-op
 
 ...
@@ -316,18 +316,18 @@ When `--json` is passed, doctor prints a single JSON object instead of the markd
       "verdict": "pass",
       "findings": [
         { "check": "canonical-frontmatter-parse", "verdict": "pass" },
-        { "check": "canonical-index-coherence", "verdict": "pass" }
+        { "check": "canonical-memory-md-consistency", "verdict": "pass" }
       ]
     },
     {
-      "name": "sentinel-hygiene",
+      "name": "sentinel-markers",
       "verdict": "warn",
       "findings": [
         { "check": "sentinel-marker-count", "verdict": "warn", "detail": "marker count=3, expected 2" }
       ]
     },
     {
-      "name": "adapter-wiring",
+      "name": "sentinel-markers",
       "verdict": "not-applicable",
       "reason": "cursor injection surface (update_sentinel_block) is a documented v1 no-op",
       "findings": [

@@ -211,6 +211,8 @@ Eight columns, byte-aligned with the agent's `## Output Contract — distill`:
 | `source-evidence` | Pointer to the evidence that produced this candidate (e.g., `"Source 1 — transcript <session-id>:<line-range>"`, `"Source 3 — git log: <sha-or-range>"`, `"Source 4 — <glob-matched-path>"`). |
 | `flags` | Zero or more flags; currently `would-supersede` when the proposed name matches an existing canonical memory. Empty cell when no flags apply. |
 
+The four `category` values above are the reflect distillation taxonomy (used during candidate generation); they are distinct from the `category` frontmatter enum on stored memory files, which is defined in `schema-validator.md`.
+
 #### Sort order
 
 Candidates are rendered in deterministic order: sorted first by `category` (lexicographic on the four locked category names), then by `proposed-name` lexicographically within each category. This order is stable across runs given identical input — it does not depend on agent output ordering.
@@ -331,7 +333,7 @@ The filter operates against four reference sets. Three are deterministic and con
 
 **Set C — per-project decline ledger.** The entries recorded in `~/.cross-memory/projects/<slug>/reflect_declined.md`. A candidate that matches a previously declined entry is dropped without prompting the user. This prevents oscillation: a user who declined a candidate once is not presented with the same candidate on the next reflect run. Filter-reason tag: `declined-redundancy`.
 
-**Set D — LLM-prompt-applied exclusion corpus (separate; not consumed by the deterministic filter).** Set D is the `## What NOT to save in memory` section of `~/.claude/CLAUDE.md`. This section is a free-text rule corpus: it produces no slug, no tag set, and no body suitable for Jaccard comparison — the three signals literally do not apply to it. Accordingly, Set D is not fed into the deterministic filter. Instead, it is supplied to the agent as a system-prompt input during raw-candidate generation (the distill step). The agent uses Set D categorically to suppress candidates before they enter the candidate pool the deterministic filter sees. Filter-reason tag when a candidate still surfaces despite the prompt corpus and needs a reason label: `excluded-rule`.
+**Set D — LLM-prompt-applied exclusion corpus (separate; not consumed by the deterministic filter).** Set D is the `## What NOT to save in memory` section of `~/.claude/CLAUDE.md`. This section is a free-text rule corpus: it produces no slug, no tag set, and no body suitable for Jaccard comparison — the three signals literally do not apply to it. Accordingly, Set D is not fed into the deterministic filter. Instead, it is supplied to the agent as a system-prompt input during raw-candidate generation (the distill step). The agent uses Set D categorically to suppress candidates before they enter the candidate pool the deterministic filter sees. Filter-reason tag when a candidate still surfaces despite the prompt corpus and needs a reason label: `excluded-by-rule`.
 
 #### Set D best-effort fallback
 
@@ -350,7 +352,7 @@ warning: ~/.claude/CLAUDE.md "What NOT to save in memory" section not found; LLM
 | Set A — canonical store | `canonical-redundancy` |
 | Set B — archive | `archive-redundancy` |
 | Set C — decline ledger | `declined-redundancy` |
-| Set D — LLM-prompt exclusion corpus | `excluded-rule` |
+| Set D — LLM-prompt exclusion corpus | `excluded-by-rule` |
 
 #### `--verbose` filter decisions
 
@@ -375,7 +377,7 @@ The table below covers all twelve behavioral dimensions across the three support
 | Component | Claude Code | Cursor | Generic |
 | :--- | :--- | :--- | :--- |
 | `/cross-memory reflect` subcommand | Full | Full (Sources 3 + 4 + 5 only) | Full (Sources 3 + 4 + 5 only) |
-| `--from-session <id>` flag | Available | Errors with `transcript ingestion is Claude-Code-only` | Errors with same message |
+| `--from-session <id>` flag | Available | Errors at parse time: `error: --from-session and --since-last-reflect are Claude-Code-only flags; current harness is <name>` | Errors with same message |
 | `--since-last-reflect` flag | Available | Same error as above | Same error as above |
 | `--from <path>` flag | Available | Available | Available |
 | `intent: distill` agent dispatch | Full | Full | Full |

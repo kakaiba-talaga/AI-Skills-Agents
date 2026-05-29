@@ -58,7 +58,7 @@ After rendering the report, the skill presents the available per-finding actions
 | `archive` | Moves the memory file to `~/.cross-memory/archive/<scope>/<original-stem>-<timestamp>.md` | Standard write-path confirmation: display the target archive path, prompt `[y/N]`, require `y` or `Y` to proceed |
 | `forget` | Dispatches the full `/cross-memory forget <name>` flow | Standard forget-flow confirmation: `Forget memory '<name>'? It will be archived but not auto-deleted. [y/N]` — require `y` or `Y` (case-insensitive) |
 | `redact-now` | Re-runs the redaction pipeline on the body and supersedes the memory with the redacted version | Standard save Gate 2-4 (redaction scan → confirm → write), treating the supersede branch as the write path |
-| `categorize` | Sets the memory's `category` frontmatter field to a user-chosen value from the five-value enum | Standard save Gate 3-4: display the updated frontmatter with the chosen category, prompt `[y/N]`, require `y` or `Y` to proceed |
+| `categorize` | Sets the memory's `category` frontmatter field to a user-chosen value from the `category` enum defined in `schema-validator.md` | Standard save Gate 3-4: display the updated frontmatter with the chosen category, prompt `[y/N]`, require `y` or `Y` to proceed |
 
 On any input other than a recognized action-plus-identifier, the skill re-displays the action menu. The session ends when the user issues an empty line or types `done`.
 
