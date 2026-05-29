@@ -14,7 +14,7 @@
     Which tool to deploy to: all, claude, or cursor. Default: all.
 
 .PARAMETER Category
-    Deploy only one category: agents, skills, hooks, or settings. Default: all.
+    Deploy only one category: agents, skills, hooks, settings, or rules. Default: all.
 
 .PARAMETER DryRun
     Show what would change without copying any files.
@@ -48,7 +48,7 @@ param(
     [ValidateSet("all", "claude", "cursor", "wsl")]
     [string]$Target = "all",
 
-    [ValidateSet("agents", "skills", "hooks", "settings", "")]
+    [ValidateSet("agents", "skills", "hooks", "settings", "rules", "")]
     [string]$Category = "",
 
     [switch]$DryRun,
@@ -495,6 +495,24 @@ function Deploy-Section {
     $shouldTransform = $Config.transform
     $renameMap = Get-RenameMap -Config $Config
 
+    # Write-path target confinement: reject paths that escape $HOME or the WSL prefix.
+    if ($target -match '\.\.[/\\]') {
+        Write-Error "  [deploy] Target '$target' contains '../' traversal — aborting $ToolName/$CategoryName"
+        return @{ Copied = 0; Skipped = 0; Updated = 0 }
+    }
+    $normalHome    = (Resolve-Path $HOME).ProviderPath.Replace('/', '\')
+    $wslPrefix     = '\\wsl.localhost\'
+    $resolvedTarget = if (Test-Path -LiteralPath $target -PathType Container) {
+        (Resolve-Path -LiteralPath $target).ProviderPath.Replace('/', '\')
+    } else {
+        [System.IO.Path]::GetFullPath($target).Replace('/', '\')
+    }
+    if (-not ($resolvedTarget.StartsWith($normalHome, [System.StringComparison]::OrdinalIgnoreCase) -or
+              $resolvedTarget.StartsWith($wslPrefix,  [System.StringComparison]::OrdinalIgnoreCase))) {
+        Write-Error "  [deploy] Target '$resolvedTarget' is outside HOME — aborting $ToolName/$CategoryName"
+        return @{ Copied = 0; Skipped = 0; Updated = 0 }
+    }
+
     $files = Get-SourceFiles -SourceDir $source -Include $include -Exclude $exclude -CategoryType $CategoryName
     if ($files.Count -eq 0) {
         Write-Host "  No files found for $ToolName/$CategoryName" -ForegroundColor DarkGray
@@ -609,11 +627,24 @@ if ($Target -eq "all" -or $Target -eq "claude") { $targets += "claude-code" }
 if ($Target -eq "all" -or $Target -eq "cursor")  { $targets += "cursor" }
 if ($Target -eq "all" -or $Target -eq "wsl")     { $targets += "claude-code-wsl" }
 
-$categories = @()
-if ($Category -eq "" -or $Category -eq "agents") { $categories += "agents" }
-if ($Category -eq "" -or $Category -eq "skills") { $categories += "skills" }
-if ($Category -eq "" -or $Category -eq "hooks")     { $categories += "hooks" }
-if ($Category -eq "" -or $Category -eq "settings")  { $categories += "settings" }
+# Discover manifest keys for all selected targets and union them.
+$knownOrder = @("agents", "skills", "hooks", "settings", "rules")
+$allManifestKeys = @()
+foreach ($t in $targets) {
+    $toolObj = $Manifest.$t
+    if (-not $toolObj) { Write-Warning "No manifest entry for target '$t'"; continue }
+    $toolKeys = ($toolObj | Get-Member -MemberType NoteProperty).Name
+    foreach ($k in $toolKeys) {
+        if ($allManifestKeys -notcontains $k) { $allManifestKeys += $k }
+    }
+}
+# Stable order: known-order keys first, then any extras alphabetically.
+$orderedKeys = @()
+foreach ($k in $knownOrder) { if ($allManifestKeys -contains $k) { $orderedKeys += $k } }
+# First-target occurrence wins in the union (stable order preserved above).
+foreach ($k in ($allManifestKeys | Sort-Object)) { if ($orderedKeys -notcontains $k) { $orderedKeys += $k } }
+# Apply -Category filter (empty string = all).
+$categories = if ($Category -ne "") { $orderedKeys | Where-Object { $_ -eq $Category } } else { $orderedKeys }
 
 $modeLabel = if ($DryRun) { "DRY RUN" } elseif ($Diff) { "DIFF" } else { "DEPLOY" }
 if ($Prune -and $PruneOnly) {

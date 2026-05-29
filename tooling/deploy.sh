@@ -7,7 +7,7 @@
 #
 # Options:
 #   -t, --target <all|claude|cursor|wsl> Target tool (default: all)
-#   -c, --category <agents|skills|hooks|settings>
+#   -c, --category <agents|skills|hooks|settings|rules>
 #                                       Deploy one category only (default: all)
 #   -n, --dry-run                       Show what would change without copying
 #   -d, --diff                          Show diffs between repo and deployed files
@@ -213,7 +213,7 @@ find_source_files() {
     local source_dir="$3"
 
     local includes
-    includes=$(jq -r ".\"$tool_key\".\"$cat_key\".include // [\"**/*\"] | .[]" "$MANIFEST")
+    includes=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].include // ["**/*"] | .[]' "$MANIFEST" | tr -d '\r')
 
     while IFS= read -r pattern; do
         [[ -z "$pattern" ]] && continue
@@ -274,8 +274,8 @@ get_expected_relative_paths() {
     local cat_key="$2"
 
     local source excludes
-    source=$(jq -r ".\"$tool_key\".\"$cat_key\".source" "$MANIFEST")
-    excludes=$(jq -r ".\"$tool_key\".\"$cat_key\".exclude // [] | .[]" "$MANIFEST")
+    source=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].source' "$MANIFEST" | tr -d '\r')
+    excludes=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].exclude // [] | .[]' "$MANIFEST" | tr -d '\r')
 
     local source_dir="$REPO_ROOT/$source"
     [[ ! -d "$source_dir" ]] && return
@@ -313,15 +313,15 @@ prune_section() {
 
     # Check manifest-level prune opt-out (e.g. settings whose target overlaps other categories)
     local prune_flag
-    prune_flag=$(jq -r ".\"$tool_key\".\"$cat_key\".prune // true" "$MANIFEST")
+    prune_flag=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].prune // true' "$MANIFEST" | tr -d '\r')
     if [[ "$prune_flag" == "false" ]]; then
         echo -e "  ${DIM}[prune] Skipped — pruning disabled for $tool_key/$cat_key${NC}"
         return
     fi
 
     local source target
-    source=$(jq -r ".\"$tool_key\".\"$cat_key\".source" "$MANIFEST")
-    target=$(jq -r ".\"$tool_key\".\"$cat_key\".target" "$MANIFEST")
+    source=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].source' "$MANIFEST" | tr -d '\r')
+    target=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].target' "$MANIFEST" | tr -d '\r')
     target=$(resolve_target_path "$target")
 
     # Guardrail: target must exist and be a directory under HOME
@@ -464,14 +464,44 @@ deploy_section() {
     local cat_key="$2"
 
     local source target should_transform
-    source=$(jq -r ".\"$tool_key\".\"$cat_key\".source" "$MANIFEST")
-    target=$(jq -r ".\"$tool_key\".\"$cat_key\".target" "$MANIFEST")
-    should_transform=$(jq -r ".\"$tool_key\".\"$cat_key\".transform" "$MANIFEST")
+    source=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].source' "$MANIFEST" | tr -d '\r')
+    target=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].target' "$MANIFEST" | tr -d '\r')
+    should_transform=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].transform' "$MANIFEST" | tr -d '\r')
+
+    # No config for this target/category combination — skip silently.
+    if [[ "$source" == "null" || "$target" == "null" ]]; then
+        echo -e "  ${DIM}No config for $tool_key/$cat_key${NC}"
+        return
+    fi
 
     local excludes
-    excludes=$(jq -r ".\"$tool_key\".\"$cat_key\".exclude // [] | .[]" "$MANIFEST")
+    excludes=$(jq -r --arg tk "$tool_key" --arg ck "$cat_key" '.[$tk][$ck].exclude // [] | .[]' "$MANIFEST" | tr -d '\r')
 
     target=$(resolve_target_path "$target")
+
+    # Write-path target confinement: reject paths that escape HOME or the WSL prefix.
+    if [[ "$target" == *../* || "$target" == */../* ]]; then
+        echo -e "  ${RED}[deploy] Target '$target' contains '../' traversal — aborting $tool_key/$cat_key${NC}" >&2
+        return 1
+    fi
+    local normal_home wsl_prefix resolved_target _deploy_in_home
+    normal_home=$(cd "$HOME" && pwd -P)
+    wsl_prefix="//wsl.localhost"
+    if [[ -d "$target" ]]; then
+        resolved_target=$(cd "$target" && pwd -P)
+    else
+        resolved_target="$target"
+    fi
+    _deploy_in_home=false
+    case "$resolved_target" in
+        "$normal_home"/*|"$normal_home") _deploy_in_home=true ;;
+        "$wsl_prefix"*)                  _deploy_in_home=true ;;
+    esac
+    if ! $_deploy_in_home; then
+        echo -e "  ${RED}[deploy] Target '$resolved_target' is outside HOME — aborting $tool_key/$cat_key${NC}" >&2
+        return 1
+    fi
+
     local source_dir="$REPO_ROOT/$source"
 
     if [[ ! -d "$source_dir" ]]; then
@@ -598,11 +628,38 @@ targets=()
 [[ "$TARGET" == "all" || "$TARGET" == "cursor" ]] && targets+=("cursor")
 [[ "$TARGET" == "all" || "$TARGET" == "wsl" ]] && targets+=("claude-code-wsl")
 
+# Discover manifest keys for all selected targets and union them in stable order.
+known_order=("agents" "skills" "hooks" "settings" "rules")
+declare -A _seen_keys=()
+manifest_keys=()
+for t in "${targets[@]}"; do
+    while IFS= read -r k; do
+        if [[ -z "${_seen_keys[$k]+x}" ]]; then
+            _seen_keys[$k]=1
+            manifest_keys+=("$k")
+        fi
+    done < <(jq -r --arg t "$t" '.[$t] | keys_unsorted[]' "$MANIFEST" | tr -d '\r')
+done
+# Build ordered list: known-order keys first, then any extras alphabetically.
+declare -A _in_manifest=()
+for k in "${manifest_keys[@]}"; do _in_manifest[$k]=1; done
+ordered_keys=()
+for k in "${known_order[@]}"; do
+    [[ -n "${_in_manifest[$k]+x}" ]] && ordered_keys+=("$k")
+done
+# Extras: keys not in known_order, alphabetically. First-target occurrence wins in the union.
+declare -A _in_ordered=()
+for k in "${ordered_keys[@]}"; do _in_ordered[$k]=1; done
+for k in $(printf '%s\n' "${manifest_keys[@]}" | sort); do
+    [[ -z "${_in_ordered[$k]+x}" ]] && ordered_keys+=("$k") && _in_ordered[$k]=1
+done
+# Apply -c / --category filter (empty = all).
 categories=()
-[[ -z "$CATEGORY" || "$CATEGORY" == "agents" ]] && categories+=("agents")
-[[ -z "$CATEGORY" || "$CATEGORY" == "skills" ]] && categories+=("skills")
-[[ -z "$CATEGORY" || "$CATEGORY" == "hooks" ]]     && categories+=("hooks")
-[[ -z "$CATEGORY" || "$CATEGORY" == "settings" ]]  && categories+=("settings")
+for k in "${ordered_keys[@]}"; do
+    if [[ -z "$CATEGORY" || "$CATEGORY" == "$k" ]]; then
+        categories+=("$k")
+    fi
+done
 
 if $DRY_RUN; then
     if $PRUNE_ONLY; then

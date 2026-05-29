@@ -86,6 +86,16 @@
             ],
             "transform": true
         },
+        "rules": {
+            "source": ".cursor/rules/",
+            "target": "~/.cursor/rules/",
+            "include": [
+                "*.mdc"
+            ],
+            "exclude": [
+                "documentation-sync.mdc"
+            ]
+        },
         "skills": {
             "source": "skills/",
             "target": "~/.cursor/skills/",
