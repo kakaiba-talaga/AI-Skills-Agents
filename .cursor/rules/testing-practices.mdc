@@ -1,0 +1,18 @@
+---
+description: Testing standards for test requirements and organization.
+alwaysApply: true
+---
+
+## Test Requirements
+
+- Write comprehensive tests for all new functionality.
+- Include both positive and negative test cases.
+- Test edge cases and boundary conditions.
+- Use descriptive test names that explain what is being tested.
+
+## Test Organization
+
+- Group related tests logically.
+- Use consistent test structure and naming conventions.
+- Mock external dependencies appropriately.
+- Maintain test data that is realistic but not sensitive.

@@ -1,0 +1,6 @@
+---
+description: Always verify the current date and time from reputable external sources for additional context.
+alwaysApply: true
+---
+
+Whenever the current date and time are required, verify them using reputable and stable external sources. Do not rely solely on training data or internal assumptions for time-sensitive information.

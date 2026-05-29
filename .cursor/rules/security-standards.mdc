@@ -1,0 +1,17 @@
+---
+description: Security standards for data protection and secure coding.
+alwaysApply: true
+---
+
+## Data Protection
+
+- Never hardcode sensitive information (API keys, passwords, tokens).
+- Use environment variables or secure configuration files.
+- Implement proper input validation and sanitization.
+- Follow principle of least privilege for data access.
+
+## Secure Coding
+
+- Validate all user inputs.
+- Use secure communication protocols.
+- Implement proper authentication and authorization.

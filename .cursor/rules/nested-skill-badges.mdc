@@ -1,0 +1,14 @@
+---
+description: How output-tagging badges behave when one skill invokes another.
+alwaysApply: true
+---
+
+When a skill invokes another skill (e.g., `/ops` invokes `/deslop` during its pipeline), the **inner skill's badge takes precedence** for that turn — it reflects which skill is actively doing work. When the inner skill finishes and the outer skill resumes, the outer badge returns on the next turn.
+
+This is expected behavior, not a bug. The badge always reflects the **currently active skill context**, not the outermost caller. Example sequence during an `/ops` run:
+
+1. **`Team Manager`** — dispatching executor, showing dashboard
+2. **`Deslop`** — `/ops` invoked `/deslop`, deslop is doing cleanup
+3. **`Team Manager`** — deslop finished, ops resumes with code review stage
+4. **`Code Review`** — `/ops` invoked `/code-review`
+5. **`Team Manager`** — review done, ops shows completion summary

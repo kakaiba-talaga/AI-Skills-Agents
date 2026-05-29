@@ -2,6 +2,8 @@
 
 This file references skills and their output badges by name. When a skill is added, renamed, removed, or has its output tagging changed, update the table and rules below to match. Skills live in `~/.claude/commands/` and `~/.claude/skills/`. Check for an `## Output Tagging` or `## Output tagging` section in each skill file to find its badge.
 
+**Cursor mirror:** Every section below (except this Maintenance Note) is mirrored one-to-one as a per-section rule under `.cursor/rules/*.mdc` (for example, *Communication Style* → `communication-style.mdc`), deployed to Cursor via `tooling/deploy-manifest.json` (`cursor` → `rules`). `documentation-sync.mdc` is intentionally excluded — it mirrors this repo's `CLAUDE.md`, not a section here. Any change to a section must be applied to its `.mdc` and vice-versa; the coupling is tracked in the Documentation Sync map in `CLAUDE.md`.
+
 ---
 
 ## Communication Style
@@ -24,7 +26,42 @@ Always verify if the information is accurate and up-to-date from known reputable
 
 ---
 
+## Documentation Standards
+
+### Function Documentation
+
+- Use verbose, conversational descriptions that explain the purpose clearly.
+- Include detailed **Args** sections describing each parameter.
+- Include **Returns** sections explaining what the function outputs.
+- Use proper English grammar and punctuation in all comments.
+- Explain the "why" behind complex logic, not just the "what".
+
+### Code Comments
+
+- Write comments that add value beyond what the code obviously does.
+- Use clear, professional language.
+- Update comments when code changes.
+- Remove outdated or misleading comments immediately.
+
+### README Requirements
+
+- **Clear project description** explaining purpose and scope.
+- **Installation instructions** with step-by-step setup.
+- **Usage examples** showing common use cases.
+- **API documentation** for public interfaces.
+- **Contributing guidelines** for team collaboration.
+
+### Inline Documentation
+
+- Maintain up-to-date inline documentation.
+- Include architectural decision records for major changes.
+- Document deployment and operational procedures.
+
+---
+
 ## Git Conventions
+
+If available, always use the git-master agent for any git-related actions or commit-message skill as the fallback. If both are unavailable, use Bash directly.
 
 Do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the default system commit instructions.
 

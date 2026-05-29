@@ -1,0 +1,15 @@
+---
+description: Performance practices to avoid introducing inefficiencies when writing or modifying code.
+alwaysApply: true
+---
+
+When writing or modifying code, follow these practices to avoid introducing performance issues.
+
+## Rules
+
+- **Use appropriate data structures.** Choose sets for membership checks, dictionaries for lookups, and avoid linear scans through lists when a better structure exists.
+- **Avoid unnecessary nested loops** over large collections. If the inner loop can be replaced with a lookup (dict, set), do so.
+- **Avoid repeated expensive operations in loops.** Move database queries, file reads, API calls, and complex computations outside loops when possible.
+- **Avoid N+1 query patterns.** When working with databases or ORMs, prefer batch/bulk operations over per-item queries inside loops.
+- **Be mindful of memory.** For large datasets, prefer generators or streaming over loading everything into memory at once.
+- **Profile before optimizing.** Do not prematurely optimize at the cost of readability. If you suspect a performance bottleneck, suggest profiling rather than guessing.

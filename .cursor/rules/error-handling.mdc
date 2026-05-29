@@ -1,0 +1,18 @@
+---
+description: Error handling standards for exception management and error responses.
+alwaysApply: true
+---
+
+## Exception Management
+
+- Always use try-catch blocks for operations that might fail.
+- Log errors with appropriate detail level for debugging.
+- Provide meaningful error messages for users.
+- Handle edge cases explicitly rather than allowing silent failures.
+- Use language-specific best practices for error propagation.
+
+## Error Response Format
+
+- Include error type, message, and context when possible.
+- Maintain consistent error handling patterns across the codebase.
+- Document expected error scenarios in code comments.

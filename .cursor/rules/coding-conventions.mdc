@@ -1,0 +1,44 @@
+---
+description: Naming conventions, code structure, imports, and language preferences.
+alwaysApply: true
+---
+
+Follow industry standards for each language, but override them with the preferences below.
+
+## Naming Conventions
+
+- **Constants**: UPPERCASE (e.g., `MAX_RETRIES`, `API_ENDPOINT`)
+- **Functions**: snake_case (e.g., `calculate_total`, `process_data`)
+- **Variables**: snake_case (e.g., `user_name`, `total_amount`)
+- **Classes**: PascalCase (e.g., `UserAccount`, `DataProcessor`)
+
+## Development Practices
+
+- **Data Types**: Always explicitly set when supported by the language.
+- **Modularization**: Implement when necessary for code organization.
+- **Code Organization**: Structure code logically with clear separation of concerns.
+- **Vertical Spacing**: Use blank lines deliberately to separate logical sections and improve readability. One blank line between logical blocks within a function. Two blank lines between top-level definitions (functions, classes). Group related statements together without blank lines; separate unrelated blocks with one blank line. Never stack three or more consecutive blank lines.
+- **Line Length**: 120 characters maximum. Match the project's Ruff/formatter configuration.
+- **Magic Numbers/Strings**: Extract magic numbers and repeated string literals into named constants. If a value appears more than once or has non-obvious meaning, give it a name.
+
+## Import Ordering
+
+Organize imports in this order, separated by a blank line between each group:
+
+1. Standard library imports
+2. Third-party imports
+3. Local/project imports
+
+## Language Priorities
+
+1. **Python** — data processing, automation, backend services, AI, machine learning, data science
+2. **JavaScript/TypeScript/Next.js/React/jQuery** — web development, frontend
+3. **SQL** — database operations, data analysis
+4. **Bash/Shell/PowerShell** — system administration, automation scripts
+5. **Rust** — systems programming, performance-critical code
+6. **Go** — backend services, performance-critical code
+7. **C#/.NET** — .NET framework, web development, desktop applications, Windows development
+8. **Dart/Flutter** — web development, mobile development, cross-platform apps
+9. **PHP** — web development, backend services
+
+Use established, well-maintained frameworks with good documentation and community support.

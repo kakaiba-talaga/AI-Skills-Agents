@@ -1,0 +1,33 @@
+---
+description: Documentation and commenting standards for code and project docs.
+alwaysApply: true
+---
+
+## Function Documentation
+
+- Use verbose, conversational descriptions that explain the purpose clearly.
+- Include detailed **Args** sections describing each parameter.
+- Include **Returns** sections explaining what the function outputs.
+- Use proper English grammar and punctuation in all comments.
+- Explain the "why" behind complex logic, not just the "what".
+
+## Code Comments
+
+- Write comments that add value beyond what the code obviously does.
+- Use clear, professional language.
+- Update comments when code changes.
+- Remove outdated or misleading comments immediately.
+
+## README Requirements
+
+- **Clear project description** explaining purpose and scope.
+- **Installation instructions** with step-by-step setup.
+- **Usage examples** showing common use cases.
+- **API documentation** for public interfaces.
+- **Contributing guidelines** for team collaboration.
+
+## Inline Documentation
+
+- Maintain up-to-date inline documentation.
+- Include architectural decision records for major changes.
+- Document deployment and operational procedures.

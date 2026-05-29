@@ -1,0 +1,19 @@
+---
+description: Proactively suggest improvements and flag issues when editing code.
+alwaysApply: true
+---
+
+When editing existing code, proactively flag issues you notice — do not silently pass over them.
+
+## What to Flag
+
+- **Code structure**: If the code you are editing has poor organization, duplication, or overly complex logic, briefly note it and ask the user if they want you to improve it.
+- **Security concerns**: If you spot hardcoded secrets, missing input validation, or unsafe patterns in the code you are touching, flag them immediately.
+- **Performance issues**: If you notice obviously inefficient patterns (e.g., unnecessary nested loops, repeated expensive calls, N+1 queries) in the code you are editing, mention them.
+- **Stale or misleading comments**: If comments contradict the code, flag and offer to fix.
+
+## How to Flag
+
+- Keep it brief — one or two sentences per issue.
+- Clearly distinguish between the task you are doing and the issue you are flagging.
+- Do not fix flagged issues without user confirmation unless they are directly part of the current task.

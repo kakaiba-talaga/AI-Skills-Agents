@@ -1,0 +1,11 @@
+---
+description: Categories categorically excluded from canonical memory.
+alwaysApply: true
+---
+
+These categories are categorically excluded from canonical memory. The `/cross-memory reflect` filter reads this section as a rule corpus and suppresses any raw candidate that falls into one of these categories before deterministic deduplication runs.
+
+- **Project goals** — the goals of the project the user is working on are derivable from the project itself (its plan, its README, its commits). Saving them as user-global memory clutters the canonical store and risks bleeding project-specific goals into other unrelated projects.
+- **Transient session state** — what the user is doing right now, what's in their clipboard, the current state of an in-progress refactor. These are conversation-context, not durable facts. They go stale within hours.
+- **Secrets and credentials** — API keys, tokens, passwords, private hostnames, any value the redaction pipeline aims to suppress. If it should not appear in a log file, it should not appear in canonical memory.
+- **Episodic conversation logs that aren't durable facts** — "the user asked about X yesterday and we discussed Y." A conversation log is not a memory; a durable fact extracted from a conversation is. Save the fact, not the log.

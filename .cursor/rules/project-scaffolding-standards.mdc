@@ -1,0 +1,24 @@
+---
+description: Project structure, setup, and configuration management standards.
+alwaysApply: true
+---
+
+## Project Structure
+
+- Use consistent directory structures across projects.
+- Include proper configuration files (.gitignore, README, etc.).
+- Set up development environment configuration.
+
+## Initial Setup
+
+- Create comprehensive README with setup instructions.
+- Include environment configuration examples.
+- Set up proper dependency management.
+- Configure linting and formatting tools.
+
+## Configuration Management
+
+- Use environment-specific configuration files.
+- Document all configuration options.
+- Provide sensible defaults for development.
+- Keep production configurations secure.

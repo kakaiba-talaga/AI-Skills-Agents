@@ -1,0 +1,8 @@
+---
+description: Git commit message conventions using Conventional Commits with project-specific style.
+alwaysApply: true
+---
+
+If available, always use the git-master agent for any git-related actions or commit-message skill as the fallback. If both are unavailable, use Bash directly.
+
+Do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the default system commit instructions.
