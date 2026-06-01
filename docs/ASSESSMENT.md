@@ -15,29 +15,29 @@
 
 | File | Model | Role |
 | :--- | :--- | :--- |
-| interviewer.md | opus | Socratic requirements interview before planning |
 | architect.md | opus | Design exploration and Architecture Decision Documents (ADDs) |
-| planner.md | opus | Breaks specs into structured implementation plans |
-| project-scoper.md | opus | Requirements analysis, gap detection, effort estimates |
-| critic.md | opus | Quality gate on plans and scoping documents |
-| executor.md | sonnet | Implements code changes from validated plans |
-| ssh-executor.md | sonnet | Remote command execution and file transfer via SSH |
-| verifier.md | sonnet | Validates implementation against acceptance criteria |
-| security-reviewer.md | opus | Security audit with severity-rated vulnerability findings |
-| code-reviewer.md | sonnet | Two-stage pipeline code review with severity-rated findings |
-| code-reviewer-diff.md | sonnet | Standalone diff review with full diff-gathering protocol |
-| documentor.md | sonnet | Documentation writer, delegates accuracy checks to `/doc-sync` |
-| debugger.md | opus | Hypothesis-driven runtime bug investigation |
-| debugger-build.md | opus | Build/compilation error diagnosis (import, type, dependency, config) |
-| git-master.md | sonnet | Git operations, branching, commits, PRs, releases, pause/resume |
-| preflight.md | sonnet | Environment readiness checks before agent work begins |
-| work-verifier.md | sonnet | Verifies whether prior agent work was completed, partial, or never started |
-| rollback.md | sonnet | Safely undoes agent-produced changes at configurable scope |
 | change-analyzer.md | sonnet | Classifies git diffs and recommends pipeline stages to run or skip |
 | code-intel.md | opus | Indexes the project into a SQLite symbol graph and answers structural queries (callers, dependencies, impact, execution flow) for other agents |
+| code-reviewer.md | sonnet | Two-stage pipeline code review with severity-rated findings |
+| code-reviewer-diff.md | sonnet | Standalone diff review with full diff-gathering protocol |
 | corpus-search.md | opus | Terminal-native multi-hop corpus search for free-text evidence, file location, claim verification, and reference tracing — every finding cites path:line |
-| research.md | opus | External/web research, multi-source fact-checking, and synthesis into cited reports; read-only on code, writes only `docs/research/` report artifacts |
+| critic.md | opus | Quality gate on plans and scoping documents |
 | cross-memory.md | opus | Synthesizes curated context blocks from the cross-memory store and audits the store for staleness, duplicates, contradictions, and redaction misses |
+| debugger.md | opus | Hypothesis-driven runtime bug investigation |
+| debugger-build.md | opus | Build/compilation error diagnosis (import, type, dependency, config) |
+| documentor.md | sonnet | Documentation writer, delegates accuracy checks to `/doc-sync` |
+| executor.md | sonnet | Implements code changes from validated plans |
+| git-master.md | sonnet | Git operations, branching, commits, PRs, releases, pause/resume |
+| interviewer.md | opus | Socratic requirements interview before planning |
+| planner.md | opus | Breaks specs into structured implementation plans |
+| preflight.md | sonnet | Environment readiness checks before agent work begins |
+| project-scoper.md | opus | Requirements analysis, gap detection, effort estimates |
+| research.md | opus | External/web research, multi-source fact-checking, and synthesis into cited reports; read-only on code, writes only `docs/research/` report artifacts |
+| rollback.md | sonnet | Safely undoes agent-produced changes at configurable scope |
+| security-reviewer.md | opus | Security audit with severity-rated vulnerability findings |
+| ssh-executor.md | sonnet | Remote command execution and file transfer via SSH |
+| verifier.md | sonnet | Validates implementation against acceptance criteria |
+| work-verifier.md | sonnet | Verifies whether prior agent work was completed, partial, or never started |
 
 ### Skills (`skills/`)
 
@@ -48,15 +48,15 @@
 | ClickUp | `skills/clickup/` | 2 | ~276 | ClickUp REST API integration |
 | Code Review | `skills/code-review/` | 2 | ~207 | Diff-based code review orchestration |
 | Commit Message | `skills/commit-message/` | 2 | ~75 | Conventional Commits message generation |
+| Cross-memory | `skills/cross-memory/` | 19 | 381 | Harness-portable memory layer with nine subcommands (init, save, recall, list, forget, search, audit, doctor, reflect) and an opus-class agent for synthesis, audit, and distill |
+| Deploy | `skills/deploy/` | 9 | ~412 (Claude), ~408 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Deslop | `skills/deslop/` | 2 | ~669 | AI slop cleanup (dead code, redundant comments, over-abstraction) |
 | Doc Sync | `skills/doc-sync/` | 2 | ~83 | Documentation audit and sync against codebase |
+| Kickoff | `skills/kickoff/` | 7 | 451 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
 | Linter | `skills/linter/` | 2 | ~141 | Source file linting with auto-fix and incremental cache |
 | Ops | `skills/ops/` | 21 | 1,223 (Claude), ~1,250 (Cursor) | Multi-agent task orchestration, dispatch, and tracking (Phase 2.5b code-intel + Phase 2.5c corpus-search preflight) |
-| Deploy | `skills/deploy/` | 9 | ~412 (Claude), ~408 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
-| Kickoff | `skills/kickoff/` | 7 | 451 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
-| Cross-memory | `skills/cross-memory/` | 19 | 381 | Harness-portable memory layer with nine subcommands (init, save, recall, list, forget, search, audit, doctor, reflect) and an opus-class agent for synthesis, audit, and distill |
 | Using AI Skills Agents | `skills/using-ai-skills-agents/` | 1 | ~83 | Usage/onboarding guide for this repo's agents and skills (single-file, instructional) |
 
 ### Documentation (`docs/`)

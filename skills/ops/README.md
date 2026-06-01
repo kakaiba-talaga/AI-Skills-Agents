@@ -34,25 +34,25 @@ The team manager auto-detects which agent to assign based on task content:
 
 | Agent | Assigned when task involves |
 | :--- | :--- |
-| executor | Implementing, creating, modifying code |
-| verifier | Validating acceptance criteria, testing |
+| architect | Design exploration, architecture decision documents, trade-off evaluation |
+| change-analyzer | Classifying diffs and recommending pipeline stage skips |
 | code-reviewer | Reviewing code quality, auditing |
-| documentor | Writing or updating documentation |
-| research | External/web research, online fact-checking, synthesizing cited reports from outside sources |
+| critic | Reviewing plans, quality gates |
 | debugger | Investigating bugs, diagnosing errors, unexpected behavior, test failures |
 | debugger-build | Build errors, import errors, type errors, dependency/compilation/config errors |
+| documentor | Writing or updating documentation |
+| executor | Implementing, creating, modifying code |
 | git-master | Git operations, branching, PRs |
-| planner | Breaking down work, designing |
-| project-scoper | Estimating effort, analyzing requirements |
 | interviewer | Clarifying ambiguous requirements via structured Socratic Q&A |
-| architect | Design exploration, architecture decision documents, trade-off evaluation |
+| planner | Breaking down work, designing |
+| preflight | Environment readiness checks (runtime, dependencies, git, disk space) |
+| project-scoper | Estimating effort, analyzing requirements |
+| research | External/web research, online fact-checking, synthesizing cited reports from outside sources |
+| rollback | Rolling back agent-produced changes after failures |
 | security-reviewer | Security audits, vulnerability scanning, OWASP checks, auth review |
 | ssh-executor | Deploying to remote servers, SSH commands, file transfer, remote verification |
-| critic | Reviewing plans, quality gates |
-| preflight | Environment readiness checks (runtime, dependencies, git, disk space) |
+| verifier | Validating acceptance criteria, testing |
 | work-verifier | Verifying whether interrupted agent work was completed |
-| rollback | Rolling back agent-produced changes after failures |
-| change-analyzer | Classifying diffs and recommending pipeline stage skips |
 
 ## Autonomy Modes
 

@@ -7,17 +7,17 @@ The following skills use **output tagging** (a badge on the first line of every 
 
 | Skill | Badge | Typical mid-run signals |
 | :--- | :--- | :--- |
-| `/ops` | **`Team Manager`** | Task board activity, agent dispatches, stage transitions |
-| `/ralph-loop` | **`Ralph Loop`** | Loop iterations, reflect/plan/act stages, state file updates |
-| `/code-review` | **`Code Review`** | Review findings, severity ratings, verdicts |
-| `/deslop` | **`Deslop`** | Deletion proposals, slop findings, cleanup reports |
-| `/deploy` | **`Deploy`** | Deployment progress, ssh-executor dispatches, rollback decisions, host status |
-| `/linter` | **`Linter`** | Lint runs, auto-fix results |
 | `/clickup` | **`ClickUp`** | ClickUp task operations |
+| `/code-review` | **`Code Review`** | Review findings, severity ratings, verdicts |
 | `/commit-message` | **`Commit`** | Commit message generation |
 | `/cross-memory` | **`Cross-Memory`** | Subcommand activity (save/recall/list/forget/search/audit), confirmation gates, audit reports, supersede flow |
+| `/deploy` | **`Deploy`** | Deployment progress, ssh-executor dispatches, rollback decisions, host status |
+| `/deslop` | **`Deslop`** | Deletion proposals, slop findings, cleanup reports |
 | `/doc-sync` | **`Doc Sync`** | Documentation audit, staleness checks |
 | `/kickoff` | **`Kickoff`** | Scaffold progress, interview questions, plan generation, plan population |
+| `/linter` | **`Linter`** | Lint runs, auto-fix results |
+| `/ops` | **`Team Manager`** | Task board activity, agent dispatches, stage transitions |
+| `/ralph-loop` | **`Ralph Loop`** | Loop iterations, reflect/plan/act stages, state file updates |
 
 **Rule:** When the user sends a message **without** a slash command and the conversation shows recent activity from any of the skills above, remind the user to re-invoke the skill: _"It looks like you have an active `/<skill>` workflow. Use `/<skill> <your message>` so I have the full context."_
 

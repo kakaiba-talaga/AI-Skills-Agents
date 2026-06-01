@@ -112,42 +112,42 @@ Before deleting, the script prints the full orphan list and prompts: `Delete N o
 | Component | Claude Code | Cursor | Notes |
 | :--- | :---: | :---: | :--- |
 | **Agents** | | | |
-| planner | Yes | Yes | Auto-transformed by deploy script |
 | architect | Yes | Yes | |
-| project-scoper | Yes | Yes | |
-| critic | Yes | Yes | |
-| executor | Yes | Yes | |
-| ssh-executor | Yes | Yes | |
-| verifier | Yes | Yes | |
-| security-reviewer | Yes | Yes | |
-| code-reviewer | Yes | Yes | |
-| code-reviewer-diff | Yes | Yes | |
-| documentor | Yes | Yes | |
-| debugger | Yes | Yes | |
-| debugger-build | Yes | Yes | |
-| git-master | Yes | Yes | |
-| interviewer | Yes | Yes | |
-| preflight | Yes | Yes | |
-| work-verifier | Yes | Yes | |
-| rollback | Yes | Yes | |
 | change-analyzer | Yes | Yes | |
 | code-intel | Yes | Yes | Dispatched by `/ops` Phase 2.5b for structural queries |
+| code-reviewer | Yes | Yes | |
+| code-reviewer-diff | Yes | Yes | |
 | corpus-search | Yes | Yes | Dispatched by `/ops` Phase 2.5c for free-text evidence search |
-| research | Yes | Yes | External/web research, multi-source fact-checking, and synthesis into cited reports; dispatched standalone or by `/ops` |
+| critic | Yes | Yes | |
 | cross-memory | Yes | Yes | |
+| debugger | Yes | Yes | |
+| debugger-build | Yes | Yes | |
+| documentor | Yes | Yes | |
+| executor | Yes | Yes | |
+| git-master | Yes | Yes | |
+| interviewer | Yes | Yes | |
+| planner | Yes | Yes | Auto-transformed by deploy script |
+| preflight | Yes | Yes | |
+| project-scoper | Yes | Yes | |
+| research | Yes | Yes | External/web research, multi-source fact-checking, and synthesis into cited reports; dispatched standalone or by `/ops` |
+| rollback | Yes | Yes | |
+| security-reviewer | Yes | Yes | |
+| ssh-executor | Yes | Yes | |
+| verifier | Yes | Yes | |
+| work-verifier | Yes | Yes | |
 | **Skills** | | | |
 | clickup | Yes | Yes | |
 | code-review | Yes | Yes | |
 | commit-message | Yes | Yes | |
+| cross-memory | Yes | Yes | |
+| deploy | Yes | Yes | Cursor-native version uses `Task(subagent_type="ssh-executor")` for dispatch. No model/tool enforcement on subagent. |
 | deslop | Yes | Yes | |
 | doc-sync | Yes | Yes | |
 | kickoff | Yes | No | Scaffolds planning infrastructure; dispatches interviewer, architect, planner, critic, and project-scoper agents. No Cursor-native version. |
 | linter | Yes | Yes | |
 | ops | Yes | Yes | Cursor-native version uses state file + TodoWrite for task board, `Task` tool for dispatch. No model escalation. |
-| deploy | Yes | Yes | Cursor-native version uses `Task(subagent_type="ssh-executor")` for dispatch. No model/tool enforcement on subagent. |
 | ralph-loop | Yes | Yes | |
 | timing-calibrator | Yes | Yes | |
-| cross-memory | Yes | Yes | |
 | using-ai-skills-agents | Yes | Yes | Usage/onboarding guide for this repo's agents and skills; single-file, instructional (no badge) |
 
 ## Global Directories
