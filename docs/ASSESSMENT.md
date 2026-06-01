@@ -11,7 +11,7 @@
 
 ### Agents (`agents/`)
 
-22 agent definitions + 1 README.
+23 agent definitions + 1 README.
 
 | File | Model | Role |
 | :--- | :--- | :--- |
@@ -36,6 +36,7 @@
 | change-analyzer.md | sonnet | Classifies git diffs and recommends pipeline stages to run or skip |
 | code-intel.md | opus | Indexes the project into a SQLite symbol graph and answers structural queries (callers, dependencies, impact, execution flow) for other agents |
 | corpus-search.md | opus | Terminal-native multi-hop corpus search for free-text evidence, file location, claim verification, and reference tracing — every finding cites path:line |
+| research.md | opus | External/web research, multi-source fact-checking, and synthesis into cited reports; read-only on code, writes only `docs/research/` report artifacts |
 | cross-memory.md | opus | Synthesizes curated context blocks from the cross-memory store and audits the store for staleness, duplicates, contradictions, and redaction misses |
 
 ### Skills (`skills/`)
@@ -147,6 +148,26 @@ The seven tracked plans (`code-intel-agent-{requirements,scoping,design,plan,cri
 | ralph-loop-skill-optimization-plan.md | Modularization plan for ralph-loop |
 | ssh-agent-plan.md | Plan for ssh-executor and ops/deploy integration |
 | unify-ops-state-management-plan.md | Plan to unify ops state management across Claude Code and Cursor |
+
+---
+
+## Changes Since Last Assessment (2026-06-01 — research agent)
+
+### New agent: `research`
+
+`agents/research.md` (model: opus) is an external/web research layer that answers questions by searching the open web, corroborating claims across multiple independent sources, and producing cited, structured reports. Every factual claim in a report traces to a source row with a URL, access date, confidence label, and optional note. It is read-only on code and existing documentation; all write output is new file creation under `docs/research/<slug>.md` (durable) or `.research/runs/<run-id>/` (ephemeral scratch, self-cleaned at end-of-dispatch).
+
+Confidence labels: `direct`, `corroborated`, `single-source`, `inferred`. Performance defaults: 15 source fetches, 5 follow-on hops, 120-second soft wall-clock. Brief-supplied URL sets are fixed at dispatch time and cannot be extended by fetched content (prevents indirect-injection pivots).
+
+### `/ops` routing rows for `research`
+
+Two routing rows were added to `skills/ops/phase-intake.md` to wire the research agent into the `/ops` dispatch table, covering standalone research tasks and web-evidence requests originating from planning or investigative dispatches.
+
+### Net effect
+
+| Surface | Before | After |
+|---|---|---|
+| Agent definitions | 22 | 23 |
 
 ---
 
@@ -604,11 +625,11 @@ The Tier A Opus 4.7 audit (`docs/agent-audits/tier-a-opus-4-7-audit.md`) produce
 ### Strengths
 
 - **Unified skill structure:** All 13 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
-- **Consistent structure** across all 22 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
+- **Consistent structure** across all 23 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
 - **Clean separation of concerns:** The ops decoupling moved operational logic (preflight, rollback, work verification, change analysis, timing calibration) out of skill companion files and into standalone agents/skills where it belongs. This reduces ops context pressure and makes each capability independently dispatchable.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
 - **Shared constraints repeated verbatim** in all agents: no compound Bash commands, no `cd` prefix, relative paths only. No variations.
-- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, corpus-search, cross-memory); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer). No mismatches between frontmatter and README.
+- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, corpus-search, research, cross-memory); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer). No mismatches between frontmatter and README.
 - **Valid cross-references** between agents and skills — no broken path references. Former ops companion references removed.
 - **Deployment automation** expanded — deploy scripts support 4 categories (agents, skills, hooks, settings), 3 targets (claude-code, claude-code-wsl, cursor), dry-run, diff, per-target, per-category, and `--prune` mode. Cursor transform is fully automatic with dedicated transform scripts per skill.
 - **Portability documented** — format differences, tool gaps, and verified findings captured in `docs/portability-guide.md`.
@@ -656,7 +677,7 @@ Skills invoked within pipeline stages:
 
 | Category | Files | Total |
 |----------|-------|-------|
-| Agents | 22 definitions + 1 README | 23 |
+| Agents | 23 definitions + 1 README | 24 |
 | Skills (clickup) | 2 | 2 |
 | Skills (code-review) | 2 | 2 |
 | Skills (commit-message) | 2 | 2 |
@@ -679,8 +700,8 @@ Skills invoked within pipeline stages:
 | Planning (`docs/plan/` 7 tracked + `docs/plan/archive/` 26 gitignored) | 33 | 33 |
 | Config | 2 (.gitignore, .markdownlint.json) | 2 |
 | Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
-| **Total** | | **167** |
+| **Total** | | **168** |
 
 ---
 
-*Assessment updated 2026-05-26 (token-efficiency Phase B + doc-sync). Files assessed: 22 agents, 13 skills (ops phase companions `phase-intake.md` / `phase-dispatch.md` / `phase-completion.md`; `agents/_shared/` orchestrator briefs; prior corpus-search v1 ship baseline). See `CLAUDE.md` Documentation Sync map for doc-to-code links. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*
+*Assessment updated 2026-06-01 (research agent). Files assessed: 23 agents, 13 skills (ops phase companions `phase-intake.md` / `phase-dispatch.md` / `phase-completion.md`; `agents/_shared/` orchestrator briefs; prior corpus-search v1 ship baseline). See `CLAUDE.md` Documentation Sync map for doc-to-code links. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*

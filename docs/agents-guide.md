@@ -425,8 +425,8 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Glob` | all agents | Find files by pattern |
 | `Grep` | all agents | Search file contents |
 | `Agent` | ops | Spawn sub-agents |
-| `WebSearch` | planner, project-scoper | Search the web for context |
-| `WebFetch` | planner, project-scoper | Fetch web page content |
+| `WebSearch` | planner, project-scoper, research | Search the web for context |
+| `WebFetch` | planner, project-scoper, research | Fetch web page content |
 | `NotebookEdit` | executor | Edit Jupyter notebooks |
 | `TodoWrite` | any agent | Legacy todo list |
 | `Skill` | ops | Invoke skills (`/ralph-loop`, `/doc-sync`, `/code-review`, etc.) |

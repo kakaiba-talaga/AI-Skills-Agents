@@ -32,6 +32,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `docs/plan/token-efficiency-phase-a-projection.md` | Post–Phase A measured/projected savings (proxy tokens); methodology aligned with TE-M1 |
 | `agents/code-intel.md` | `agents/code-intel.md`, `agents/_shared/code-intel-orchestrator-brief.md`, `skills/ops/phase-dispatch.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
 | `agents/corpus-search.md` | `agents/corpus-search.md`, `agents/_shared/corpus-search-orchestrator-brief.md`, `skills/ops/phase-dispatch.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
+| `agents/research.md` | `agents/research.md`, `skills/ops/phase-intake.md` (Agent Assignment Rules row + lane-boundary row), `tooling/deploy-manifest.json` |
 | `docs/code-intel-integration-test.md` | `agents/code-intel.md`, `skills/ops/phase-dispatch.md` (Phase 2.5b), `skills/ops/phase-completion.md` (Phase 4 cleanup), `skills/ralph-loop/SKILL.md` |
 | `docs/corpus-search-integration-test.md` | `agents/corpus-search.md`, `skills/ops/phase-dispatch.md` (Phase 2.5c), `skills/ops/phase-intake.md` (Trivial Dispatch), `skills/ops/phase-completion.md` (Phase 4 cleanup) |
 | `agents/cross-memory.md` | `agents/cross-memory.md`, `skills/cross-memory/SKILL.md` (audit subcommand brief shape; init+doctor non-trigger boundary; distill intent brief shape and output contract), `skills/cross-memory/README.md` (Audit section; synthesize, audit, and distill intent coverage) |
