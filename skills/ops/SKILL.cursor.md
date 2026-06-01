@@ -25,6 +25,9 @@ Parse arguments as follows:
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
+- `--code-intel` / `--code-intel=off` — Phase 2.5b: fire `code-intel` on every code-modifying task, or disable for the run.
+- `--corpus-search` / `--corpus-search=off` — Phase 2.5c: fire `corpus-search` on every eligible task, or disable for the run.
+- `--memory-inject=off|auto|always` — control `## Project Knowledge` injection into agent briefs (default `auto`).
 - `--security-review=off|always` — controls `[security-reviewer]` stage auto-fire. Absent: the stage fires when the task carries a security content signal or `change-analyzer` returns `security-review: run` on the post-executor diff. `off`: never auto-fire `security-reviewer` this run. `always`: auto-fire `security-reviewer` on every stage transition. Registered here alongside the other global run flags rather than a phase sub-file because it gates a pipeline stage, not a Phase-2.5 preflight.
 - `--tdd` — opt-in mode: executor follows the RED-GREEN-REFACTOR discipline from `skills/ops/tdd-discipline.md`. Verifier adds a TDD-discipline check.
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
@@ -186,6 +189,10 @@ If the predicate is ambiguous — when you cannot determine with confidence that
 | `dispatch-log.md` | `--dispatch-log` set |
 | `integrations.md` | `/deslop`, `ralph` |
 | `help-card.md` | `/ops help` |
+| `timing-edge-cases.md` | Phase 4 completion / Status Dashboard timing |
+| `cost-tracking.md` | Phase 4 cost estimate (`--cost`) |
+| `tdd-discipline.md` | `--tdd` flag set |
+| `pointer-format.md` | Maintaining companion pointer consistency |
 
 ---
 

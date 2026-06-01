@@ -1,7 +1,7 @@
 ---
 name: change-analyzer
 model: sonnet
-description: Analyzes a git diff to classify changes and recommend which pipeline stages (verify, deslop, review, security-review) to run or skip. Returns per-stage recommendations with justification.
+description: Analyzes a git diff to classify changes and recommend which pipeline stages (verify, deslop, review, security-review) to run or skip. Returns per-stage recommendations with justification. Also provides the single classification signal the team manager uses to auto-schedule `security-reviewer` when the diff touches security-sensitive paths.
 tools:
   - Read
   - Glob
