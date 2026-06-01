@@ -60,8 +60,9 @@ See [SKILL.md → Subcommand preflight](SKILL.md#subcommand-preflight) for the f
 
 1. Provisions `~/.cross-memory/` via the lazy-provisioning sequence (creates the directory tree and `config.yaml` with defaults). If the directory already exists, this step is a no-op.
 2. Detects the active harness via the five-step adapter-selection chain.
-3. Probes the harness-native `MEMORY.md` for reachability and verifies sentinel markers are present.
+3. Re-runs adapter detection (confirming the harness resolves consistently), probes the harness-native `MEMORY.md` for reachability, and verifies its sentinel markers are present (exactly one begin/end pair).
 4. Runs the always-on tier filter, formats the `[CROSS-MEMORY]` injection block, and writes it between the sentinel markers in the harness-native `MEMORY.md`.
+4.5. Reads the per-project `state.toml`; if `reflect.last_reflect_at` is older than `reflect_staleness_threshold_days` (default 30), emits a reflect-staleness hint. Suppressed silently when the file is absent/unparseable or the field is unset; never auto-invokes reflect.
 5. Prints a one-line summary.
 
 **Flags:**
@@ -327,7 +328,7 @@ The candidate report has two parts rendered to chat.
 | :--- | :--- |
 | `id` | Run-local identifier (e.g., `c1`). Does not persist across runs. |
 | `type` | Memory type proposed by the agent (e.g., `preference`, `rule`). |
-| `category` | One of four locked taxonomy categories: `architectural-decisions`, `conventions-implicit-in-code`, `workflow-patterns-from-successful-runs`, `user-preferences-from-feedback-patterns`. |
+| `category` | One of four locked taxonomy categories: `architectural-decisions`, `conventions-implicit-in-code`, `workflow-patterns-from-successful-runs`, `user-preferences-from-feedback-patterns`. *(Reflect distillation taxonomy only — distinct from the seven-value `category` frontmatter enum on stored memory files; see `schema-validator.md`.)* |
 | `scope` | Proposed memory scope: `user-global`, `project:<slug>`, or `harness:<name>`. |
 | `proposed-name` | Slug for the would-be memory file name. |
 | `body-preview` | Up to 160 characters of the candidate body. |

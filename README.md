@@ -20,7 +20,7 @@ Initially, these should work on Claude Code and Cursor. Other AI development too
 
 The project is organized into the following directories:
 
-- `/agents` — 22 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
+- `/agents` — 23 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
 - `/skills` — 13 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
 - `/hooks` — Event hooks (e.g., post-compaction context re-injection, PostToolUse security pattern warnings).
 - `/docs` — Assessment and portability guide.
@@ -133,6 +133,7 @@ Before deleting, the script prints the full orphan list and prompts: `Delete N o
 | change-analyzer | Yes | Yes | |
 | code-intel | Yes | Yes | Dispatched by `/ops` Phase 2.5b for structural queries |
 | corpus-search | Yes | Yes | Dispatched by `/ops` Phase 2.5c for free-text evidence search |
+| research | Yes | Yes | External/web research, multi-source fact-checking, and synthesis into cited reports; dispatched standalone or by `/ops` |
 | cross-memory | Yes | Yes | |
 | **Skills** | | | |
 | clickup | Yes | Yes | |
@@ -147,6 +148,7 @@ Before deleting, the script prints the full orphan list and prompts: `Delete N o
 | ralph-loop | Yes | Yes | |
 | timing-calibrator | Yes | Yes | |
 | cross-memory | Yes | Yes | |
+| using-ai-skills-agents | Yes | Yes | Usage/onboarding guide for this repo's agents and skills; single-file, instructional (no badge) |
 
 ## Global Directories
 

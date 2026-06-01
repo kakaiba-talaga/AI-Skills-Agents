@@ -6,7 +6,7 @@
 
 Deployable markdown companions shared across multiple agent contracts. Each snippet holds prose that would otherwise be duplicated in every agent `## Brief Format` subsection. Agents keep a **one-line `See` pointer** plus **agent-specific overrides** only (required-section lists, file-class allowlists, mode handling, and similar).
 
-Canonical brief grammar and file-class tables remain in `~/.claude/skills/ops/brief-contract.md`. Snippets capture cross-agent defaults that repeat in the 13 brief-contract agents; they do not replace the contract.
+Canonical brief grammar and file-class tables remain in `~/.claude/skills/ops/brief-contract.md`. Snippets capture cross-agent defaults that repeat in the 14 brief-contract agents; they do not replace the contract.
 
 ## Pointer contract
 
@@ -31,7 +31,7 @@ Bump the **module version** in this README when adding snippets or making breaki
 
 ## Agents that include `brief-format-snippet.md`
 
-These 13 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format-snippet.md` from `## Brief Format` (grep `brief-format-snippet` to audit):
+These 14 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format-snippet.md` from `## Brief Format` (grep `brief-format-snippet` to audit):
 
 | Agent | Agent-specific overrides (examples) |
 | :--- | :--- |
@@ -44,6 +44,7 @@ These 13 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format
 | `executor.md` | TDD mode; file-class allowlist; strict missing AC |
 | `git-master.md` | Git operations scope |
 | `project-scoper.md` | `plan-doc` file-class; mode ignored |
+| `research.md` | Web-research lane; trust-boundary / URL-source rules; no Edit tool; missing AC proceeds |
 | `security-reviewer.md` | Security-weighted Project Knowledge |
 | `ssh-executor.md` | Deploy JSON brief + preamble PK |
 | `verifier.md` | AC source priority; TDD commit-order check |

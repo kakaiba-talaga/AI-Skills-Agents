@@ -38,6 +38,7 @@ The team manager auto-detects which agent to assign based on task content:
 | verifier | Validating acceptance criteria, testing |
 | code-reviewer | Reviewing code quality, auditing |
 | documentor | Writing or updating documentation |
+| research | External/web research, online fact-checking, synthesizing cited reports from outside sources |
 | debugger | Investigating bugs, diagnosing errors, unexpected behavior, test failures |
 | debugger-build | Build errors, import errors, type errors, dependency/compilation/config errors |
 | git-master | Git operations, branching, PRs |
@@ -75,6 +76,13 @@ The team manager auto-detects which agent to assign based on task content:
 | `--no-deslop` | Skip the deslop cleanup stage after verification |
 | `--cost` | Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default) |
 | `--brainstorm` | Run interviewer + architect and require design approval before planner |
+| `--tdd` | Executor follows RED-GREEN-REFACTOR discipline; verifier adds a TDD-discipline check |
+| `--skip-baseline` | With `--worktree`, skip the baseline test-suite check (only the `.gitignore` enforcement runs) |
+| `--dispatch-log` | Append each dispatch to `docs/ops-dispatch-log.md` (opt-in audit trail; off by default) |
+| `--security-review=off\|always` | Force the `security-reviewer` stage off, or fire it on every stage transition |
+| `--code-intel[=off]` | Phase 2.5b: fire `code-intel` on every code-modifying task (`--code-intel`) or disable it (`=off`) |
+| `--corpus-search[=off]` | Phase 2.5c: fire `corpus-search` on every eligible task or disable it (`=off`) |
+| `--memory-inject=off\|auto\|always` | Control `## Project Knowledge` injection into agent briefs (default `auto`) |
 | `ralph` | Wrap workflow in a `/ralph-loop` for iterative metric-driven goals |
 
 ## Key Features
@@ -406,6 +414,7 @@ The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase po
 | `integrations.md` | Deslop and Ralph Loop integration procedures | Verify→review stage transition; `ralph` flag |
 | `timing-edge-cases.md` | 7 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time) | Phase 4 completion and Status Dashboard display |
 | `cost-tracking.md` | Token estimation heuristics, model pricing, cost dashboard format, per-task and per-model rollup templates | Phase 4 completion (cost estimate and dashboard) |
+| `tdd-discipline.md` | RED-GREEN-REFACTOR discipline rules loaded by executor and verifier | `--tdd` flag set |
 | `interruption-recovery.md` | Detailed procedures for cancel, reprioritize, inject tasks, remove tasks, session recovery, foreground/background dispatch explainer | User interrupts, `resume` command, dispatch context |
 | `subcommand-save.md` | Full save flow, schema, ritual values, redaction integration, resume interaction | `save` subcommand |
 | `completion-options.md` | Four-option completion menu (merge / PR / keep / discard), per-option workflow, destructive-option confirmation gate, worktree cleanup by provenance | Phase 4 completion (present decision menu and capture user choice) |

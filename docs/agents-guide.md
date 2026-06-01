@@ -6,6 +6,12 @@ Extended usage examples, workflow details, and permission configuration for the 
 
 Agents are invoked automatically by Claude Code when a task matches their description. You can also request them explicitly by name or by describing the task.
 
+### Interviewer
+
+- _"Use the interviewer to clarify this ambiguous spec before we plan"_
+- _"My requirements are vague — have the interviewer ask me questions to crystallize them"_
+- _"Resolve the open questions in this feature request before planning"_
+
 ### Architect
 
 - _"Use the architect to explore design options for the new caching layer"_
@@ -82,6 +88,12 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Search the repo for evidence that Phase 2.5c is advisory — grep for 'advisory' in skills/ops"_
 - _"Locate where the verification-gate ritual is documented"_
 - _"Verify that README.md contains the phrase 'reusable AI agents'"_
+
+### Research
+
+- _"Research current best practices for X from the web and synthesize a cited report"_
+- _"Fact-check this claim against external/online sources and tell me the confidence per source"_
+- _"Gather evidence from the open web on Y — read-only, cite every source with access date"_
 
 ### Cross-Memory
 
@@ -320,6 +332,12 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Per-stage skip/run recommendations for verify, deslop, review, security-review
 - NEVER-skip rules take precedence over skip conditions
 
+**Research:**
+
+- External/web research, multi-source fact-checking, and synthesis into cited reports
+- Read-only on code; writes only `docs/research/<slug>.md` report artifacts (untracked by default)
+- Structural anti-exfiltration trust boundary: only fetches URLs surfaced by a prior `WebSearch` or supplied in the brief; never writes secrets into a report
+
 ### Utility Agent Handoffs
 
 Utility agents can hand off to pipeline agents or other utility agents depending on their outcome. Unlike the linear pipeline, these handoffs are conditional — they depend on what the agent found.
@@ -386,6 +404,13 @@ No outbound handoffs. Code-intel returns citable query results (callers, impact,
 **Corpus Search:**
 
 No outbound handoffs. Corpus-search returns citable evidence (path:line snippets, verdicts, reference chains) to the caller — the executor, debugger, documentor, or `/ops` Phase 2.5c orchestrator decides what to do with the data.
+
+**Research:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Report complete | **user**, **planner**, or **documentor** consume the cited findings |
+| No reliable sources found | Back to **user** with an explicit "cannot answer reliably" notice — does not fabricate |
 
 ### Parallelization
 

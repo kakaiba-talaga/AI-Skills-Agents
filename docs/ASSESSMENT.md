@@ -57,6 +57,7 @@
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
 | Kickoff | `skills/kickoff/` | 7 | 451 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
 | Cross-memory | `skills/cross-memory/` | 19 | 381 | Harness-portable memory layer with nine subcommands (init, save, recall, list, forget, search, audit, doctor, reflect) and an opus-class agent for synthesis, audit, and distill |
+| Using AI Skills Agents | `skills/using-ai-skills-agents/` | 1 | ~83 | Usage/onboarding guide for this repo's agents and skills (single-file, instructional) |
 
 ### Documentation (`docs/`)
 
