@@ -97,7 +97,7 @@ Write the redacted save payload to `.ops-state/<run-id>-save.json.tmp` (the `.tm
 
 Then read the temp file back from disk and parse it as JSON to verify the bytes round-tripped correctly. If the read-back parse fails — for example due to a disk-full condition, an encoding mismatch, or a write-tool error — delete the temp file immediately and surface the error to the user. Stop before proceeding to step 6. The user must see the error before any partial file is exposed under the final name.
 
-If the read-back parse succeeds, rename `.ops-state/<run-id>-save.json.tmp` to `.ops-state/<run-id>-save.json`. The rename is atomic within the same directory on every supported filesystem (`Move-Item` semantics on Windows; POSIX `rename(2)` on Linux and macOS). After the rename, verify the final-name file exists with one more read before proceeding to step 6.
+If the read-back parse succeeds, rename `.ops-state/<run-id>-save.json.tmp` to `.ops-state/<run-id>-save.json`. The rename is atomic within the same directory on every supported filesystem (`Move-Item` semantics on Windows; POSIX `rename(2)` on Linux and macOS). After the rename, verify the final-name file exists with one more read before proceeding to step 6. If the final-name file is absent after the rename (e.g., the rename silently failed or the path was otherwise not materialized), surface an error to the user and do NOT print the step 6 success line — the checkpoint has not been saved.
 
 **Step 6 — Display a one-line confirmation.**
 

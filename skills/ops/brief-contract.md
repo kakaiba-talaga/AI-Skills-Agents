@@ -34,7 +34,7 @@ Every valid brief must contain the four sections below. A brief missing any of t
 
 ```
 ## Task
-Implement the `## Brief Format` subsection in `agents/executor.md` per ADD §7.1.
+Implement the `## Brief Format` subsection in `agents/executor.md`.
 ```
 
 ### `## Scope`
@@ -77,7 +77,7 @@ Implement the `## Brief Format` subsection in `agents/executor.md` per ADD §7.1
 ```
 ## Constraints
 [Shared Brief Constraints — see skills/ops/SKILL.md#shared-brief-constraints]
-- Do not modify `skills/ops/SKILL.md` — that is a separate task in M1.
+- Do not modify `skills/ops/SKILL.md` — that is a separate task.
 - Match the heading level and spacing conventions of the existing executor.md body.
 ```
 
@@ -180,10 +180,10 @@ Which governs this task — the durable rule (redact unconditionally) or the tas
 | :--- | :--- | :--- |
 | `## Task` | None — refuse the dispatch. | Always escalate: "Brief missing required section `## Task`. No task statement. Re-dispatch with a task." |
 | `## Scope` | `debugger` only: investigate broadly. All others: refuse. | `executor`, `verifier`, `project-scoper`: escalate with "no scope given." `debugger`: proceed with broad investigation, note absence in report. |
-| `## Acceptance Criteria` | None — `executor` and `verifier` refuse. Other consumers: note absence, proceed. | `executor` and `verifier`: refuse with "Brief missing required section `## Acceptance Criteria`. Cannot proceed. Re-dispatch with verifiable criteria, or provide a plan-doc reference." This closes `executor` MAJOR-1 and `verifier` BLOCKER-1. |
+| `## Acceptance Criteria` | None — `executor` and `verifier` refuse. Other consumers: note absence, proceed. | `executor` and `verifier`: refuse with "Brief missing required section `## Acceptance Criteria`. Cannot proceed. Re-dispatch with verifiable criteria, or provide a plan-doc reference." |
 | `## Constraints` | Treat the Shared Brief Constraints block as the full constraint set. Proceed. | No escalation. |
 | `## Context` | Proceed without prior context. | No escalation. Often absent. |
-| `## Mode` | Default to `autonomous`. | No escalation. See "Mode Handling" below. Recognized values: `interactive`, `autonomous`, `supervised`, `tdd`. This closes `git-master` BLOCKER-1. |
+| `## Mode` | Default to `autonomous`. | No escalation. See "Mode Handling" below. Recognized values: `interactive`, `autonomous`, `supervised`, `tdd`. |
 | `## Handoff Artifacts` | Proceed without reading handoff files. | No escalation. Often absent for first-stage dispatches. |
 | `## Code Intelligence Context` | Proceed without code-intel report. | No escalation. Phase 2.5b is advisory. |
 | `## Corpus Search Context` | Proceed without corpus-search report. | No escalation. Phase 2.5c is advisory. |
@@ -205,11 +205,11 @@ The `## Mode` section carries one of four values: `interactive`, `autonomous`, `
 - `interactive` — ask the user to choose: stash, WIP commit, or include in new branch.
 - `supervised` — equivalent to `interactive` for git-master's decision tree unless the agent's `## Brief Format` subsection specifies otherwise.
 
-This closes `git-master` BLOCKER-1: the decision tree no longer forks on a runtime-undetectable inferred mode.
+The decision tree forks only on these explicit mode values — never on a runtime-undetectable inferred mode.
 
 **`tdd` is a discipline overlay, not a git-master fork trigger.** When `## Mode: tdd` is set, git-master treats it as `autonomous` for uncommitted-change decisions — `tdd` is not a recognized fork-triggering value, so the autonomous fallback applies. The `tdd` value primarily affects the executor (RED-GREEN-REFACTOR discipline, per `skills/ops/tdd-discipline.md`) and the verifier (commit-ordering check). Git-master applies no special behavior for `tdd` beyond the autonomous stash default.
 
-**All other audited agents** (`executor`, `verifier`, `debugger`, `project-scoper`) ignore the `## Mode` field unless they explicitly declare mode-branching behavior in their own `## Brief Format` subsection. Absence of a `## Brief Format` mode declaration means: read the field, ignore it, proceed as `autonomous`.
+**All other consuming agents** (`executor`, `verifier`, `debugger`, `project-scoper`) ignore the `## Mode` field unless they explicitly declare mode-branching behavior in their own `## Brief Format` subsection. Absence of a `## Brief Format` mode declaration means: read the field, ignore it, proceed as `autonomous`.
 
 **Unrecognized `## Mode` value:** An unrecognized `## Mode` value is treated as absent — default to `autonomous` and note the unrecognized value in the response.
 
@@ -229,7 +229,7 @@ The `## Scope` section lists paths. Each path belongs to a file class. The class
 | `plan-doc` | Planning artifacts — plans, ADDs, scoping docs, assessments. | `docs/plan/*.md`, `docs/*-assessment.md`, `docs/*-add.md` |
 | `design-doc` | Architecture Decision Documents produced by the architect via the brainstorm gate. In scope for the `architect` agent only. | `docs/plan/*-design.md` |
 
-**`agent-contract` routing rules** (closes `project-scoper` BLOCKER-1):
+**`agent-contract` routing rules:**
 
 - Edits to `agent-contract` paths MUST route through the `executor`. No other agent class applies Edit or Write to these files in a planned dispatch.
 - The `project-scoper` MUST refuse Edit/Write on `agent-contract` paths. When `## Scope` includes an `agent-contract` path, the scoper produces a revision plan and hands off to the executor — it does not apply the change itself.
@@ -243,11 +243,10 @@ The `## Scope` section lists paths. Each path belongs to a file class. The class
 
 ```
 ## Task
-Add the `## Brief Format` subsection to `agents/executor.md` per ADD §7.1.
+Add the `## Brief Format` subsection to `agents/executor.md`.
 
 ## Context
-The brief-contract spec ADD was approved on 2026-05-04. The contract file at
-`skills/ops/brief-contract.md` was written by task-2. This task (task-3a in M2)
+The contract file at `skills/ops/brief-contract.md` is already in place. This task
 retrofits the executor agent body with the subsection that applies the contract.
 
 ## Scope
@@ -279,7 +278,7 @@ The executor reads each section in order: validates `## Task` (present, well-for
 
 ```
 ## Task
-Verify the `## Brief Format` subsection added to `agents/executor.md` by task-3a.
+Verify the `## Brief Format` subsection added to `agents/executor.md`.
 
 ## Scope
 - `agents/executor.md` (read)
@@ -298,8 +297,7 @@ VERDICT: NEEDS-INPUT
 Brief missing required section `## Acceptance Criteria`. The verifier cannot
 determine what "done" means without a verifiable criteria list. Re-dispatch
 with an explicit numbered list of testable assertions, or provide a plan-doc
-reference (e.g., `docs/plan/brief-contract-spec-plan.md#task-3a`) from which
-the team manager can extract the criteria.
+reference from which the team manager can extract the criteria.
 ```
 
 The verifier does not guess, does not Glob for a plan doc, and does not infer criteria from `## Scope`. It refuses and returns control to the team manager.
@@ -388,12 +386,11 @@ This file is an `agent-contract` per the file-class vocabulary in the "File-Clas
 ### Where this contract is referenced
 
 - `skills/ops/SKILL.md` — Agent Briefing Format section (the producer-side reference that points here for the full contract grammar).
-- `agents/executor.md` — `## Brief Format` subsection (M2 retrofit).
-- `agents/verifier.md` — `## Brief Format` subsection (M2 retrofit).
-- `agents/debugger.md` — `## Brief Format` subsection (M2 retrofit).
-- `agents/git-master.md` — `## Brief Format` subsection (M2 retrofit).
-- `agents/project-scoper.md` — `## Brief Format` subsection (M2 retrofit).
-- `docs/plan/brief-contract-spec-add.md` — design rationale, option analysis, and the spec skeleton (ADD §6) that this file implements.
+- `agents/executor.md` — `## Brief Format` subsection.
+- `agents/verifier.md` — `## Brief Format` subsection.
+- `agents/debugger.md` — `## Brief Format` subsection.
+- `agents/git-master.md` — `## Brief Format` subsection.
+- `agents/project-scoper.md` — `## Brief Format` subsection.
 
 ### Related documents
 

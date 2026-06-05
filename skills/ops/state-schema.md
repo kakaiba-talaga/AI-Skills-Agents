@@ -161,6 +161,32 @@ Used when `plan_file` is null — trivial-path runs or runs without a persisted 
 - **Resolution:** No resolution step needed. Used directly in the agent brief's Context, Scope, and Acceptance Criteria sections.
 - **`description` field:** May duplicate `description_inline` summary or be omitted. `description_inline` is the authoritative source.
 
+#### Example (`description_inline` mode)
+
+```json
+{
+  "id": "task-0",
+  "subject": "Add null-check to login handler",
+  "description": "Guard against null user object in login handler",
+  "description_inline": "Add a null-check for the user object in `src/auth/login.py` before the session is created. Acceptance criteria: a `pytest` run with a null-user fixture must pass. Files: `src/auth/login.py`, `tests/test_login.py`.",
+  "status": "pending",
+  "agent_type": "executor",
+  "stage": "implement",
+  "priority": 1,
+  "estimated_minutes": 10,
+  "estimate_source": "ops",
+  "blocked_by": [],
+  "started_at": null,
+  "completed_at": null,
+  "duration_seconds": null,
+  "model_used": null,
+  "attempts": 0,
+  "adaptation": null,
+  "handoff_file": null,
+  "_internal": false
+}
+```
+
 ### Choosing the mode
 
 | Condition | Mode | Set `description_ref`? | Set `description_inline`? |

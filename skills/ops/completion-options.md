@@ -41,6 +41,7 @@ Push the branch to the remote and open a pull request for team review or pre-mer
    - `git push -u origin <branch>`
 2. After push completes, run:
    - `gh pr create --title "<title>" --body "<summary>"`
+   - If `gh pr create` fails (gh not installed, not authenticated, or no remote configured), surface the error message verbatim and tell the user: "Please push the branch and open the PR manually via the repository's web UI." Do not proceed silently.
 3. Return the PR URL to the user.
 
 **Default for:** team workflows, branches requiring CI, or when review is desired before merge.

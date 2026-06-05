@@ -4,6 +4,10 @@
 
 A coordination skill that manages a team of specialized agents working on a shared task list. Instead of manually invoking agents one at a time, the team manager plans the work, creates a task board, dispatches agents (hands each a self-contained task brief, in parallel where safe), tracks progress, and handles failures.
 
+## What is this?
+
+`/ops` is a coordination skill that runs a full AI agent pipeline for you. Give it a goal — a spec, a bug report, a plan — and it breaks the work into tasks, assigns each to the right specialist agent (executor, verifier, code-reviewer, etc.), and drives the pipeline to completion while tracking progress and handling failures. It is the right tool when work spans multiple stages or agents (e.g., implement → verify → review → document). For a single, self-contained command ("rename this variable", "run the linter"), invoke the agent directly instead of routing through `/ops`.
+
 ## Words this skill uses
 
 | Term | Plain meaning |
@@ -403,7 +407,37 @@ You can interact with the team manager at any point between agent dispatches:
 - **Blocker**: Creates a blocker task, pauses the affected chain, continues other chains.
 - **Scope issue**: Re-plans in-place if small; escalates to user if large.
 
-## Companion Files
+## Troubleshooting / Common mistakes
+
+**`/ops execute` says it cannot find a plan.**
+`execute` reads the plan from the current conversation context. If you are in a new session or have used `/clear`, there is no plan in context. Paste or re-describe the plan before running `/ops execute`, or use `/ops resume` if you saved state from an earlier run.
+
+**A new branch appeared on `main` — I didn't ask for that.**
+By design, `/ops` creates a working branch before any agents modify code when you are on `main` or `master`. This protects your base branch. If you want to work directly on the current branch, pass `--no-branch`.
+
+**`/ops resume` says no state file was found.**
+`resume` relies on a state file at `.ops-state/<run-id>-board.json`. State is only written when a run has progressed past the task-board creation step, or when `/ops save` was called explicitly. If the previous session ended before that point, there is nothing to resume — start a new run instead.
+
+**Where is the state file?**
+`.ops-state/` in your project root. Each run gets its own file named after the run ID (e.g., `.ops-state/caching-layer-2026-04-09-board.json`). The state file, the plan document under `docs/plan/`, and handoff files under `.agents/handoffs/` together hold everything needed for a full session recovery.
+
+**An agent is looping and the task never completes.**
+The team manager retries a failing task up to 4 times (sonnet × 2 → debugger diagnosis → opus → user escalation). If you see the same task cycling, type `stop` to halt dispatching, then inspect what the last agent returned. You can then `skip` the task, adjust the plan, and resume.
+
+**`/ops` is running when I just wanted a quick command.**
+`/ops` is intended for multi-stage, multi-agent workflows. For single commands ("run the tests", "format this file"), invoke the agent or skill directly without wrapping in `/ops`.
+
+## Reusability
+
+This skill is project-agnostic. It coordinates whatever agents are available globally (`~/.claude/agents/`) or in the current project's `.claude/agents/` directory. To share agents with a specific project, copy the relevant files from `~/.claude/agents/` into that project's `.claude/agents/`.
+
+---
+
+## For skill maintainers
+
+> The sections below describe the internal file layout and companion-loading architecture of `/ops`. If you are using the skill rather than maintaining or extending it, you can stop reading here.
+
+### Companion Files
 
 The skill uses companion files for conditional sections, loaded on demand via Read instead of being inlined in SKILL.md. This keeps the core file lean — sections are only loaded when the relevant workflow branch is reached.
 
@@ -451,9 +485,3 @@ Eight procedures previously in companion files have been extracted into standalo
 | `~/.claude/agents/git-master.md` (enriched) | `branch-isolation.md` | Branch workflow decisions and worktree isolation |
 | `~/.claude/agents/work-verifier.md` (enriched) | `agent-health-monitoring.md` | Orphan detection and timeout budgets |
 | `~/.claude/agents/ssh-executor.md` (enriched) | `ssh-integration.md` | SSH preflight checks and handoff format |
-
----
-
-## Reusability
-
-This skill is project-agnostic. It coordinates whatever agents are available globally (`~/.claude/agents/`) or in the current project's `.claude/agents/` directory. To share agents with a specific project, copy the relevant files from `~/.claude/agents/` into that project's `.claude/agents/`.

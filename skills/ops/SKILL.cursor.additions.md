@@ -695,24 +695,6 @@ These limitations are inherent to the Cursor platform and cannot be worked aroun
 
 @@PATCH
 ACTION: insert_after
-ANCHOR: 9. **Trivial route still enforces LB1 and LB2** — even on the trivial path, a state file is created and verified on disk (LB1) and the agent brief is fully self-contained (LB2). The triage gate never bypasses these invariants.
-@@CONTENT
-10. **Nested skill returns are mid-loop events.** Never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. A nested-skill return is a **mid-loop checkpoint**, never a terminal event. The team manager's ritual around every nested skill invocation is:
-    - **Before** invoking another skill (e.g., `/deslop`, `/clickup`), write a `pending_nested_skill` record to the state file on disk (fields: `skill`, `invoked_at`, `resume_phase`, `resume_notes`). See `state-schema.md`.
-    - **After** the nested skill returns, re-read the state file, consult `pending_nested_skill.resume_phase` and `resume_notes` to know where to resume, capture any output that downstream phases need (into a handoff file where one exists per the Handoff Documents section, or into the next agent's brief when no handoff procedure applies — e.g., ClickUp), clear the field back to `null`, write the state file, and execute the resume action in the same turn.
-    - The dispatch loop terminates **only** on Phase 4 completion (all tasks `completed`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
-@@END
-
-@@PATCH
-ACTION: insert_after
-ANCHOR: **Skip when:** `--no-deslop` set, `/deslop` skill unavailable, run produced no code changes, or all changes are trivial/mechanical.
-@@CONTENT
-
-**After this nested skill returns, do not end the turn and do not write "Handing control back."** A nested-skill return is a mid-loop event (see Non-negotiable #10). Before invoking, write `pending_nested_skill` to the state file with `skill: "/deslop"`, `resume_phase: "phase-3-deslop-stage"`, and `resume_notes: "integrations.md steps 5-6"`. After the skill returns, re-read the state file, follow integrations.md steps 5–6 — if deslop made changes, re-dispatch the verifier against the modified files; if deslop made no changes, proceed to the code-review stage. Either branch: do not end the turn. Then clear `pending_nested_skill` back to `null` and continue.
-@@END
-
-@@PATCH
-ACTION: insert_after
 ANCHOR: **ClickUp context enrichment:** If a ClickUp task ID is referenced, pull task details before planning. Invoke `/clickup Get task <id>` if the skill is available, or fall back to `curl https://api.clickup.com/api/v2/task/<id>` with the token from `~/.claude/config/clickup/config.json`. Extract title, description, status, checklist items, and comments as spec context. Intake-only — does not write back to ClickUp.
 @@CONTENT
 
