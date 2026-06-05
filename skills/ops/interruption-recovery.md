@@ -17,7 +17,7 @@ Do not ask "are you sure?" — if the user says stop, stop. They can always resu
 
 Both verbs interrupt an active run, but they target different problems. **`pause`** is a mid-session bookmark: the team manager stops dispatching new work, lets any currently-running agents finish, and then waits. Conversation context is still alive, so the user can type `resume` moments later and pick up exactly where things left off — no files read back, no reconstruction needed. Use `pause` for a coffee break, a quick side-lookup, or a brief detour inside the same session.
 
-**`save`** is a journal entry for context loss. The user invokes it as a deliberate prelude to clearing the context window, closing the terminal, or stepping away long enough that the conversation will not survive. Unlike `pause`, `save` captures the conversation-side state that the state file alone cannot hold — verbal decisions made mid-run, the working hypothesis, the "where I was" note — and writes it to a save file on disk. After saving, the user typically clears the window and later runs `/ops resume` in a fresh session, which reads both the on-disk state file and the save file together to reconstruct full context. See `~/.claude/skills/ops/subcommand-save.md` for the complete save invocation flow and file schema.
+**`save`** is a journal entry for context loss. The user invokes it as a deliberate prelude (step before) to clearing the context window, closing the terminal, or stepping away long enough that the conversation will not survive. Unlike `pause`, `save` captures the conversation-side state that the state file alone cannot hold — verbal decisions made mid-run, the working hypothesis, the "where I was" note — and writes it to a save file on disk. After saving, the user typically clears the window and later runs `/ops resume` in a fresh session, which reads both the on-disk state file and the save file together to reconstruct full context. See `~/.claude/skills/ops/subcommand-save.md` for the complete save invocation flow and file schema.
 
 ## Reprioritize
 
@@ -37,7 +37,7 @@ When the user asks to change priority, reorder tasks, or skip a stage mid-run:
 When the user adds new work mid-run ("also add X" or "we need to handle Y too"):
 
 1. Create the new task(s) in the state file with appropriate metadata and dependencies.
-2. Wire dependencies — if the new task depends on existing tasks, set `blockedBy`. If existing tasks should wait for the new task, update their `blockedBy`.
+2. Wire dependencies — if the new task depends on existing tasks, set `blocked_by`. If existing tasks should wait for the new task, update their `blocked_by`.
 3. Show the updated board with the new task(s) highlighted.
 4. Resume dispatching — the new task enters the normal dispatch loop.
 
@@ -48,7 +48,7 @@ Do not re-plan the entire board. The new task slots into the existing structure.
 When the user says to drop a task ("skip #4", "we don't need the documentation"):
 
 1. Mark the task as `deleted`.
-2. **Update downstream dependencies** — any task that was `blockedBy` the removed task should have that blocker cleared. Check if this unblocks new work.
+2. **Update downstream dependencies** — any task that was `blocked_by` the removed task should have that blocker cleared. Check if this unblocks new work.
 3. Show the updated board.
 4. Resume dispatching.
 
@@ -61,13 +61,23 @@ If the conversation is interrupted (terminal closed, context reset, session time
 - **Plan document on disk** survives — it contains the overall work scope and acceptance criteria.
 - Tasks that were `in_progress` when the session died remain marked as such, but the agent that was working on them is gone.
 
-All `in_progress` tasks are considered **orphaned** after a session boundary — the agents from the prior session no longer exist. The **work-verifier** agent (`~/.claude/agents/work-verifier.md`) handles orphan detection (via timeout budgets per agent type) and determines whether each orphaned task's work was actually applied.
+All `in_progress` tasks are considered **orphaned** (the agent that owned the task is gone, so its status can't be trusted) after a session boundary — the agents from the prior session no longer exist. The **work-verifier** agent (`~/.claude/agents/work-verifier.md`) handles orphan detection (via timeout budgets per agent type) and determines whether each orphaned task's work was actually applied.
 
 On `/ops resume`:
 
 1. Read the state file from `.ops-state/` to recover the board.
-2. **Check `pending_nested_skill`.** Read the state file's root-level `pending_nested_skill` field. If it is `null` or absent, proceed to the next step (orphan detection and dedup verification for `in_progress` tasks). If it is non-null, the previous session was interrupted **inside a nested-skill call** (between the write-before step and the return). **Do not re-invoke the nested skill automatically** — the side-effects of a partial invocation are not known to the team manager. Instead, escalate to the user with the marker's contents (`skill`, `invoked_at`, `resume_phase`, `resume_notes`) and ask whether to (a) clear the marker and continue resume (if the user has verified the nested skill's effects are in the correct terminal state), (b) re-invoke the nested skill (if the user has verified the pre-invocation conditions still hold), or (c) abort the resume. Record the user's decision. Do not clear `pending_nested_skill` automatically until the user confirms. See `state-schema.md` for the field shape.
-3. For tasks still marked `in_progress` — check whether the agent's work was actually applied (read the files, check git status). If changes are present and look correct, mark as `completed`. If not, reset to `pending` for re-dispatch.
+2. **Check `pending_nested_skill`.** Read the state file's root-level `pending_nested_skill` field.
+
+   If the field is `null` or absent, proceed to the next step (orphan detection and dedup verification for `in_progress` tasks).
+
+   If the field is non-null, the previous session was interrupted **inside a nested-skill call** (between the write-before step and the return) — meaning the changes already made by that skill may be partial, complete, or absent. **Do not re-invoke the nested skill automatically.** Escalate to the user with the marker's contents (`skill`, `invoked_at`, `resume_phase`, `resume_notes`) and ask which branch applies:
+
+   - **(a) Clear and continue** — the user has verified the nested skill's effects are in the correct terminal state; clear the marker and proceed with resume.
+   - **(b) Re-invoke** — the user has verified the pre-invocation conditions still hold; re-run the nested skill from the beginning.
+   - **(c) Abort** — neither condition holds; abandon this resume.
+
+   Record the user's decision. Do not clear `pending_nested_skill` automatically until the user confirms. See `state-schema.md` for the field shape.
+3. For tasks still marked `in_progress` — the **work-verifier** agent is the authority that determines whether an orphaned task's work was actually applied; the checks described here are what the work-verifier performs. Read the expected deliverable files and check git status. If the expected deliverable files exist and the task's handoff file records completion, mark as `completed`. If not, reset to `pending` for re-dispatch.
 4. **Read the plan document** from `docs/plan/` (look for the most recently modified `*-plan.md` file, or use the path stored in the state file's root `plan_file` field).
 5. **Read handoff files** from the run's subdirectory in `.agents/handoffs/<run_id>/` (the `run_id` is stored at the root of the state file). Use these to reconstruct the context chain when briefing the next agent to dispatch.
 6. Rebuild the dispatch state from the task board (what's done, what's blocked, what's ready).

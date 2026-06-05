@@ -1,8 +1,25 @@
 # Ops
 
-> Previously called `/ops`. Renamed to `/ops` on 2026-04-09 for brevity.
+> This skill is invoked as `/ops`.
 
-A coordination skill that manages a team of specialized agents working on a shared task list. Instead of manually invoking agents one at a time, the team manager plans the work, creates a task board, dispatches agents (in parallel where safe), tracks progress, and handles failures.
+A coordination skill that manages a team of specialized agents working on a shared task list. Instead of manually invoking agents one at a time, the team manager plans the work, creates a task board, dispatches agents (hands each a self-contained task brief, in parallel where safe), tracks progress, and handles failures.
+
+## Words this skill uses
+
+| Term | Plain meaning |
+| :--- | :--- |
+| **team manager** | The `/ops` skill itself — it coordinates agents but never implements or reviews anything directly. |
+| **agent** | A specialist that performs one type of work (e.g., executor writes code, verifier checks it). |
+| **dispatch** | Hand a self-contained task brief to an agent and wait for the result. |
+| **pipeline** | The ordered sequence of stages a task moves through: plan → implement → verify → review → document. |
+| **stage** | One phase in the pipeline (e.g., "verification stage", "code-review stage"). |
+| **task board** | The list of tasks, their statuses, dependencies, and agent assignments for a run — tracked in the on-disk state file (the authoritative record). |
+| **handoff** | A structured summary passed from one agent to the next so each agent starts with full context. |
+| **state file** | The JSON file on disk (`.ops-state/<run-id>-board.json`) that preserves task-board state across sessions. |
+| **idempotent** | Safe to run more than once — repeating the operation produces the same result without side effects. |
+| **heuristic** | A rule-of-thumb estimate, not a measurement — used when precise data is unavailable. |
+| **provenance** | Origin — which run or agent created a file or entry. |
+| **predicate** | A condition that must be true for something to trigger (e.g., a security-review predicate fires only on security-related diffs). |
 
 ## Quick Start
 
@@ -18,7 +35,7 @@ A coordination skill that manages a team of specialized agents working on a shar
 ## How It Works
 
 1. **Intake** — Receives a spec, requirement, or existing plan. If a ClickUp task ID is referenced, pulls task details via the `/clickup` skill (falls back to manual API if the skill is unavailable).
-2. **Plan Validation** — Scores plan complexity and adaptively dispatches project-scoper (gap analysis, estimates) and/or critic (feasibility review, verdict) before execution. Three tiers: skip (trivial), scope only (medium), scope + critique (complex/architectural).
+2. **Plan Validation** — Scores plan complexity and automatically chooses whether to dispatch project-scoper (gap analysis, estimates) and/or critic (feasibility review, verdict) before execution. Three tiers: skip (trivial), scope only (medium), scope + critique (complex/architectural).
 3. **Task Board** — Breaks work into tasks with dependencies, assigns each to a specialist agent.
 4. **Dispatch Loop** — Spawns agents (in parallel where safe), tracks results, handles failures.
 5. **Verify → Fix Loop** — Verification failures trigger fix cycles that loop back until clean (max 3 loops).
@@ -43,7 +60,7 @@ The team manager auto-detects which agent to assign based on task content:
 | documentor | Writing or updating documentation |
 | executor | Implementing, creating, modifying code |
 | git-master | Git operations, branching, PRs |
-| interviewer | Clarifying ambiguous requirements via structured Socratic Q&A |
+| interviewer | Clarifying ambiguous requirements via structured follow-up questions |
 | planner | Breaking down work, designing |
 | preflight | Environment readiness checks (runtime, dependencies, git, disk space) |
 | project-scoper | Estimating effort, analyzing requirements |
@@ -79,7 +96,7 @@ The team manager auto-detects which agent to assign based on task content:
 | `--tdd` | Executor follows RED-GREEN-REFACTOR discipline; verifier adds a TDD-discipline check |
 | `--skip-baseline` | With `--worktree`, skip the baseline test-suite check (only the `.gitignore` enforcement runs) |
 | `--dispatch-log` | Append each dispatch to `docs/ops-dispatch-log.md` (opt-in audit trail; off by default) |
-| `--security-review=off\|always` | Force the `security-reviewer` stage off, or fire it on every stage transition |
+| `--security-review=off\|always` | By default, the security review runs only when the change looks security-related; `off` disables it; `always` runs it on every stage. |
 | `--code-intel[=off]` | Phase 2.5b: fire `code-intel` on every code-modifying task (`--code-intel`) or disable it (`=off`) |
 | `--corpus-search[=off]` | Phase 2.5c: fire `corpus-search` on every eligible task or disable it (`=off`) |
 | `--memory-inject=off\|auto\|always` | Control `## Project Knowledge` injection into agent briefs (default `auto`) |
@@ -111,7 +128,7 @@ For non-trivial tasks (>2 implementation tasks or multi-stage work), the team ma
 
 ### Handoff Documents
 
-Structured context summaries passed between pipeline stages, **persisted to disk** at `.agents/handoffs/<run_id>/`. Each agent starts fresh, so handoff documents preserve what was done, key decisions, files changed, and guidance for the next agent.
+Structured context summaries passed between pipeline stages, **saved to disk** at `.agents/handoffs/<run_id>/`. Each agent starts fresh, so handoff documents preserve what was done, key decisions, files changed, and guidance for the next agent.
 
 Handoff files are scoped per run — each run gets its own subdirectory (e.g., `caching-layer-2026-04-09/`). This prevents interference when multiple sessions use the team manager concurrently on the same project. On successful completion, the run's handoff directory is cleaned up. On pause/cancel, it's kept for `resume`.
 
@@ -157,7 +174,7 @@ The team manager adapts strategy at runtime instead of rigidly following the ini
 
 Every task is timed and estimated. The dashboard always shows estimated vs actual:
 
-- **Per-task** — estimated time (from scoping doc or team-manager heuristic) alongside actual duration.
+- **Per-task** — estimated time (from scoping doc or team-manager heuristic — a rule-of-thumb estimate, not a measurement) alongside actual duration.
 - **Per-stage totals** — estimated vs actual grouped by pipeline stage.
 - **Total wall time** — estimated total vs actual elapsed.
 - **Variance** — percentage over/under estimate. Tasks exceeding 2x their estimate are flagged.
@@ -183,7 +200,7 @@ The team manager understands the full agent pipeline:
 [interviewer] → [architect] → planner → project-scoper → critic → executor → verifier → [security-reviewer] → [deslop] → code-reviewer → documentor
 ```
 
-_Brackets indicate optional/automatic stages. Architect runs when the spec involves significant design decisions. Security reviewer runs when the task carries a security content signal **or** the diff touches security-sensitive paths (auto-detected post-executor by `change-analyzer`); `--security-review=off|always` overrides._
+_Brackets indicate optional/automatic stages. Architect runs when the spec involves significant design decisions. By default, the security reviewer runs only when the task carries a security content signal **or** the diff touches security-sensitive paths (auto-detected post-executor by `change-analyzer`); `--security-review=off` disables it entirely; `--security-review=always` runs it on every stage._
 
 For deployment workflows, the `ssh-executor` can be inserted between executor and verifier:
 
@@ -192,7 +209,7 @@ executor → ssh-executor → verifier  (build locally, deploy remotely, verify)
 ssh-executor → verifier              (standalone remote task, then verify)
 ```
 
-- **Interviewer** — dispatched before the planner when specs are ambiguous. Conducts Socratic Q&A to crystallize requirements. Skipped when specs are clear.
+- **Interviewer** — dispatched before the planner when specs are ambiguous. Conducts structured follow-up questions to pin down requirements. Skipped when specs are clear.
 - **Deslop** — runs `/deslop --conservative` on files modified by executors, cleaning AI-generated structural bloat before code review. Runs by default — use `--no-deslop` to skip. Silently skipped if the skill is not installed.
 
 With the verify-fix loop:

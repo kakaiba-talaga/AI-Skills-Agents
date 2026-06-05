@@ -91,11 +91,26 @@ All task board operations use the state file as the primary store. **Every mutat
 7. **Timing section mandatory** — always include Timing in every dashboard display (mid-run and completion).
 8. **Dashboard gating** — runs with ≤ 2 non-internal tasks: render full dashboard at completion only; stage transitions use one-liner `✓ [stage] complete (Xs)`. Always render full dashboard on `/ops status`.
 9. **Trivial route still enforces LB1 and LB2** — even on the trivial path, a state file is created and verified on disk (LB1) and the agent brief is fully self-contained (LB2). The triage gate never bypasses these invariants.
-10. **Nested skill returns are mid-loop events.** Never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. A nested-skill return is a **mid-loop checkpoint**, never a terminal event. The team manager's ritual around every nested skill invocation is:
-    - **Before** invoking another skill (e.g., `/deslop`, `/clickup`), write a `pending_nested_skill` record to the state file on disk (fields: `skill`, `invoked_at`, `resume_phase`, `resume_notes`). See `state-schema.md`.
-    - **After** the nested skill returns, re-read the state file, consult `pending_nested_skill.resume_phase` and `resume_notes` to know where to resume, capture any output that downstream phases need (into a handoff file where one exists per the Handoff Documents section, or into the next agent's brief when no handoff procedure applies — e.g., ClickUp), clear the field back to `null`, write the state file, and execute the resume action in the same turn.
-    - The dispatch loop terminates **only** on Phase 4 completion (all tasks `completed`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
-    - **Reality note: post-Skill() mechanism limitation.** When a nested skill is invoked via the **Skill** tool (e.g., `/deslop`, `/clickup`), the next assistant turn IS the skill's processing — the LLM is operating in the skill's prompt context, not the team manager's. The team manager has no turn from which to "continue dispatching in the same turn" with the skill. Under this mechanism, the "clear-after" ritual above must be split across two turns: the skill's response turn must end with an explicit user-visible halt notice, and the user's `/ops resume` invocation then completes the clear-after steps. Failing to emit the halt notice leaves the user staring at the skill's final output with no signal that further dispatching is needed — this is a structural limitation, not a workflow preference.
+10. **Nested skill returns are mid-loop events.** A nested-skill return is a **mid-loop checkpoint**, never a terminal event — never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. Run this ritual around every nested-skill invocation (e.g., `/deslop`, `/clickup`):
+
+    **Write-before** (immediately before invoking the nested skill):
+    1. Build the `pending_nested_skill` record (fields: `skill`, `invoked_at`, `resume_phase`, `resume_notes`). See `state-schema.md`.
+    2. Read the state file from disk.
+    3. Set the `pending_nested_skill` field on the root object.
+    4. Write the state file to disk.
+    5. Invoke the nested skill.
+
+    **Clear-after** (immediately after the nested skill returns):
+    1. Re-read the state file from disk.
+    2. Consult `pending_nested_skill.resume_phase` and `resume_notes` to know where to resume and how to proceed.
+    3. Capture any output that downstream phases need — into a handoff file where one exists per the Handoff Documents section, or into the next agent's brief when no handoff procedure applies (e.g., ClickUp).
+    4. Clear `pending_nested_skill` back to `null`.
+    5. Write the state file to disk.
+    6. Execute the resume action (subject to the post-`Skill()` two-turn caveat below).
+
+    The dispatch loop terminates **only** on Phase 4 completion (all tasks `completed`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
+
+    **Caveat (Skill-tool two-turn reality): post-`Skill()` mechanism limitation.** When a nested skill is invoked via the **Skill** tool (e.g., `/deslop`, `/clickup`), the next assistant turn IS the skill's processing — the LLM is operating in the skill's prompt context, not the team manager's. The team manager has no turn from which to "continue dispatching in the same turn" with the skill. Under this mechanism, the "clear-after" ritual above must be split across two turns: the skill's response turn must end with an explicit user-visible halt notice, and the user's `/ops resume` invocation then completes the clear-after steps. Failing to emit the halt notice leaves the user staring at the skill's final output with no signal that further dispatching is needed — this is a structural limitation, not a workflow preference.
 
       **Mandatory halt-notice template** (the team manager — operating as the skill — emits these lines as the final lines of the skill's response output, before yielding the turn to the user):
 
@@ -124,13 +139,13 @@ Classify the invocation before reading any further. Apply the first matching rul
 
 **NOT trivial:** "add a new agent for X" (multiple files + stages), "refactor the foo module" (code across modules), "investigate this bug" (implies debugger→executor→verifier chain).
 
-If the predicate is ambiguous — when you cannot determine with confidence that ALL trivial conditions are met — route to `pipeline`.
+If the predicate (the yes/no condition that decides this) is ambiguous — when you cannot determine with confidence that ALL trivial conditions are met — route to `pipeline`.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/phase-intake.md` for Phase 1 intake (starting-point table, trivial dispatch including **LB1 — mandatory**, save subcommand, brainstorm gate, plan persistence, Phase 1a, Phase 1.5, Phase 2 task board creation, and Agent Assignment Rules). If the file is missing, stop — cannot proceed without intake procedures.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/phase-dispatch.md` for Phase 2.5b/2.5c preflight, Phase 2.5 preflight validation, and Phase 3 dispatch loop (including **LB2 — mandatory** `description_ref` resolution, memory injection, and Agent Dispatch Procedure). If the file is missing, stop.
+> **Reference:** You MUST Read `~/.claude/skills/ops/phase-dispatch.md` for Phase 2.5b/2.5c preflight (checks run before dispatch), Phase 2.5 preflight validation, and Phase 3 dispatch loop (including **LB2 — mandatory** `description_ref` resolution, memory injection, and Agent Dispatch Procedure). If the file is missing, stop.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/phase-completion.md` for Phase 4 completion ceremony and Status Dashboard rendering. If the file is missing, proceed using Non-negotiables #3, #4, #7, and #8 for minimum completion behavior.
+> **Reference:** You MUST Read `~/.claude/skills/ops/phase-completion.md` for Phase 4 completion steps/process and Status Dashboard rendering. If the file is missing, proceed using Non-negotiables #3, #4, #7, and #8 for minimum completion behavior.
 
 ### Pipeline sequence (summary)
 
@@ -172,9 +187,9 @@ If the predicate is ambiguous — when you cannot determine with confidence that
 
 When spawning an agent via the Agent tool, always provide a **complete, self-contained brief**. The agent has no conversation history — it only sees what you give it.
 
-> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical brief contract — required sections, optional sections, missing-section behavior, mode handling, and file-class vocabulary.
+> **Reference:** You MUST Read `~/.claude/skills/ops/brief-contract.md` for the canonical (the single official source) brief contract — required sections, optional sections, missing-section behavior, mode handling, and file-class vocabulary.
 
-The contract at `~/.claude/skills/ops/brief-contract.md` is the single source of truth for the brief format. Each consumer agent declares its per-agent application of the contract in its own `## Brief Format` subsection. The fenced shape below is the producer-side rendering of what the contract specifies — it shows the section headers and placeholder text the team manager emits; the contract describes the semantic rules that govern each section.
+The contract at `~/.claude/skills/ops/brief-contract.md` is the single source of truth for the brief format. Each consumer agent declares its per-agent application of the contract in its own `## Brief Format` subsection. The fenced shape below is the producer-side rendering of what the contract specifies — it shows the section headers and placeholder text the team manager emits; the contract describes the semantic (meaning/behavior) rules that govern each section.
 
 > **Literal prompt template — keep fenced.** The block below is the agent-side prompt body passed to spawned agents as a text string, not a user-facing UI output. Do not unfence it.
 
@@ -213,7 +228,7 @@ The executor reads `skills/ops/tdd-discipline.md` for the full discipline. The v
 
 ### Shared Brief Constraints {#shared-brief-constraints}
 
-Include this block verbatim in every agent brief's `## Constraints` section:
+Include this block verbatim (word-for-word) in every agent brief's `## Constraints` section:
 
 - **No compound Bash commands** — never use `&&`, `;`, or `||`. Make separate Bash tool calls; use parallel calls for independent commands.
 - **No `cd` prefix** — the working directory is already the project root. Run commands directly (e.g., `git diff file.py`, `python -m pytest`).
@@ -253,7 +268,7 @@ Enforce in every brief (in addition to the Shared Brief Constraints block):
 
 When a task completes and feeds into a downstream task, write a **handoff document** to persist context across stage transitions.
 
-**Invariants:** `.agents/handoffs/<run_id>/`; `handoff-<task_number>-<from_stage>-to-<to_stage>.md`.
+**Invariants** (rules that must always hold): `.agents/handoffs/<run_id>/`; `handoff-<task_number>-<from_stage>-to-<to_stage>.md`.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/handoffs.md` for the full handoff template, run identity rules, naming examples, accumulation rules, and cleanup lifecycle. If the file is missing, proceed using the invariant paths above.
 
@@ -451,7 +466,7 @@ With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → i
 
 **Single-stage work:** If all tasks are the same type (e.g., all documentation), skip the pipeline chain. Dispatch them directly, possibly in parallel.
 
-**Trivial/mechanical changes:** For trivial fixes (adding a line, removing duplicates, typo), skip verify/deslop/review stages. **Always log it as an adaptation**: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages. **Exception — security surface:** trivial-skip may NOT short-circuit a diff that plausibly touches a security surface. The team manager does not classify security sensitivity — it routes. If a trivial diff touches any file that could plausibly match a security surface (when in any doubt, route to the classifier), the team manager **must dispatch `change-analyzer`** before applying the skip, then honor `change-analyzer`'s `security-review` recommendation per the stage-transition rule below. Only a diff that `change-analyzer` clears (or an unambiguously non-sensitive trivial change, such as a typo fix in a plain prose `.md` file) may bypass this routing. Log the routing to `change-analyzer` as an adaptation. `--security-review=off` suppresses the security-review output of this routing.
+**Trivial/mechanical changes:** For trivial/mechanical fixes (no behavior change, no new logic — e.g., a typo fix, adding a line, removing duplicates), skip verify/deslop/review stages. **Always log it as an adaptation**: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages. **Exception — security surface:** trivial-skip may NOT short-circuit a diff that plausibly touches a security surface (security surface = code touching auth, secrets/credential handling, input validation, cryptography, file or network I/O, or permissions configuration). The team manager does not classify security sensitivity — it routes. If a trivial diff touches any file that could plausibly match a security surface (when in any doubt, route to the classifier), the team manager **must dispatch `change-analyzer`** before applying the skip, then honor `change-analyzer`'s `security-review` recommendation per the stage-transition rule below. Only a diff that `change-analyzer` clears (or an unambiguously non-sensitive trivial change, such as a typo fix in a plain prose `.md` file) may bypass this routing. Log the routing to `change-analyzer` as an adaptation. `--security-review=off` suppresses the security-review output of this routing.
 
 **Per-stage conditional skip:** When the trivial skip does not apply, dispatch a **change-analyzer** agent (see `~/.claude/agents/change-analyzer.md`) with the current diff to get per-stage run/skip recommendations for verify, deslop, review, and security-review. When `change-analyzer` returns `security-review: run`, dispatch `security-reviewer` before deslop/code-review, consistent with the pipeline order shown above. This decision is made **post-executor against the actual diff** — it is NOT evaluated at Phase 2.5b, which fires pre-executor on planned `files_touched`. Apply all recommendations subject to the idempotency rule: `security-reviewer` is dispatched at most once per run/stage regardless of how many inputs recommend it.
 

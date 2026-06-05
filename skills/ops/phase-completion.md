@@ -33,7 +33,27 @@ When every task is `completed`:
 6. Display the final task board (with per-task durations).
 7. Summarize: what was accomplished, how many tasks, retries, escalations, total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
-9. **Clean up temp files, handoffs, state, and advisory preflight run artifacts** — run `rm _tmp_*` to remove any temporary files created during the run. Delete this run's handoff subdirectory (`.agents/handoffs/<run_id>/`). Delete this run's `.code-intel/runs/<run-id>/` subdirectory (ephemeral run artifacts — impact analysis reports and JSON sidecars for this run only). Delete this run's `.corpus-search/runs/<run-id>/` subdirectory (ephemeral corpus-search reports and JSON sidecars for this run only). Delete this run's state file (`.ops-state/<run-id>-board.json`). Delete this run's save file (`.ops-state/<run-id>-save.json`) if present. **Do not delete** plan documents in `docs/plan/` — these are persistent deliverable artifacts. **Do not delete** `docs/ops-dispatch-log.md` if present — it is a persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`). **Do not delete** other runs' handoff subdirectories or state files. **Do not delete** `.code-intel/index.sqlite`, `.code-intel/index.sqlite-wal`, or `.code-intel/index.sqlite-shm` — these are persistent infrastructure shared across all runs. **Do not delete** the parent `.code-intel/runs/` directory itself. **Do not delete** the parent `.corpus-search/` directory or `docs/corpus-search/` — corpus-search has no persistent index (unlike code-intel's SQLite DB); only the run-scoped subdirectory is ephemeral.
+9. **Clean up ephemeral (short-lived; this run only) temp files, handoffs, state, and advisory preflight run artifacts.**
+
+   > **Run-id confirmation gate:** For each `<run-id>`-bearing path below, confirm the embedded `<run-id>` segment matches the active run's `run_id` field from the state file before issuing the `rm`. For `_tmp_*` (which carries no `<run-id>` segment), apply the no-bulk-delete rule: remove files one at a time. Never issue a directory-level or recursive delete for any path.
+
+   **Delete (this run only):**
+   - `_tmp_*` — temporary files created during this run (use `rm _tmp_*` to remove them)
+   - `.agents/handoffs/<run_id>/` — this run's handoff subdirectory; verify the `<run_id>` segment matches the active `run_id` before each `rm`
+   - `.code-intel/runs/<run-id>/` — ephemeral run-scoped impact-analysis reports and JSON sidecars for this run only; confirm the `<run-id>` segment matches before each `rm`
+   - `.corpus-search/runs/<run-id>/` — ephemeral corpus-search reports and JSON sidecars for this run only; confirm the `<run-id>` segment matches before each `rm`
+   - `.ops-state/<run-id>-board.json` — this run's state file; confirm the `<run-id>` segment matches before `rm`
+   - `.ops-state/<run-id>-save.json` — this run's save file; delete only if the file is present; confirm the `<run-id>` segment matches before `rm`
+
+   **Never delete:**
+   - `docs/plan/` — plan documents are persistent deliverable artifacts; provenance (origin — which run created it) does not make them ephemeral
+   - `docs/ops-dispatch-log.md` — persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`)
+   - Any other run's handoff subdirectory under `.agents/handoffs/` or state files under `.ops-state/`
+   - `.code-intel/index.sqlite` — persistent shared infrastructure
+   - `.code-intel/index.sqlite-wal` and `.code-intel/index.sqlite-shm` — WAL/SHM sidecars (`.sqlite-wal` and `.sqlite-shm` — SQLite companion files; deleting them can corrupt the database)
+   - `.code-intel/runs/` — the parent runs directory itself
+   - `.corpus-search/` — the parent corpus-search directory
+   - `docs/corpus-search/` — corpus-search has no persistent index (unlike code-intel's SQLite DB); only the run-scoped subdirectory under `.corpus-search/runs/<run-id>/` is ephemeral
 10. **Present completion options** — render the structured four-option menu (merge locally / push and PR / keep branch / discard) and capture user decision before exiting.
 
    > **Reference:** You MUST Read `~/.claude/skills/ops/completion-options.md` for the four-option menu, per-option workflow, destructive-option confirmation gate, and worktree-cleanup-by-provenance procedure. If the file is missing, fall back to suggesting natural next steps (e.g., "Ready for commit" or "Run the full test suite").

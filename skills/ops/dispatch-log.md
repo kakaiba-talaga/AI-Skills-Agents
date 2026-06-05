@@ -6,7 +6,7 @@ The team manager maintains an optional persistent audit trail at `docs/ops-dispa
 
 ## Opt-in via `--dispatch-log`
 
-The dispatch log is **off by default**. It is written only when the user invokes `/ops` with the `--dispatch-log` flag (the flag is sticky only for the run; it does not persist across invocations).
+The dispatch log is **off by default**. It is written only when the user invokes `/ops` with the `--dispatch-log` flag (the flag is sticky (applies to this run only; not remembered next time) only for the run; it does not persist across invocations).
 
 When the flag is not set: skip every append step below entirely. Do not create, open, or touch `docs/ops-dispatch-log.md` — the file may already exist from previous flagged runs; leave it alone.
 
@@ -20,7 +20,7 @@ When the flag IS set: follow this spec for the full run, including all nested ph
 
 ## When to append an entry (only when `--dispatch-log` is set)
 
-- **Every agent dispatch** — Phase 3 Step 3, Trivial Dispatch Step 4, Brainstorm Gate dispatches, Phase 1a scoper/critic dispatches, Phase 2.5 preflight dispatches, and every other `Agent(...)` call the team manager issues. One entry per dispatch, before the agent runs. Parallel batches → one entry per agent in the batch.
+- **Every agent dispatch** — Phase 3 Step 3, Trivial Dispatch Step 4, Brainstorm Gate dispatches, Phase 1a scoper/critic dispatches, Phase 2.5 preflight (checks run before dispatch) dispatches, and every other `Agent(...)` call the team manager issues. One entry per dispatch, before the agent runs. Parallel batches → one entry per agent in the batch.
 - **Framework-guided direct-tool choices** — when the team manager pauses at a research/reading decision, consults the Subagent Dispatch Decision Framework in `tool-restrictions.md`, and deliberately picks a direct tool (`Read` / `Grep` / `Glob`), append a `research-direct` entry. Do NOT log routine file reads where no framework decision was weighed (e.g., resolving `description_ref` is routine; weighing whether to spawn `Explore` for a broad code question is not).
 
 ## Entry format

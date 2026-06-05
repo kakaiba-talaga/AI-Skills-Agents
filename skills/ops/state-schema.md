@@ -4,12 +4,12 @@
 
 ## Cursor: dual-layer board
 
-When the active harness is **Cursor**, ops uses a JSON board file plus `TodoWrite` for IDE display. **Only the board file is authoritative** for `resume`, timing, dependencies, and handoffs. Every status mutation must follow the Write → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Updating `TodoWrite` without writing the board file in the same turn is a protocol violation.
+When the active harness is **Cursor**, ops uses a JSON board file plus `TodoWrite` for IDE display. **Only the board file is authoritative** for `resume`, timing, dependencies, and handoffs. Every status mutation (a change written to the state file) must follow the Write → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Updating `TodoWrite` without writing the board file in the same turn is a protocol violation.
 
 ## Directory Conventions
 
 - `.ops-state/` holds one board file per run (supports concurrent/sequential runs without collision)
-- `.ops-state/` should be in `.gitignore` (ephemeral runtime state, not project content)
+- `.ops-state/` should be in `.gitignore` (ephemeral (short-lived; this run only) runtime state, not project content)
 - Cleaned up on successful completion (same lifecycle as ralph-loop's `.ralph-state/`)
 
 ## State File Structure
@@ -98,11 +98,11 @@ Field meanings:
 
 **Lifecycle:** `null` → set on write-before → consumed and acted upon on clear-after → `null`.
 
-**Backward compatibility:** The `pending_nested_skill` field is additive. State files written before this field was introduced will not have it. The team manager treats absence as equivalent to `null`. No migration is required.
+**Backward compatibility:** The `pending_nested_skill` field is additive (optional; older files simply omit it). State files written before this field was introduced will not have it. The team manager treats absence as equivalent to `null`. No migration is required.
 
 ### worktrees_created
 
-Root-level field tracking worktrees this run created, used for provenance-safe cleanup in Phase 4.
+Root-level field tracking worktrees this run created, used for provenance (origin — which run created it)-safe cleanup in Phase 4.
 
 **Type:** `array` (default `[]` when absent).
 
@@ -188,4 +188,4 @@ Between these events, the team manager operates on the cached snapshot and does 
 
 ### Safety note
 
-If the user manually edits the state file JSON between invalidation events (out-of-band edit), those changes will not be visible until the next invalidation trigger. Manual out-of-band edits are not a supported workflow — the state file is written exclusively by the team manager. If the user needs to intervene, use the supported mid-run commands (`add`, `drop`, `reprioritize`) which trigger an invalidation.
+If the user manually edits the state file JSON between invalidation events (out-of-band edit), those changes will not be visible until the next invalidation trigger. Manual out-of-band (made outside the team manager, e.g. a hand edit) edits are not a supported workflow — the state file is written exclusively by the team manager. If the user needs to intervene, use the supported mid-run commands (`add`, `drop`, `reprioritize`) which trigger an invalidation.

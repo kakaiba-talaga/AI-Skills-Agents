@@ -3,7 +3,7 @@
 
 > **Opt-in reference** — this file is read only when `/ops` is invoked with `--cost` or the user explicitly asks for cost information. Do not read this file by default.
 
-This file defines token and cost estimation for `/ops` runs. Claude Code does not expose actual token counts to the conversation, so all estimates are heuristic-based.
+This file defines token and cost estimation for `/ops` runs. Claude Code does not expose actual token counts to the conversation, so all estimates are heuristic-based (rule-of-thumb estimates, not measurements).
 
 ---
 
@@ -66,12 +66,21 @@ est_cost = (input_tokens × input_price_per_token + output_tokens × output_pric
 
 Where `input_price_per_token = model_input_price / 1,000,000` and similarly for output.
 
+**Worked example** — executor on sonnet, 1 attempt:
+
+```
+input:  8,000 tokens × ($3.00 / 1,000,000) = $0.0240
+output: 12,000 tokens × ($15.00 / 1,000,000) = $0.1800
+retry_count = 1
+est_cost = ($0.0240 + $0.1800) × 1 = ~$0.20
+```
+
 **Steps:**
 
 1. For each completed task, apply the per-task formula using the agent type's baseline tokens and the model recorded in `metadata.model_used`.
 2. Sum across all tasks for the total run cost estimate.
 3. Break down by model tier — show how much was attributed to sonnet vs. opus (vs. other tiers if applicable).
-4. Compute model escalation overhead: the additional cost incurred by tasks that were escalated. This is the difference between what the task would have cost at the baseline model vs. what it cost at the escalated model.
+4. Compute model escalation overhead: the additional cost added by tasks that were escalated. This is the difference between what the task would have cost at the baseline model vs. what it cost at the escalated model.
 5. Flag the overhead: `"Model escalation added ~$X.XX to the run"`
 
 ---
@@ -93,11 +102,12 @@ You may show both if the run has mixed characteristics (e.g., most tasks on sonn
 
 ```
 ### Cost Estimate
-| # | Agent      | Model | Tokens | Tool uses | Cost           |
-|---|------------|-------|--------|-----------|----------------|
-| 3 | debugger   | opus  | ~81K   | 36        | ~$1.50–3.00    |
-| 4 | documentor | opus  | ~37K   | 6         | ~$0.50–1.50    |
-| **Total** |    |       | **~118K** | **42** | **~$2–5**   |
+| # | Agent                  | Model | Tokens | Tool uses | Cost           |
+|---|------------------------|-------|--------|-----------|----------------|
+| 3 | debugger               | opus  | ~81K   | 36        | ~$1.50–3.00    |
+| 4 | documentor             | opus  | ~37K   | 6         | ~$0.50–1.50    |
+| — | Team manager overhead  | opus  | ~30K   | —         | ~$0.50–1.50    |
+| **Total** |               |       | **~148K** | **42** | **~$2.50–6** |
 
 Model escalation overhead: ~$1.80 (2 tasks escalated sonnet→opus)
 ```
@@ -162,20 +172,4 @@ Omit this row only if the run had zero agent dispatches (e.g., a `status` or `--
 
 Display in the completion dashboard only — omit from mid-run dashboards.
 
-Either a per-task table (preferred for small runs, <10 tasks) OR a per-model rollup (preferred for large runs):
-
-**Per-task:**
-
-| # | Agent | Model | Tokens | Tool uses | Cost |
-|---|-------|-------|--------|-----------|------|
-| Team manager overhead | — | (orchestration model) | ~?K | — | ~$X.XX |
-| **Total** | | | | | |
-
-**Per-model rollup:**
-
-| Model | Tasks | Tokens | Cost |
-|-------|-------|--------|------|
-| **Total** | | | |
-
-Model escalation overhead: ~$X.XX (N tasks escalated) — omit if no escalations.
-All $ and token figures prefixed with `~`. Ranges acceptable (e.g., `~$1.50–3.00`).
+Use the canonical table formats defined in **Section 5.2** (per-task breakdown) and **Section 5.3** (per-model rollup). Refer to those sections for column definitions, required rows, and formatting rules.

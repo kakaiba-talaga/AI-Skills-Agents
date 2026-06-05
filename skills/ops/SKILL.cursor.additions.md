@@ -688,7 +688,7 @@ These limitations are inherent to the Cursor platform and cannot be worked aroun
 
 - **No model escalation** — All subagents run on the session model (or `model="fast"`). The retry-escalate pattern (sonnet → opus) is not available. The retry strategy compensates by using diagnostic agents (debugger/debugger-build) to improve brief quality instead.
 - **No tool enforcement** — Agent tool restrictions in briefs are advisory only. A critic *could* still call StrReplace; it's just instructed not to. The deploy script's agent hardening adds explicit constraint sections to mitigate this.
-- **No custom agent definitions** — Cursor's `Task(subagent_type=...)` uses a fixed enum of built-in agent types. Custom agent `.md` definitions are not loadable as subagent prompts.
+- **No agent-definition injection at dispatch** — Cursor's `Task(subagent_type=...)` covers all 15 pipeline agent types natively plus utility types (`generalPurpose`, `explore`, `shell`, `best-of-n-runner`, etc.), so dispatch by role name works directly. Setting `subagent_type` provides the role label but does NOT inject the agent's `.md` body into its context — the spawned agent must self-read `~/.cursor/agents/<agent_type>.md` as its first action (Non-negotiable #2). Agents outside the enum (`work-verifier`, `preflight`, `change-analyzer`, `rollback`) dispatch via `Task(subagent_type="generalPurpose")`.
 - **TodoWrite limitations** — TodoWrite items only have `id`, `content`, and `status` fields. All rich metadata (dependencies, timing, estimates) lives in the state file on disk.
 - **TodoWrite drift** — Models often update TodoWrite without writing `.ops-state/<run-id>-board.json`. The board file is mandatory on every status change; see `phase-dispatch.md` § **Cursor: state file sync (mandatory)**.
 @@END
@@ -724,10 +724,22 @@ ACTION: insert_after
 ANCHOR: > **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.
 @@CONTENT
 
-**Nested skill invocations:** When the team manager invokes a nested skill (e.g., `/deslop`, `/clickup`) during the dispatch loop, execute the write-before / clear-after ritual to prevent the turn from ending on the nested skill's return. The ritual has eleven steps (5 write-before + 6 clear-after):
+**Nested skill invocations:** When the team manager invokes a nested skill (e.g., `/deslop`, `/clickup`) during the dispatch loop, execute the write-before / clear-after ritual so the turn does not end on the nested skill's return. The ritual has eleven steps.
 
-- **Write-before** (immediately before the nested-skill call): (1) build the `pending_nested_skill` record with fields `skill`, `invoked_at`, `resume_phase`, `resume_notes`; (2) read the state file from disk; (3) set the `pending_nested_skill` field on the root object; (4) write the state file to disk; (5) issue the nested-skill call.
-- **Clear-after** (immediately after the nested skill returns, in the same turn): (1) read the state file from disk (cache was invalidated — see Step 1); (2) read `pending_nested_skill.resume_phase` and `resume_notes` to identify where to resume and how to proceed; (3) capture any output the nested skill produced that downstream phases need — write it into a handoff file where one exists, or hold it in-turn for the next agent's brief when no handoff procedure applies; (4) set `pending_nested_skill` back to `null`; (5) write the state file to disk; (6) execute the `resume_phase`-specified next action. **Do not end the turn.** See Non-negotiable #10.
+**Write-before** (immediately before the nested-skill call):
+1. Build the `pending_nested_skill` record with fields `skill`, `invoked_at`, `resume_phase`, `resume_notes`.
+2. Read the state file from disk.
+3. Set the `pending_nested_skill` field on the root object.
+4. Write the state file to disk.
+5. Issue the nested-skill call.
+
+**Clear-after** (immediately after the nested skill returns, in the same turn):
+1. Read the state file from disk (the cache was invalidated by step 5 above).
+2. Read `pending_nested_skill.resume_phase` and `resume_notes` to identify where to resume and how to proceed.
+3. Capture any output the nested skill produced that downstream phases need — write it into a handoff file where one exists, or hold it in-turn for the next agent's brief when no handoff procedure applies.
+4. Set `pending_nested_skill` back to `null`.
+5. Write the state file to disk.
+6. Execute the resume action. **Mechanism caveat:** if the nested skill was invoked via the `Skill` tool, you cannot continue in the same turn — the next turn IS the skill's processing. In that case, follow the post-`Skill()` two-turn split in Non-negotiable #10 (Reality note): end the skill's response with the mandatory `/ops resume` halt-notice, and let the resume invocation complete steps 1-6. Only continue in the same turn when the resume action does not depend on a `Skill`-tool boundary. See Non-negotiable #10.
 @@END
 
 @@PATCH

@@ -64,7 +64,7 @@ Delete the branch. **This is a destructive operation** — it permanently remove
 **Procedure:**
 
 1. **Require explicit confirmation before proceeding.** Two acceptable forms:
-   - (a) User types the word `discard` verbatim in their reply.
+   - (a) User types the word `discard` verbatim (word-for-word) in their reply.
    - (b) Present a yes/no prompt; proceed only on an unambiguous "yes".
 2. After confirmation, dispatch **git-master**:
    - `git branch -D <branch>` (force-delete — use `-D` because the branch is not merged at discard time; `-d` would refuse the deletion; safe only after the explicit confirmation above)

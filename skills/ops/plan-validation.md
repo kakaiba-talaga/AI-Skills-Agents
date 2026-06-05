@@ -7,7 +7,7 @@
 | Signal | Clarity level | Action |
 | :--- | :--- | :--- |
 | User provides specific requirements, acceptance criteria, or references an existing spec/ticket | **Clear** | Dispatch planner directly. |
-| User's input names a goal but leaves key decisions open ("make it better", "add caching", "improve performance") | **Vague** | Dispatch **interviewer** to crystallize: what specifically needs to change, what are the success criteria, what are the constraints? Then dispatch planner with the interviewer's requirements document. |
+| User's input names a goal but leaves key decisions open ("make it better", "add caching", "improve performance") | **Vague** | Dispatch **interviewer** to crystallize (pin down): what specifically needs to change, what are the success criteria, what are the constraints? Then dispatch planner with the interviewer's requirements document. |
 | User's input is contradictory, references unknown context, or has multiple possible interpretations | **Ambiguous** | Dispatch **interviewer** to resolve the ambiguity before planning. |
 | User says "just plan it" or explicitly asks for planning despite vague input | **User override** | Dispatch planner directly — the user wants to see what the planner produces and will refine from there. Log: "Adapted: skipped interviewer — user requested direct planning despite vague spec." |
 
@@ -38,7 +38,7 @@ If **any** of these signals are present, skip Phase 1a. If **none** are present,
 | :--- | :--- |
 | **ACCEPT** | Proceed to Phase 1.5. |
 | **ACCEPT WITH RESERVATIONS** | Display the reservations. In all modes (interactive, autonomous, supervised), **stop and present the reservations to the user**. The user decides: proceed as-is, address the reservations first, or send it back for revision. This is a decision point — autonomous mode stops here per the Autonomy Modes rules. |
-| **REVISE** | Route the critic's findings back to a **planner** agent. The planner updates the existing plan document. Re-run Phase 1a. Maximum 2 revision loops — if the planner produces a substantively similar plan after 2 revisions, escalate to the user: "The planner produced a similar plan after 2 revisions. The critic's findings may require rethinking the approach, not just revising the plan." |
+| **REVISE** | Route the critic's findings back to a **planner** agent. The planner updates the existing plan document. Re-run Phase 1a. Maximum 2 revision loops — if after a revision the revised plan still leaves unchanged every task the critic flagged (the yes/no condition that decides this: zero flagged tasks were modified, removed, or replaced), escalate to the user: "The revised plan did not address the critic's flagged tasks after 2 revision loops. The critic's findings may require rethinking the approach, not just revising the plan." |
 | **REJECT** | Escalate to the user with the critic's full findings. Do not proceed to Phase 2. |
 
 ## Mode-Specific Behavior
@@ -66,7 +66,7 @@ In **supervised mode**, show the tier decision and wait for approval before each
 - **Feasibility review** — can this plan actually be implemented as described?
 - **Assumption audit** — what assumptions does the plan make that might not hold?
 - **Verdict** — ACCEPT / ACCEPT WITH RESERVATIONS / REVISE / REJECT
-- **Revision loop** — if REVISE, findings go back to the planner. The planner updates the plan, and Phase 1a re-evaluates (maximum 2 revision loops before escalating to the user)
+- **Revision loop** — if REVISE, findings go back to the planner. The planner updates the plan, and Phase 1a re-evaluates (cap and escalation condition: see REVISE row above)
 
 ## Adaptation
 

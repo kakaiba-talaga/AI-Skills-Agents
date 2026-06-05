@@ -37,7 +37,7 @@ The delegate-first table above governs **work types** (code, git, review, deploy
 | Known file + narrow question | `Read` with `offset` / `limit`, or scoped `Grep` | A subagent adds latency and tokens without returning new information |
 | Unknown location, narrow scope, ≤ 2 lookups likely | `Grep` → `Read` directly | In-context exploration is cheaper than briefing a subagent |
 | Unknown location, broad scope, 3+ rounds likely | `Agent(subagent_type: Explore)` | Protects main context; returns a summary instead of raw files |
-| Tool output would pollute main context (large logs, test dumps, long file reads) | Subagent or background `Bash` | Keeps main context clean for orchestration |
+| Tool output would clutter main context (large logs, test dumps, long file reads) | Subagent or background `Bash` | Keeps main context clean for orchestration |
 | 2+ independent research threads | Dispatch subagents in **parallel** in a single message | Sequential serialization wastes time when threads don't depend on each other |
 | Task matches a specialist agent's lane (executor, debugger, verifier, etc.) | That specialist via normal dispatch | Lane match overrides the research heuristic |
 | Cannot write a tight, self-contained brief yet | Don't dispatch — clarify the question first | Vague briefs produce vague work |

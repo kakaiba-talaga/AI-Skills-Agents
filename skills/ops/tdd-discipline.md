@@ -34,12 +34,13 @@ guarantee — not a planner suggestion — that every new behavior is tested bef
 2. Write a test that asserts that behavior and nothing else.
 3. **Run the test and observe it fail.** This step is mandatory. "It obviously fails" is not an
    observation. Capture the failure output (test runner name, file, line, assertion message).
-4. Commit the failing test on its own commit (preferred for clean history) or stash it before
-   proceeding to GREEN. The commit is the verifier's evidence that RED was real.
+4. Commit the failing test on its own commit before proceeding to GREEN. The commit is the
+   verifier's evidence that RED was real; no stash path is permitted when TDD mode is active.
 
 **Anti-pattern:** "I'll write the test after I implement." An after-test verifies the
-implementation, not the specification. It locks in whatever the code happens to do — including
-bugs — and cannot distinguish between "correct" and "coincidentally passing."
+implementation (what the code actually does), not the specification (what the code should do). It
+locks in whatever the code happens to do — including bugs — and cannot distinguish between
+"correct" and "coincidentally passing."
 
 ### GREEN — Minimum code to pass
 
@@ -114,8 +115,11 @@ present in the brief:
 5. **Failure condition:** A production-code commit with no preceding failing-test commit on the
    branch causes the verifier to issue a `FAILED` verdict with the offending commit hash cited.
 
-The verifier does **not** re-run the failing test — it relies on commit ordering as the primary
-signal. Captured test output in the commit message or brief handoff is supporting evidence.
+The verifier does **not** re-run the failing test at check time. Commit ordering is the primary
+structural signal, but it is not sufficient on its own — the executor **must** record the observed
+RED test-runner output (file, line, assertion message) in the commit message or the brief handoff.
+The verifier treats captured RED output as **required** evidence: a RED commit that contains no
+captured failure output fails the check just as a missing RED commit does.
 
 ### Failure modes the verifier catches
 
@@ -124,6 +128,8 @@ signal. Captured test output in the commit message or brief handoff is supportin
 - No test commits at all on a branch with production-code commits under TDD mode → `FAILED`
 - Test commit present but test file is unrelated to the changed module → verifier flags for
   human review rather than issuing an automatic `FAILED`
+- RED commit present but contains no captured failure output (file, line, assertion message) →
+  `FAILED`
 
 ## Common Mistakes and Rationalization Prevention
 

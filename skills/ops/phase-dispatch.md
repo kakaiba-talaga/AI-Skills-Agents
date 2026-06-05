@@ -4,7 +4,7 @@
 
 ### Phase 2.5b — Code Intelligence Preflight (advisory)
 
-Before each code-modifying executor dispatch in Phase 3 Step 2, the team manager may dispatch a **code-intel** agent to perform an impact analysis. This phase is *advisory* — its output enriches the executor's brief but never blocks it.
+Before each code-modifying executor dispatch in Phase 3 Step 2, the team manager may dispatch a **code-intel** agent to perform an impact analysis. This phase is *advisory* (informs the brief but never blocks it) — its output enriches the executor's brief but never blocks it.
 
 #### Trigger predicate
 
@@ -72,7 +72,7 @@ For `output_mode: "inline"`: includes `report_inline` (full Markdown), omits `re
 
 #### State cache invalidation
 
-After `code-intel` returns from a Phase 2.5b dispatch, the team manager invalidates its state cache (read-on-next-Step-1) before composing the executor brief. `code-intel` is an agent rather than a nested skill, so the nested-skill-return rule at Phase 3 Step 1 does not strictly fire on its own — but because `code-intel` writes a report to disk that the executor must subsequently read, invalidation is required to keep the executor's view consistent.
+After `code-intel` returns from a Phase 2.5b dispatch, the team manager invalidates (marks the cached copy stale so it is re-read from disk) its state cache (read-on-next-Step-1) before composing the executor brief. `code-intel` is an agent rather than a nested skill, so the nested-skill-return rule at Phase 3 Step 1 does not strictly fire on its own — but because `code-intel` writes a report to disk that the executor must subsequently read, invalidation is required to keep the executor's view consistent.
 
 #### Refusal handling
 
@@ -235,7 +235,7 @@ Corpus Search Context: see .corpus-search/runs/<run-id>/evidence_search-<slug>.m
   - <caveat 2, if any>
 ```
 
-When dual preflight ran, the path token reflects `trace_reference-<slug>.md` instead of `evidence_search-<slug>.md`.
+When dual preflight ran, the path token reflects `trace_reference-<slug>.md` (where `<slug>` is a short lowercase, hyphen-separated label) instead of `evidence_search-<slug>.md`.
 
 #### Cleanup pointer
 
@@ -295,7 +295,7 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 
 1. Update the state file: set `status` to `"in_progress"`, record `started_at` with ISO-8601 timestamp, record `model_used`. Write the state file to disk. **Cursor only:** follow § **Cursor: state file sync** (Write → Read verify → then `TodoWrite`) in the same turn before step 2.
 2. **Resolve description_ref (LB2 — mandatory before dispatch):** If the task has a `description_ref`, read the plan doc at the pointer (e.g., `Read("docs/plan/<name>-plan.md")`) and extract the referenced section to obtain the full task description, acceptance criteria, and implementation notes. Use this resolved content to compose the Context, Scope, and Acceptance Criteria sections of the brief. The final agent prompt must be fully self-contained — `description_ref` is resolved here so the agent never receives a bare pointer. If the task has `description_inline` instead, use that directly.
-3. **Evaluate the memory-injection predicate (Lever 1) and call the selector (Lever 2).** Before spawning the agent, determine whether to inject `## Project Knowledge` into the brief.
+3. **Evaluate the memory-injection predicate (Lever 1) and call the selector (Lever 2).** Before spawning an agent, determine whether to inject `## Project Knowledge` into the brief. The rules below say when to skip (the user turned it off, the agent ignores project rules, or a retry already carried the notes) and how to avoid injecting the section twice.
 
    **Override flag.** The run-level flag `--memory-inject=off|auto|always` controls injection:
    - `off` — skip injection unconditionally for every dispatch in this run.
@@ -318,7 +318,7 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
    | :--- | :--- |
    | `--memory-inject=off` | Skip injection. Proceed to spawn without `## Project Knowledge`. |
    | `agent_type` ∈ `MECHANICAL_AGENTS` | Skip injection. Proceed to spawn without `## Project Knowledge`. |
-   | `attempt > 1` AND the prior handoff body contains the exact sentinel `<!-- project-knowledge:carried -->` | Skip injection (section was already carried in the prior attempt's handoff). |
+   | `attempt > 1` AND the prior handoff body contains the exact sentinel (a fixed hidden marker the system writes so a later step can detect it) `<!-- project-knowledge:carried -->` | Skip injection (section was already carried in the prior attempt's handoff). |
    | `--memory-inject=always` | Call selector with `enable_agent_type_intersection=false`. Inject if bytes returned. |
    | Otherwise (default `auto` path) | Call selector with `enable_agent_type_intersection=true`. Inject if bytes returned. |
 

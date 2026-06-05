@@ -10,7 +10,13 @@
 
 ## Purpose and Audience
 
-This file exists to close the brief-schema gap surfaced by the Tier A audit (2026-05-04), a read-only review by 5 parallel `critic` agents examining the 5 highest-traffic core-pipeline agents (`executor`, `verifier`, `debugger`, `git-master`, `project-scoper`) for Opus 4.7 instructional explicitness — whether each agent definition is precise enough that an Opus 4.7 instance dispatched as `subagent_type: <name>` executes correctly without filling in blanks. The audit produced 4 BLOCKERs, 31 MAJORs, and 19 MINORs; the full report is `docs/agent-audits/tier-a-opus-4-7-audit.md`. Four BLOCKERs in that audit trace directly to one structural problem: the team manager composes briefs according to `skills/ops/SKILL.md` § Agent Briefing Format (canonical grammar in this file), but none of the dispatched agents document the contract they parse. The four BLOCKERs are: `executor` MAJOR-1 (brief-section parsing — agent infers from wrong source when `## Acceptance Criteria` is absent); `verifier` BLOCKER-1 (acceptance-criteria source — agent Globs and hallucinates when the brief omits the criteria); `git-master` BLOCKER-1 (mode flag — decision tree forks on `mode:` but the field has no contractual home in the brief); and `project-scoper` BLOCKER-1 (file-class boundary — no enumerated vocabulary for which paths the scoper may Edit/Write). This contract resolves all four by defining the universal brief grammar in one place. The three audiences for this document are: dispatched subagents at runtime (reading it when encountering a malformed brief or an ambiguous precedence question); the team manager when composing briefs (ensuring every brief it produces conforms); and agent authors when writing or revising agent contracts (declaring how their agent applies the universal grammar in its own `## Brief Format` subsection).
+This file defines the exact format every dispatch brief must follow, so any agent that receives one parses it the same way.
+
+**Who reads this:**
+
+- **Runtime agents** (`executor`, `verifier`, `debugger`, `git-master`, `project-scoper`, and any future fleet member) — consulted when encountering a malformed brief or an ambiguous precedence question.
+- **The team manager** composing briefs — ensures every brief it produces conforms to the grammar defined here.
+- **Agent authors** writing or revising agent contracts — use the vocabulary and section definitions here when declaring how their agent applies the universal grammar in its own `## Brief Format` subsection.
 
 ---
 
@@ -49,7 +55,7 @@ Implement the `## Brief Format` subsection in `agents/executor.md` per ADD §7.1
 
 **Shape:** Numbered list. Each item is a testable assertion (pass/fail, not subjective).
 
-**Content:** Copied verbatim from the plan document or the ADD. The agent uses this list as the contractual bar for declaring success. The verifier uses this list as the primary source for its verification pass. No paraphrasing — verbatim only.
+**Content:** Copied verbatim (word-for-word) from the plan document or the ADD. The agent uses this list as the contractual bar for declaring success. The verifier uses this list as the primary source for its verification pass. No paraphrasing — verbatim only.
 
 **Example:**
 
@@ -125,9 +131,9 @@ The sections below are not required in every brief. Their absence is not an erro
 
 ### `## Project Knowledge`
 
-**When present:** When the orchestrator predicate fired AND the selector (documented in `skills/cross-memory/brief-injector.md`) returned non-empty bytes.
+**When present:** When the orchestrator predicate (the yes/no condition that decides this) fired AND the selector (documented in `skills/cross-memory/brief-injector.md`) returned non-empty bytes.
 
-**Content:** Selector output rendered under the `## Project Knowledge` heading — the `User Profile:` and `Project Knowledge:` sub-sections defined in `skills/cross-memory/injection-block.md`. These sub-sections carry the user's standing durable rules from the canonical store.
+**Content:** Selector output rendered under the `## Project Knowledge` heading — the `User Profile:` and `Project Knowledge:` sub-sections defined in `skills/cross-memory/injection-block.md`. These sub-sections carry the user's standing durable rules from the canonical store (the single official source).
 
 **When absent:** Predicate was skipped OR the selector returned empty bytes — proceed without it. No escalation required. This section is often absent by design; predicate-gated injection means many dispatches will omit it.
 
@@ -145,7 +151,7 @@ When the brief contains an internal contradiction (for example, `## Scope` lists
 3. **`## Constraints`** further restricts how the work happens. Task-specific constraints narrow the allowed approach.
 4. **`## Context`**, **`## Code Intelligence Context`**, and **`## Corpus Search Context`** inform what the agent considers. They never override the above tiers.
 
-**Mandatory `NEEDS-INPUT` escalation for security/correctness/safety contradictions.** When a task-specific `## Constraints` bullet contradicts a `## Project Knowledge` rule whose body or tags signal security, correctness, or safety semantics, the agent MUST escalate via `NEEDS-INPUT` rather than silently apply the constraint. The v1 detection is body-keyword based: if the durable rule's body contains any of the following keywords — *secret*, *credential*, *token*, *redact*, *prod*, *production*, *destroy*, *drop*, *delete*, *force*, *auth* — the rule is security-flagged and the contradiction requires explicit user confirmation. The escalation message must name: (a) the conflicting durable rule (with its memory file path if available), (b) the conflicting `## Constraints` bullet, (c) an explicit ask for the user to confirm which one governs this task. Err on the side of escalating when body language is ambiguous.
+**Mandatory `NEEDS-INPUT` escalation for security/correctness/safety contradictions.** When a task-specific `## Constraints` bullet contradicts a `## Project Knowledge` rule whose body or tags signal security, correctness, or safety meaning, the agent MUST escalate via `NEEDS-INPUT` rather than silently apply the constraint. The v1 detection is body-keyword based: if the durable rule's body contains any of the following keywords — *secret*, *credential*, *token*, *redact*, *prod*, *production*, *destroy*, *drop*, *delete*, *force*, *auth* — the rule is security-flagged and the contradiction requires explicit user confirmation. The escalation message must name: (a) the conflicting durable rule (with its memory file path if available), (b) the conflicting `## Constraints` bullet, (c) an explicit ask for the user to confirm which one governs this task. Err on the side of escalating when body language is ambiguous.
 
 **Advisory escalation for non-security durable rules.** When a task-specific `## Constraints` bullet contradicts a `## Project Knowledge` rule that does not trigger any of the security-flagged keywords — for example, a style preference, naming convention, or formatting choice — the agent notes the conflict in its handoff and proceeds with the `## Constraints` bullet as the local override for that single task. The conflict is surfaced to the user in the handoff output so it can be reviewed. Err on the side of escalating when the body language is ambiguous.
 
@@ -183,6 +189,8 @@ Which governs this task — the durable rule (redact unconditionally) or the tas
 | `## Corpus Search Context` | Proceed without corpus-search report. | No escalation. Phase 2.5c is advisory. |
 | `## Project Knowledge` | Proceed without it. | No escalation. Often absent; predicate-gated injection means many dispatches will omit this section by design. |
 
+**Multiple missing required sections:** If two or more required sections (`## Task`, `## Scope`, `## Acceptance Criteria`, `## Constraints`) are missing, refuse the dispatch and name every missing section in the refusal message.
+
 ---
 
 ## Mode Handling
@@ -202,6 +210,8 @@ This closes `git-master` BLOCKER-1: the decision tree no longer forks on a runti
 **`tdd` is a discipline overlay, not a git-master fork trigger.** When `## Mode: tdd` is set, git-master treats it as `autonomous` for uncommitted-change decisions — `tdd` is not a recognized fork-triggering value, so the autonomous fallback applies. The `tdd` value primarily affects the executor (RED-GREEN-REFACTOR discipline, per `skills/ops/tdd-discipline.md`) and the verifier (commit-ordering check). Git-master applies no special behavior for `tdd` beyond the autonomous stash default.
 
 **All other audited agents** (`executor`, `verifier`, `debugger`, `project-scoper`) ignore the `## Mode` field unless they explicitly declare mode-branching behavior in their own `## Brief Format` subsection. Absence of a `## Brief Format` mode declaration means: read the field, ignore it, proceed as `autonomous`.
+
+**Unrecognized `## Mode` value:** An unrecognized `## Mode` value is treated as absent — default to `autonomous` and note the unrecognized value in the response.
 
 ---
 
@@ -358,7 +368,7 @@ autonomous
 
 **Read-only-scope note:** The `## Scope` section above lists only read paths (`~/.cross-memory/**` and the source inputs) plus `_tmp_*` for filter computation staging. There are no new write paths. The agent does not write `reflect_declined.md` — the skill does, after the user types `decline <id>` in the interactive loop.
 
-The distill intent's filter consumes Sets A, B, and C deterministically against the three threshold signals (`slug_overlap: 0.85`, `tag_overlap: 0.8`, `body_token_jaccard: 0.7`); Set D is applied at the LLM-prompt layer during raw-candidate generation and is not part of the deterministic filter. The agent receives all four reference sets via the `reference_sets:` constraint block and the three threshold values via the `thresholds:` block.
+The distill intent's filter consumes Sets A, B, and C deterministically (always produces the same result for the same input) against the three threshold signals (`slug_overlap: 0.85`, `tag_overlap: 0.8`, `body_token_jaccard: 0.7`); Set D is applied at the LLM-prompt layer during raw-candidate generation and is not part of the deterministic filter. The agent receives all four reference sets via the `reference_sets:` constraint block and the three threshold values via the `thresholds:` block.
 
 ---
 

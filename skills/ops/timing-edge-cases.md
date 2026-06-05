@@ -6,7 +6,7 @@
 - `metadata.attempts`: array of `{started_at, completed_at, duration_seconds, model, outcome}`.
 - `metadata.duration_seconds`: total across all attempts (for the Actual column).
 - `metadata.duration_first_success`: duration of the successful attempt only (for variance comparison against estimate).
-- In the dashboard, show total actual time but note retries: `"3:42 (2 retries)"`. Calculate variance against `duration_first_success`, not total duration — the estimate assumed a single pass, so compare apples to apples.
+- In the dashboard, show total actual time but note retries: `"3:42 (2 retries)"`. Calculate variance (how far the actual time ran from the estimate) against `duration_first_success`, not total duration — the estimate assumed a single pass, so compare apples to apples.
 
 **2. Parallel execution:** Track both wall time and agent time:
 

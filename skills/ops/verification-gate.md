@@ -2,7 +2,7 @@
 
 # Verification Gate
 
-This rule exists as insurance against a plausible failure mode — an agent claiming completion at a dispatch boundary where the verifier-loop safety net is not running. The trivial dispatch route is the load-bearing case: when the team manager takes the trivial path, Phase 3 is bypassed entirely and no downstream verifier demands fresh evidence. Without a gate at the brief level, an agent on that path has only its own discipline standing between a real check and a plausible-sounding "tests should pass now." The ritual below is the explicit form that discipline takes.
+This rule exists as insurance against a plausible failure mode — an agent claiming completion at a dispatch boundary where the verifier-loop safety net is not running. The trivial dispatch route is the case that matters most: when the team manager takes the trivial path, Phase 3 is bypassed entirely and no downstream verifier demands fresh evidence. Without a gate at the brief level, an agent on that path has only its own discipline standing between a real check and a plausible-sounding "tests should pass now." The ritual below is the explicit form that discipline takes.
 
 ## The ritual — IDENTIFY / RUN / READ / VERIFY / CLAIM
 
