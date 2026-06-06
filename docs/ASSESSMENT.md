@@ -107,7 +107,7 @@
 | deploy-manifest.json | Maps repo source directories to tool-specific global directories. 3 targets (claude-code, claude-code-wsl, cursor), 4 categories (agents, skills, hooks, settings). |
 | deploy.ps1 | PowerShell deploy script (primary). `SKILL.cursor.md` detection, agent tool-restriction hardening, `--prune` mode, hooks/settings deployment. |
 | deploy.sh | Bash deploy script (cross-platform, requires `jq`). Same features as deploy.ps1. |
-| transform-cursor-ops.ps1 | PowerShell transform: generates `skills/ops/SKILL.cursor.md` from `SKILL.md` + `SKILL.cursor.additions.md`. |
+| transform-cursor-ops.ps1 | PowerShell transform: generates `skills/ops/SKILL.cursor.md` from `SKILL.md` via an embedded patch list (`SKILL.cursor.additions.md` is a documentation mirror of those patches, not a transform input). |
 | transform-cursor-ops.sh | Bash version of the ops Cursor transform. |
 | transform-cursor-ralph-loop.ps1 | PowerShell transform: generates `skills/ralph-loop/SKILL.cursor.md` from `SKILL.md`. |
 | transform-cursor-ralph-loop.sh | Bash version of the ralph-loop Cursor transform. |
@@ -413,7 +413,7 @@ Sprints 2-6 ran between 2026-04-17 and 2026-04-18, compressing and consolidating
 | **`settings.json`** (commit `1fd3751`) | Claude Code settings file at repo root. Configures permissions (allow/deny lists), model (`opus[1m]`), hooks (SessionStart, Notification), effort level (`xhigh`). |
 | **`hooks/post-compaction-context.sh`** (commit `1fd3751`) | Restores project context after Claude Code compaction events. Bound to `SessionStart` hook with `compact` matcher. |
 | **`hooks/notify.sh`** (commit `1e7eda4`) | Cross-platform notification script (Windows toast via PowerShell, macOS `osascript`, Linux `notify-send`). Bound to `Notification` hook. |
-| **`skills/ops/SKILL.cursor.additions.md`** | Transform side-car file (754 lines) containing patch blocks injected into `SKILL.md` during Cursor transform. Keyed by anchor lines and actions (prepend, replace_line, insert_after, etc.). Created during P14 transform infrastructure. |
+| **`skills/ops/SKILL.cursor.additions.md`** | ~660-line human-readable documentation mirror of the Cursor transform's hard-coded patch list (NOT read by any tool; the `.ps1`/`.sh` scripts are the source of truth). Keyed by anchor lines and `rep(old,new)`-style replacements. Created during P14 transform infrastructure. |
 
 ### Ops feature additions
 
@@ -641,10 +641,10 @@ The Tier A Opus 4.7 audit (`docs/agent-audits/tier-a-opus-4-7-audit.md`) produce
 
 These are not defects — they are patterns worth monitoring.
 
-- **Large skill files:** `skills/ops/SKILL.cursor.md` (~1,250 lines) is now the largest single file, followed by `skills/ops/SKILL.md` (~1,223 lines), `skills/ops/SKILL.cursor.additions.md` (~754 lines), and `skills/deslop/SKILL.md` (~669 lines). The ops files grew further in this run due to the Phase 2.5c corpus-search dispatch stage (following the earlier Phase 2.5b code-intel stage). Net context per ops invocation remains lower than before the companion extraction because companions are no longer loaded.
+- **Large skill files:** `skills/deslop/SKILL.md` (~689 lines) and `skills/ops/SKILL.cursor.additions.md` (~660 lines — the Cursor transform documentation mirror, repo-only) are the largest single files, followed by `skills/ops/SKILL.cursor.md` (~561 lines) and `skills/ops/SKILL.md` (~517 lines). Net context per ops invocation remains lower than before the companion extraction because companions are no longer loaded.
 - **No version identifiers** in any agent or skill file. If these files are shared across machines or updated frequently, a version field in frontmatter would aid change tracking.
 - **Planning docs mostly gitignored:** `docs/plan/` is in `.gitignore`, meaning most planning context is local-only. Exception: `ops-decoupling-plan.md` is now tracked in git, establishing a precedent for tracking significant architectural plans.
-- **Cursor transform is text-based:** The ops transform now uses a dedicated side-car file (`SKILL.cursor.additions.md`) with an anchor-and-patch format, which is more robust than pure text replacement. Ralph-loop still uses the simpler transform approach. No false-positive issues observed in current files.
+- **Cursor transform is text-based:** The ops transform applies a hard-coded `rep(old,new)` patch list embedded in the `.ps1`/`.sh` scripts; `SKILL.cursor.additions.md` documents those patches block-by-block for review but is not consumed by the transform. Ralph-loop uses the simpler transform approach. No false-positive issues observed in current files.
 - **Three skills have Cursor-native versions:** ops, deploy, and ralph-loop all have `SKILL.cursor.md` files. State management (`.ops-state/` JSON files) is unified across both versions. Remaining limitations: no model escalation, no tool enforcement. See `docs/portability-guide.md` for details.
 - **Agent dispatch mechanism at parity:** Claude Code's `Agent` tool auto-registers all agent definition files at `~/.claude/agents/` as `subagent_type` values — matching Cursor's native coverage. Both platforms dispatch directly via `subagent_type="<agent_type>"`. The ops skill retains the self-read prompt pattern so agents load their full definition on startup. `SKILL.cursor.md` is still needed for Cursor-specific differences (TodoWrite, `Task` tool, `~/.cursor/` paths). See `docs/portability-guide.md` § Agent Dispatch Mechanism.
 - **`code-intel` and `corpus-search` model assignments:** Both are assigned `opus`, consistent with other deep-reasoning agents (planner, critic, debugger, security-reviewer). The Logical model assignments bullet above should be read as: sonnet for execution-track agents, opus for analysis/reasoning agents — `code-intel` and `corpus-search` fall in the latter category.

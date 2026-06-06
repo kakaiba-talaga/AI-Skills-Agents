@@ -27,6 +27,8 @@
   --brainstorm     Run interviewer → architect and require design approval before planning
   --dispatch-log   Opt-in audit log: append each dispatch to docs/ops-dispatch-log.md (off by default)
   --security-review  off|always  By default runs only when the change looks security-related; off disables it; always runs it on every stage
+  --tdd            Executor follows RED-GREEN-REFACTOR; verifier adds a TDD-discipline check
+  (advanced: --code-intel, --corpus-search, --memory-inject, --skip-baseline — see README Options)
 
 ### Mid-run actions (say these during a run)
   stop / cancel    Stop dispatching, preserve task list

@@ -11,7 +11,7 @@ This document describes the format differences between Claude Code and Cursor, w
 | Skill entry point | `SKILL.md`; may have no frontmatter; can use `$ARGUMENTS` | `SKILL.md` with required `name` + `description` frontmatter |
 | Skill location | `~/.claude/skills/` | `~/.cursor/skills/` |
 | Tool names | `Bash`, `Edit`, `Write`, `Agent`, `Skill` | `Shell`, `StrReplace`, `Write`, `Task`, no `Skill` equivalent |
-| Subagent spawning | `Agent` tool (`subagent_type` covers all agents with definitions in `~/.claude/agents/`; self-read prompt for full context) | `Task` tool (`subagent_type` enum covers all 15 agent types natively plus utility types; `model` limited to `"fast"`) |
+| Subagent spawning | `Agent` tool (`subagent_type` covers all agents with definitions in `~/.claude/agents/`; self-read prompt for full context) | `Task` tool (`subagent_type` enum covers all pipeline agent types natively plus utility types; `model` limited to `"fast"`) |
 | Invocation | `/skill-name args` with `$ARGUMENTS` | Description-matched by IDE; no slash commands |
 | Config/state paths | `~/.claude/config/`, `.claude/state/` | `~/.cursor/config/`, `.cursor/state/` |
 | Global instructions | `~/.claude/CLAUDE.md` (from repo `CLAUDE-root.md`) | Project `.cursor/rules/` (not deployed from this repo) |
@@ -81,7 +81,7 @@ These Claude Code features have no direct counterpart in Cursor. The mechanical 
 | `TaskCreate`/`TaskUpdate`/`TaskList` | No shared task board for multi-agent coordination. | **Mitigated** | Both Claude Code and Cursor versions of ops now use a JSON state file (`.ops-state/<run-id>-board.json`) as the task board. Cursor adds `TodoWrite` as a display layer on top. Full metadata, dependencies, and timing preserved. |
 | `Agent` tool with custom `model`/`tools` | Cannot spawn agents with a specific model or restrict their tool access. | **Mitigated** | Ops and deploy use `Task(subagent_type=...)` for dispatch. Deploy script injects `## Tool Constraints` markdown into agent bodies for tool-restricted agents. Model selection is not possible — documented as accepted limitation. |
 | `Skill` tool | Cannot programmatically invoke another skill from within a skill. | **Mitigated** | Read-and-dispatch pattern: read the target skill's `SKILL.md` from `~/.cursor/skills/<name>/SKILL.md`, then follow inline or pass to `Task(subagent_type="generalPurpose")`. |
-| Agent `subagent_type` coverage | Cursor's `Task` tool `subagent_type` enum includes all 15 agent types natively (executor, verifier, planner, architect, security-reviewer, etc.) plus utility types (generalPurpose, explore, shell, etc.). Claude Code's `Agent` tool auto-registers all agent definition files at `~/.claude/agents/` as `subagent_type` values — full parity with Cursor for dispatch labeling. | **Resolved** | Both platforms dispatch directly via `subagent_type="<agent_type>"`. Self-read prompt still needed for full agent context injection. |
+| Agent `subagent_type` coverage | Cursor's `Task` tool `subagent_type` enum includes all pipeline agent types natively (executor, verifier, planner, architect, security-reviewer, etc.) plus utility types (generalPurpose, explore, shell, etc.). Claude Code's `Agent` tool auto-registers all agent definition files at `~/.claude/agents/` as `subagent_type` values — full parity with Cursor for dispatch labeling. | **Resolved** | Both platforms dispatch directly via `subagent_type="<agent_type>"`. Self-read prompt still needed for full agent context injection. |
 | `EnterWorktree`/`ExitWorktree` | No git worktree isolation for parallel agents. | **Mitigated** | `Task(subagent_type="best-of-n-runner")` provides isolated worktrees per agent. |
 | Model enforcement per agent | Cursor runs all agents on the session model. The `model` field is stripped during transform. | **Accepted** | No workaround. All subagents run on session model or `model="fast"`. Cost implications only. |
 | Tool surface restriction per agent | All tools are available to all agents in Cursor. | **Partially mitigated** | Deploy script injects `## Tool Constraints` section into agents whose Claude Code frontmatter restricted tools (critic, ssh-executor, interviewer, verifier). Advisory only — not enforced. |
@@ -103,14 +103,14 @@ When mechanical transformation of `SKILL.md` produces a non-functional result (e
 skills/<name>/
   SKILL.md                    # Claude Code version
   SKILL.cursor.md             # Cursor hub (committed; deployed as SKILL.md at target)
-  SKILL.cursor.additions.md   # Transform patch source (repo only — never deployed)
+  SKILL.cursor.additions.md   # Doc mirror of transform patches (repo only — never deployed; not read by the transform)
   README.md                   # Shared
   *.md                        # Companion files (shared, transformed by deploy script)
 ```
 
 The deploy script detects `SKILL.cursor.md` and uses it instead of transforming `SKILL.md`. The file is deployed as `SKILL.md` at the target — `SKILL.cursor.md` never appears at the destination.
 
-`SKILL.cursor.additions.md` is input for `tooling/transform-cursor-*.ps1` / `.sh` (and embedded patch lists). It is excluded from all deploy targets in `tooling/deploy-manifest.json` — keep it in git for maintainers and CI, not under `~/.cursor/skills/`.
+`SKILL.cursor.additions.md` is a human-readable documentation mirror of the patches hard-coded in `tooling/transform-cursor-*.ps1` / `.sh`; it is NOT read by the transform — the scripts are the source of truth. It is excluded from all deploy targets in `tooling/deploy-manifest.json` — keep it in git for maintainers and CI, not under `~/.cursor/skills/`.
 
 **When to create a `SKILL.cursor.md`:**
 
