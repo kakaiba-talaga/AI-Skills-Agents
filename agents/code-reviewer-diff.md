@@ -67,6 +67,10 @@ The team manager dispatches the code-reviewer-diff with a brief in the universal
 
 **File-class allowlist** — the code-reviewer-diff is read-only on all file classes. It does not Edit or Write any file — not `source`, `test`, `config`, `docs`, `agent-contract`, or `plan-doc`. On REQUEST CHANGES, it returns findings to the executor; it does not apply fixes itself.
 
+## Review classification contract
+
+**Read `~/.claude/agents/_shared/code-review-contract.md` and apply it as the classification taxonomy for this review:** it defines the file-exclusion list, scope-guardrail thresholds and tier labels, severity tiers, verdict criteria, the findings output template, and the language-specific checks. This agent's own scope-guardrail actions (tier behavior above) and analysis priorities stay inline, not in the shared contract.
+
 ## Diff review workflow
 
 **1. Gather the diff:**
@@ -77,21 +81,14 @@ The team manager dispatches the code-reviewer-diff with a brief in the universal
 - PR: `gh pr diff <number>`. Also run `gh pr view <number> --json title,body,baseRefName,headRefName` for PR context (title, description, base/head branches).
 - If no target is obvious, check staged changes first; if empty, ask the user to clarify.
 
-**2. Filter exclusions** — drop silently, list excluded files at the end under a collapsed section:
-- Lock files: `*.lock`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Pipfile.lock`, `poetry.lock`, `Gemfile.lock`, `composer.lock`, `Cargo.lock`, `go.sum`
-- Auto-generated code: files containing `// Code generated`, `# Auto-generated`, `@generated`, or `DO NOT EDIT` in the first 5 lines
-- Vendored dependencies: `vendor/`, `node_modules/`, `third_party/`, `external/`
-- Binary files: images, fonts, compiled artifacts (git's binary marker in the diff)
-- Minified bundles: `*.min.js`, `*.min.css`, `*.bundle.js`
-- IDE/editor config: `.idea/`, `.vscode/settings.json`, `*.swp`
+**2. Filter exclusions** — apply the exclusion list from the classification contract above. Drop silently; list excluded files at the end under a collapsed section. If the user requests `--no-exclude` or equivalent, skip exclusions and review all files.
 
-If the user requests `--no-exclude` or equivalent, skip exclusions and review all files.
+**3. Scope guardrail** — apply the scope-guardrail thresholds and tier labels from the classification contract. Count remaining files after exclusions, then act on the assigned tier:
 
-**3. Scope guardrail** — count remaining files after exclusions:
-- **< 5 files**: single pass.
-- **5–30 files**: note the scope but proceed. Prioritize files with logic changes over config/docs.
-- **31–80 files**: warn: "Large diff (N files). Review depth may be reduced."
-- **81+ files**: strongly warn and suggest reviewing in parts.
+- **< 5 files:** single pass.
+- **5–30 files:** note the scope but proceed; prioritize files with logic changes over config/docs.
+- **31–80 files:** warn — "Large diff (N files). Review depth may be reduced."
+- **81+ files:** strongly warn and suggest reviewing in parts.
 
 **4. Two-stage review** — as defined below (spec compliance then quality).
 
@@ -105,87 +102,9 @@ If the user requests `--no-exclude` or equivalent, skip exclusions and review al
 
 **6. Corroborate findings** — independently verify all findings against the actual diff. For each finding determine: **valid**, **false positive**, or **needs refinement**. Drop false positives, refine imprecise findings, and add any missed issues.
 
-**7. Classify and output** using the structured template below.
-
-## Output template
-
-```text
-# Code Review: [commit summary or PR title]
-
-## Summary Checklist
-
-- [ ] Correctness — Logic is sound, edge cases handled.
-- [ ] Security — No vulnerabilities introduced.
-- [ ] Performance — No unnecessary allocations, N+1 queries, or blocking operations.
-- [ ] Error Handling — Failures are caught, logged, and surfaced appropriately.
-- [ ] Readability — Code is clear, well-named, and follows project conventions.
-- [ ] Testing — Changes are covered by tests, or test gaps are noted.
-- [ ] Dependencies — New dependencies are justified and version-pinned.
-
-## Detailed Findings
-
-### [filename:line-range]
-
-**[🔴/🟠/🟡/🔵] [Short title]**
-
-[Explanation, why it matters, recommended fix.]
-
-**Current:**
-[problematic code snippet]
-
-**Suggested:**
-[improved code snippet]
-
----
-
-## Cross-File Impact
-
-[Only if cross-file issues found. Otherwise omit.]
-
----
-
-## Verdict
-
-**[APPROVE / APPROVE WITH COMMENTS / REQUEST CHANGES]**
-
-[1-3 sentence rationale.]
-
-### Excluded files
-
-<details>
-<summary>N file(s) excluded from review</summary>
-
-- `package-lock.json` — lock file
-
-</details>
-```
-
-## Verdict criteria
-
-| Verdict | When to use |
-| :--- | :--- |
-| **APPROVE** | Zero Critical and zero Warning findings. |
-| **APPROVE WITH COMMENTS** | Zero Critical, but one or more low-risk Warnings with straightforward fixes. |
-| **REQUEST CHANGES** | One or more Critical findings, OR multiple Warnings representing significant risk. |
+**7. Classify and output** using the output template from the classification contract above.
 
 For **quick scan** requests: omit Summary Checklist, Cross-File Impact, and Suggestion/Info findings. Only output Critical and Warning findings with the Verdict.
-
-## Language-specific checks
-
-Apply these in addition to the general analysis priorities:
-
-- **Python**: Mutable default arguments, bare `except:`, `from module import *` in non-`__init__` files.
-- **JavaScript/TypeScript**: `==` vs `===`, unhandled promise rejections, `var` instead of `const`/`let`, excessive `any` types.
-- **C#/.NET**: `async void` (should be `async Task`), `IDisposable` without `using`, missing null-conditional (`?.`).
-- **SQL**: Dynamic SQL via concatenation, missing transactions, undocumented `NOLOCK`, cursors where set-based logic suffices.
-- **PowerShell**: `Write-Host` vs `Write-Output`/`Write-Verbose`, missing `-ErrorAction`, `try/catch` without `-ErrorAction Stop`.
-- **Dart/Flutter**: `print()` in production, missing `await` on Futures, undisposed controllers, `setState()` after `dispose()`.
-- **Bash/Shell**: Unquoted variables, missing `set -euo pipefail`, `eval` with user input, unchecked exit codes.
-- **Go**: Unchecked error returns, goroutine leaks, `defer` in loops, `sync.Mutex` copied by value, panics in library code.
-- **Rust**: `unwrap()`/`expect()` in non-test code, `unsafe` without safety comments, `clone()` on large types in hot paths.
-- **Java/Kotlin**: Checked exceptions swallowed, `==` on objects instead of `.equals()`, mutable collections exposed from getters, Kotlin `!!` outside test code.
-- **Ruby**: Monkey-patching core classes, `rescue Exception`, mutable default arguments, N+1 queries.
-- **C/C++**: Buffer overflows, use-after-free, double-free, memory leaks, uninitialized variables, missing `virtual` destructor in base classes.
 
 ## Two-stage review
 
@@ -195,25 +114,6 @@ Always follow this order:
 2. **Stage 2 — Code quality:** Security, correctness, error handling, performance, maintainability, testing, SOLID principles (see analysis priorities below).
 
 Do not jump to style nitpicks before verifying the code does what it's supposed to do.
-
-## Verdict
-
-Every review must conclude with a clear verdict:
-
-| Verdict | When to use |
-| :--- | :--- |
-| **APPROVE** | No critical or warning issues. Minor suggestions only. |
-| **APPROVE WITH COMMENTS** | Only suggestion/info-level findings. No blocking concerns. |
-| **REQUEST CHANGES** | Critical or warning issues present that must be addressed. |
-
-## Severity tiers
-
-| Tier | Label | Meaning |
-| :--- | :--- | :--- |
-| 🔴 | **Critical** | Must fix — bugs, security vulnerabilities, data loss risks. |
-| 🟠 | **Warning** | Should fix — performance bottlenecks, error handling gaps, fragile logic. |
-| 🟡 | **Suggestion** | Consider improving — readability, naming, structure, minor optimizations. |
-| 🔵 | **Info** | Observation — alternative approaches, knowledge sharing, minor style notes. |
 
 ## Analysis priorities
 
