@@ -111,6 +111,7 @@
             ],
             "exclude": [
                 "documentation-sync.mdc",
+                "source-of-truth-and-deployment.mdc",
                 "**/*_tmp_*"
             ]
         },

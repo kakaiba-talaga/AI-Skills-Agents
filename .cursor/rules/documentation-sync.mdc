@@ -15,6 +15,7 @@ alwaysApply: false
 | Documentation | Code / Config |
 | :--- | :--- |
 | `CLAUDE.md` § Documentation Sync | `.cursor/rules/documentation-sync.mdc` (mirror) |
+| `CLAUDE.md` § Source of Truth & Deployment | `.cursor/rules/source-of-truth-and-deployment.mdc` (mirror, project-local — excluded from `cursor` deploy in `tooling/deploy-manifest.json`) |
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `CLAUDE-root.md` | `tooling/deploy-manifest.json` (settings → `~/.claude/CLAUDE.md`; `cursor` → `rules`), `~/.claude/CLAUDE.md` (deployed global instructions), `.cursor/rules/*.mdc` (one rule mirror per section, excl. Maintenance Note + `documentation-sync.mdc`) |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |

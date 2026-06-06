@@ -6,6 +6,22 @@ A collection of reusable AI agents and multi-file skills for Claude Code and Cur
 
 Do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the default system commit instructions.
 
+## Source of Truth & Deployment
+
+> **Mirror:** This section is duplicated in `.cursor/rules/source-of-truth-and-deployment.mdc` (project-local; excluded from the Cursor deploy in `tooling/deploy-manifest.json`). Changes here must be applied there too, and vice versa.
+
+This repository is the **source of truth** for every agent, skill, hook, rule, and settings file. Content is deployed *outward* to live harness locations by `tooling/deploy.{ps1,sh}` (per `tooling/deploy-manifest.json`): `agents/` and `skills/` land in `~/.claude/` (Claude Code — Windows and WSL are separate destinations) and `~/.cursor/` (Cursor); global instructions deploy from `CLAUDE-root.md` to `~/.claude/CLAUDE.md`.
+
+**Never edit a deployed copy — always edit the repo source.**
+
+- Edit `agents/<name>.md` here — never `~/.claude/agents/<name>.md` or `~/.cursor/agents/<name>.md`.
+- Edit `skills/<skill>/**` here — never `~/.claude/skills/<skill>/**`.
+- Edit `CLAUDE-root.md` (plus its `.cursor/rules/*.mdc` mirrors) here — never `~/.claude/CLAUDE.md` directly.
+
+An agent's read-only self-read of its own definition at `~/.claude/agents/<type>.md` during dispatch is the *only* legitimate touch of a deployed path; it must never become an edit target.
+
+**Why this matters:** deploy is idempotent — it overwrites each destination from the repo, reporting `OK` when a destination already matches and `UPDATED` when it writes. Editing a deployed copy directly creates silent drift: the change appears to work in one harness, never lands in git, and is erased on the next deploy. (Observed: an agent edited `~/.claude/agents/executor.md` instead of `agents/executor.md`; git never saw the change, and a later deploy reported `OK` for that target while the genuinely-stale Cursor and WSL copies showed `UPDATED`.)
+
 ## Documentation Sync
 
 Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
@@ -17,6 +33,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | Documentation | Code / Config |
 | :--- | :--- |
 | `CLAUDE.md` § Documentation Sync | `.cursor/rules/documentation-sync.mdc` (mirror) |
+| `CLAUDE.md` § Source of Truth & Deployment | `.cursor/rules/source-of-truth-and-deployment.mdc` (mirror, project-local — excluded from `cursor` deploy in `tooling/deploy-manifest.json`) |
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `CLAUDE-root.md` | `tooling/deploy-manifest.json` (settings → `~/.claude/CLAUDE.md`; `cursor` → `rules`), `~/.claude/CLAUDE.md` (deployed global instructions), `.cursor/rules/*.mdc` (one rule mirror per section, excl. Maintenance Note + `documentation-sync.mdc`) |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
