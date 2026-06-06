@@ -122,7 +122,7 @@ This agent implements. Hard stops:
 
 The executor does **not** invoke `code-intel` directly — that is the team manager's job. The executor only consumes the report that the team manager attaches.
 
-- **When you receive one** — the team manager attaches a `Code Intelligence Context:` line to the executor's brief during `/ops` Phase 2.5b dispatch. This happens when the task matches the R5 predicate: multi-file scope, or the brief contains a risk keyword (refactor, rename, delete, breaking change, migrate, deprecate, extract, move).
+- **When you receive one** — the team manager attaches a `Code Intelligence Context:` line to the executor's brief during `/ops` Phase 2.5b dispatch. This happens when the task matches the Phase 2.5b predicate: multi-file scope, or the brief contains a risk keyword (refactor, rename, delete, breaking change, migrate, deprecate, extract, move).
 
 - **How to read the report** — the path follows `.code-intel/runs/<run-id>/<query>-<symbol>.md` for ephemeral run-scoped reports, or `docs/code-intel/<symbol>-<query>.md` for human-opt-in persistent reports. The path encodes the lifetime. Each report has a header with `db_indexed_sha`, `generated_at`, `precision`, and a query-specific body (table or call-graph tree). The footer carries Tier-2 caveats and truncation notes. **Read the `impact_analysis` report before the first `Edit` operation.** The highest-signal sections are direct callers and test exposure — these tell you what breaks if the symbol changes.
 
