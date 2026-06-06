@@ -57,7 +57,7 @@ Module contract, version, and consumer list: [`_shared/README.md`](_shared/READM
 
 Pipeline agents share brief-format boilerplate in [`_shared/brief-format-snippet.md`](_shared/brief-format-snippet.md) instead of duplicating it in every contract. Each agent's `## Brief Format` subsection keeps agent-specific overrides only and points at the snippet with a **`See`** line (for example, `See ~/.claude/agents/_shared/brief-format-snippet.md`). Agents that compose or validate briefs still use **`You MUST Read`** on `~/.claude/skills/ops/brief-contract.md` for the canonical contract.
 
-Deploy includes nested markdown: [`tooling/deploy-manifest.json`](../tooling/deploy-manifest.json) uses `"include": ["**/*.md"]` for agents (both Claude Code and Cursor targets), so `_shared/` ships to `~/.claude/agents/_shared/` and, on Cursor deploy, `~/.cursor/agents/_shared/` with path rewrite. `agents/README.md` stays repo-only (`exclude: ["README.md"]`). See [`skills/ops/pointer-format.md`](../skills/ops/pointer-format.md) for MUST vs See tiering.
+Deploy includes nested markdown: [`tooling/deploy-manifest.json`](../tooling/deploy-manifest.json) uses `"include": ["**/*.md"]` and `"exclude": ["**/*_tmp_*"]` for agents (both Claude Code and Cursor targets), so all `.md` files under `agents/` deploy — including `agents/README.md` and `_shared/README.md`. On Cursor deploy, `_shared/` ships to `~/.cursor/agents/_shared/` with path rewrite. See [`skills/ops/pointer-format.md`](../skills/ops/pointer-format.md) for MUST vs See tiering.
 
 ## Extended documentation
 

@@ -67,11 +67,11 @@ Agents without `## Brief Format` (e.g. architect, planner) do not include `brief
 
 ```json
 "include": ["**/*.md"],
-"exclude": ["README.md"]
+"exclude": ["**/*_tmp_*"]
 ```
 
+- All `.md` files under `agents/` deploy, including both `agents/README.md` and `agents/_shared/README.md`.
 - Nested markdown under `_shared/` deploys to `~/.claude/agents/_shared/` (and `~/.cursor/agents/_shared/` on Cursor transform).
-- Top-level `agents/README.md` is repo-only (`README.md` exclude matches that file only, not `_shared/README.md`).
 
 Dry-run check: `.\tooling\deploy.ps1 -Target cursor -Category agents -DryRun` — expect `brief-format-snippet.md`, orchestrator brief companions, and this file in the upsert set.
 
