@@ -5,6 +5,9 @@
             "target": "~/.claude/agents/",
             "include": [
                 "**/*.md"
+            ],
+            "exclude": [
+                "**/*_tmp_*"
             ]
         },
         "skills": {
@@ -15,7 +18,8 @@
                 "**/*.yaml"
             ],
             "exclude": [
-                "**/SKILL.cursor.additions.md"
+                "**/SKILL.cursor.additions.md",
+                "**/*_tmp_*"
             ]
         },
         "hooks": {
@@ -23,6 +27,9 @@
             "target": "~/.claude/hooks/",
             "include": [
                 "**/*"
+            ],
+            "exclude": [
+                "**/*_tmp_*"
             ]
         },
         "settings": {
@@ -44,6 +51,9 @@
             "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/agents/",
             "include": [
                 "**/*.md"
+            ],
+            "exclude": [
+                "**/*_tmp_*"
             ]
         },
         "skills": {
@@ -54,7 +64,8 @@
                 "**/*.yaml"
             ],
             "exclude": [
-                "**/SKILL.cursor.additions.md"
+                "**/SKILL.cursor.additions.md",
+                "**/*_tmp_*"
             ]
         },
         "hooks": {
@@ -62,6 +73,9 @@
             "target": "//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/hooks/",
             "include": [
                 "**/*"
+            ],
+            "exclude": [
+                "**/*_tmp_*"
             ]
         },
         "settings": {
@@ -84,6 +98,9 @@
             "include": [
                 "**/*.md"
             ],
+            "exclude": [
+                "**/*_tmp_*"
+            ],
             "transform": true
         },
         "rules": {
@@ -93,7 +110,8 @@
                 "*.mdc"
             ],
             "exclude": [
-                "documentation-sync.mdc"
+                "documentation-sync.mdc",
+                "**/*_tmp_*"
             ]
         },
         "skills": {
@@ -105,7 +123,8 @@
             "exclude": [
                 "kickoff/**",
                 "**/SKILL.cursor.additions.md",
-                "**/SKILL.cursor.md"
+                "**/SKILL.cursor.md",
+                "**/*_tmp_*"
             ],
             "transform": true
         }
