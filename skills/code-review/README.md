@@ -67,6 +67,8 @@ Gather diff --> Filter exclusions --> Scope check --> Analyze --> Cross-file imp
 
 ### File exclusions
 
+> The canonical exclusion list, scope-guardrail thresholds, severity tiers, verdict criteria, output template, and language-specific checks are defined in `~/.claude/agents/_shared/code-review-contract.md`. The summaries below describe the behavior; the contract is the authoritative source.
+
 These are automatically excluded from review (listed in a collapsed section at the bottom of the output):
 
 - **Lock files** -- `package-lock.json`, `yarn.lock`, `Cargo.lock`, `go.sum`, `*.lock`, etc.

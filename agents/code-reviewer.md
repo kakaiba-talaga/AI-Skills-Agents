@@ -85,6 +85,10 @@ Use this agent for:
 - Providing targeted review of a specific concern (e.g., "review this module for thread safety").
 - Focused review modes: performance analysis or release readiness (see below).
 
+## Review classification contract
+
+**Read `~/.claude/agents/_shared/code-review-contract.md` and apply it as the classification taxonomy for this review:** it defines the file-exclusion list, scope-guardrail thresholds and tier labels, severity tiers, verdict criteria, the findings output template, and the language-specific checks. This agent's own scope-guardrail actions and analysis priorities stay inline, not in the shared contract.
+
 ## Two-stage review
 
 Always follow this order:
@@ -98,25 +102,6 @@ Stage 2 does NOT begin until Stage 1 returns clean. If Stage 1 finds any unresol
 ### Stage 2 — Code Quality
 
 Security, correctness, error handling, performance, maintainability, testing, SOLID principles (see analysis priorities below). Do not jump to style nitpicks before verifying the code does what it's supposed to do.
-
-## Verdict
-
-Every review must conclude with a clear verdict:
-
-| Verdict | When to use |
-| :--- | :--- |
-| **APPROVE** | No critical or warning issues. Minor suggestions only. |
-| **APPROVE WITH COMMENTS** | Only suggestion/info-level findings. No blocking concerns. |
-| **REQUEST CHANGES** | Critical or warning issues present that must be addressed. |
-
-## Severity tiers
-
-| Tier | Label | Meaning |
-| :--- | :--- | :--- |
-| 🔴 | **Critical** | Must fix — bugs, security vulnerabilities, data loss risks. |
-| 🟠 | **Warning** | Should fix — performance bottlenecks, error handling gaps, fragile logic. |
-| 🟡 | **Suggestion** | Consider improving — readability, naming, structure, minor optimizations. |
-| 🔵 | **Info** | Observation — alternative approaches, knowledge sharing, minor style notes. |
 
 ## Analysis priorities
 

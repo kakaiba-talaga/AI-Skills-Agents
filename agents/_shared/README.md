@@ -1,6 +1,6 @@
 # Agent shared snippets (`agents/_shared/`)
 
-**Module version:** 1.1.0 (token-efficiency Phase B — B5, 2026-05-26)
+**Module version:** 1.2.0 (add code-review-contract.md shared contract, 2026-06-06)
 
 ## Purpose
 
@@ -26,6 +26,7 @@ Tiering matches [`skills/ops/pointer-format.md`](../../skills/ops/pointer-format
 | [`brief-format-snippet.md`](brief-format-snippet.md) | 1.0.0 | Default required/optional sections, Project Knowledge precedence, missing `## Acceptance Criteria`, internal inconsistency |
 | [`code-intel-orchestrator-brief.md`](code-intel-orchestrator-brief.md) | 1.0.0 | JSON-fenced orchestrator brief schema, validation pseudocode, Constraints exemption, strict-cap rules |
 | [`corpus-search-orchestrator-brief.md`](corpus-search-orchestrator-brief.md) | 1.0.0 | JSON-fenced orchestrator brief schema, validation pseudocode, Constraints exemption, strict-cap rules |
+| [`code-review-contract.md`](code-review-contract.md) | 1.0.0 | Shared classification contract — exclusion list, scope-guardrail thresholds, severity tiers, verdict criteria, output template, language-specific checks; consumed by the `/code-review` skill and both code-reviewer agents |
 
 Bump the **module version** in this README when adding snippets or making breaking semantic changes to shared defaults. Bump the per-snippet version column when only one file changes.
 
@@ -75,9 +76,9 @@ Agents without `## Brief Format` (e.g. architect, planner) do not include `brief
 
 Dry-run check: `.\tooling\deploy.ps1 -Target cursor -Category agents -DryRun` — expect `brief-format-snippet.md`, orchestrator brief companions, and this file in the upsert set.
 
-## Adding a snippet
+## Adding a snippet or contract
 
-1. Add `agents/_shared/<name>-snippet.md` with `~/.claude/` paths.
+1. Add `agents/_shared/<name>.md` (a `-snippet.md` brief-format companion or a `-contract.md` shared contract) with `~/.claude/` paths.
 2. Document it in the table above; list consuming agents.
 3. Replace duplicated paragraphs in agents with one `See` line; keep overrides only.
 4. Confirm manifest still uses `**/*.md` (no top-level-only regression).
