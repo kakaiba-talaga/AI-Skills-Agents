@@ -156,7 +156,7 @@ The two platforms differ significantly in how agents are dispatched programmatic
 
 ### Cursor — native `subagent_type` enum
 
-Cursor's `Task` tool includes all 15 agent types as built-in `subagent_type` values, plus utility types: `generalPurpose`, `explore`, `shell`, `browser-use`, `best-of-n-runner`, `architect`, `code-reviewer-diff`, `code-reviewer`, `critic`, `debugger-build`, `debugger`, `documentor`, `executor`, `git-master`, `interviewer`, `planner`, `project-scoper`, `security-reviewer`, `ssh-executor`, `verifier`.
+Cursor's `Task` tool exposes this repo's agent types as built-in `subagent_type` values alongside Cursor's own utility types. Utility types: `generalPurpose`, `explore`, `shell`, `browser-use`, `best-of-n-runner`. Repo agent types: `architect`, `change-analyzer`, `code-intel`, `code-reviewer`, `code-reviewer-diff`, `corpus-search`, `critic`, `cross-memory`, `debugger`, `debugger-build`, `documentor`, `executor`, `git-master`, `interviewer`, `planner`, `preflight`, `project-scoper`, `research`, `rollback`, `security-reviewer`, `ssh-executor`, `verifier`, `work-verifier`.
 
 The ops skill dispatches directly: `Task(subagent_type="executor", prompt=<brief>)`. The agent type appears as the label in dispatch notifications. No additional setup is needed.
 

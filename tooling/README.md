@@ -57,6 +57,6 @@ After ops modularization (B1), `transform-cursor-ops` drift-check compares **`sk
 
 See repository `README.md` and `docs/portability-guide.md` for `deploy.ps1` / `deploy.sh` usage.
 
-`tooling/deploy-manifest.json` excludes build-only skill artifacts from every target: `**/SKILL.cursor.additions.md` (transform patch source). The Cursor target also excludes `**/SKILL.cursor.md` — deploy writes that content as `SKILL.md` at the destination only.
+`tooling/deploy-manifest.json` excludes build-only skill artifacts from every target: `**/SKILL.cursor.additions.md` (a human-readable documentation mirror of the Cursor-transform patches hard-coded in `tooling/transform-cursor-ops.{ps1,sh}`; NOT read by the transform — the scripts are the source of truth). The Cursor target also excludes `**/SKILL.cursor.md` — deploy writes that content as `SKILL.md` at the destination only.
 
 For Claude Code **settings**, the manifest may include a `rename` map (source filename → destination filename). `CLAUDE-root.md` deploys as `~/.claude/CLAUDE.md` on both `claude-code` and `claude-code-wsl` targets.
