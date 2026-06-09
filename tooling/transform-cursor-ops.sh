@@ -854,7 +854,7 @@ rep(
 
 Every adaptation is tracked, reported in the dashboard's **Adaptations** section, and summarized at Phase 4 completion. User feedback on adaptations is saved as project memory for future runs.
 
-At each pipeline stage transition, the team manager also performs a short reflection beat (see Phase 3 Step 5) — a bounded self-critique of whether the remaining plan still holds in light of what the stage produced. The beat is advisory and additive-only: it may propose adding or re-sequencing work through the mechanisms above, but if it identifies work that should be removed, it escalates to the user rather than acting — the scope-reduction guardrail applies unchanged. Each beat is recorded in the `adaptations` log and surfaced in the dashboard's Adaptations section.
+At each pipeline stage transition, the team manager also performs a short reflection beat (see Phase 3 Step 5) — a bounded self-critique of whether the remaining plan still holds in light of what the stage produced. The beat is advisory and additive-only: it may propose adding or re-sequencing work through the mechanisms above, but if it identifies work that should be removed, it escalates to the user rather than acting — the scope-reduction guardrail applies unchanged. Each beat is recorded in the `adaptations` log and surfaced in the dashboard's Adaptations section. When the beat identifies material remaining-graph invalidation — a finished stage's outcome that makes two or more remaining tasks impossible, redundant, or falsely-assumed — it hands the unfinished tasks to the dynamic re-planning of the remaining graph procedure described in Phase 3 Step 5.
 
 ---
 
@@ -863,7 +863,7 @@ At each pipeline stage transition, the team manager also performs a short reflec
 
 Every adaptation is tracked, reported in the dashboard's **Adaptations** section, and summarized at Phase 4 completion. User feedback on adaptations is saved as project memory for future runs.
 
-At each pipeline stage transition, the team manager also performs a short reflection beat (see Phase 3 Step 5) — a bounded self-critique of whether the remaining plan still holds in light of what the stage produced. The beat is advisory and additive-only: it may propose adding or re-sequencing work through the mechanisms above, but if it identifies work that should be removed, it escalates to the user rather than acting — the scope-reduction guardrail applies unchanged. Each beat is recorded in the `adaptations` log and surfaced in the dashboard's Adaptations section.
+At each pipeline stage transition, the team manager also performs a short reflection beat (see Phase 3 Step 5) — a bounded self-critique of whether the remaining plan still holds in light of what the stage produced. The beat is advisory and additive-only: it may propose adding or re-sequencing work through the mechanisms above, but if it identifies work that should be removed, it escalates to the user rather than acting — the scope-reduction guardrail applies unchanged. Each beat is recorded in the `adaptations` log and surfaced in the dashboard's Adaptations section. When the beat identifies material remaining-graph invalidation — a finished stage's outcome that makes two or more remaining tasks impossible, redundant, or falsely-assumed — it hands the unfinished tasks to the dynamic re-planning of the remaining graph procedure described in Phase 3 Step 5.
 
 ---
 

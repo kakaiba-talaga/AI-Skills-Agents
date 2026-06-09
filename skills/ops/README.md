@@ -198,6 +198,7 @@ The team manager adapts strategy at runtime instead of rigidly following the ini
 - **Strategy adaptation** — switches between sequential and parallel dispatch based on throughput and file conflicts. Escalates to worktree isolation if parallel agents keep conflicting.
 - **Cross-run learning** — records patterns from completed runs (which modules need opus, where parallel dispatch causes conflicts, which agent types fit which task patterns) as project memory. Recalled patterns inform future runs as soft defaults. Patterns are stored at `~/.claude/projects/<project>/memory/feedback_team_patterns.md` — created automatically after the first run that produces learnings worth recording.
 - **Reflection beat** — at each pipeline stage transition, the team manager records a short self-critique of whether the remaining plan still holds; it can propose additions or re-sequencing, but escalates any scope reduction to the user rather than acting.
+- **Dynamic re-planning** — when a finished stage materially invalidates two or more remaining tasks (making them impossible, redundant, or falsely-assumed), the team manager dispatches the planner on the unfinished task graph, routes the revision through the critic REVISE loop, and rewrites the remaining board only on a critic-accepted result that drops no scope; scope-dropping revisions and non-convergence escalate to the user.
 
 ### Timing and Estimation
 

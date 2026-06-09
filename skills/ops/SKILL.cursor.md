@@ -470,6 +470,7 @@ The team manager adapts strategy based on runtime conditions. Every adaptation i
 | **Wrong sequencing** — a task's dependency was incorrect | Update the dependency graph in the state file. Re-order the dispatch queue. Log the change. |
 | **Task too large** — agent reports the task needs splitting | Pause the task. Dispatch the **planner** via `Task(subagent_type="planner")` to break it into subtasks. Replace the original task with the subtasks in the state file and TodoWrite. Resume. |
 | **Scope change** — agent reports the approach needs rethinking | In autonomous mode: if the change is small (affects < 3 tasks), adapt in-place. If large (affects a whole stage), pause and escalate to the user. In interactive mode: always present at the next checkpoint. |
+| **Remaining graph invalidated** — a finished stage's outcome makes two or more remaining tasks impossible / redundant / falsely-assumed | Dispatch the planner on the unfinished tasks, route through the critic REVISE loop, rewrite the remaining board on ACCEPT; scope-drop or non-convergence escalates to the user. |
 
 **Guardrail:** The team-manager may add tasks or re-sequence, but must not silently remove tasks or reduce scope. Scope reduction always requires user approval.
 
@@ -500,7 +501,7 @@ Note: Cursor does not support model escalation (changing the model between attem
 
 Every adaptation is tracked, reported in the dashboard's **Adaptations** section, and summarized at Phase 4 completion. User feedback on adaptations is saved as project memory for future runs.
 
-At each pipeline stage transition, the team manager also performs a short reflection beat (see Phase 3 Step 5) — a bounded self-critique of whether the remaining plan still holds in light of what the stage produced. The beat is advisory and additive-only: it may propose adding or re-sequencing work through the mechanisms above, but if it identifies work that should be removed, it escalates to the user rather than acting — the scope-reduction guardrail applies unchanged. Each beat is recorded in the `adaptations` log and surfaced in the dashboard's Adaptations section.
+At each pipeline stage transition, the team manager also performs a short reflection beat (see Phase 3 Step 5) — a bounded self-critique of whether the remaining plan still holds in light of what the stage produced. The beat is advisory and additive-only: it may propose adding or re-sequencing work through the mechanisms above, but if it identifies work that should be removed, it escalates to the user rather than acting — the scope-reduction guardrail applies unchanged. Each beat is recorded in the `adaptations` log and surfaced in the dashboard's Adaptations section. When the beat identifies material remaining-graph invalidation — a finished stage's outcome that makes two or more remaining tasks impossible, redundant, or falsely-assumed — it hands the unfinished tasks to the dynamic re-planning of the remaining graph procedure described in Phase 3 Step 5.
 
 ---
 
