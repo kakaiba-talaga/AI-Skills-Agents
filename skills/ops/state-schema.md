@@ -140,6 +140,38 @@ Root-level field tracking whether the Cursor first-time memory-injection awarene
 
 **Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `false`. No migration is required.
 
+### adaptations
+
+Root-level array recording every adaptation the team manager makes during a run — strategy switches, mid-run plan adjustments, reflection-beat notes, and (when present) promotion events. This is the run-level backing store for the dashboard's Adaptations section and the Phase 4 adaptation summary.
+
+This run-level `adaptations` array is distinct from the existing per-task `adaptation` field (singular) on each task object (`state-schema.md:42`). The plural `adaptations` array is the **run-level rollup**; the singular per-task `adaptation` field is unchanged by this work.
+
+**Type:** `array` (default `[]` when absent).
+
+**Element shape:**
+
+```json
+{
+  "type": "reflection",
+  "at": "2026-06-09T14:22:03Z",
+  "stage": "implement",
+  "note": "No remaining-plan concern detected after the implement stage.",
+  "action_taken": "logged"
+}
+```
+
+Field meanings:
+
+- `type` — the kind of adaptation. One of `reflection` (a post-stage reflection-beat note), `promotion` (a triage-confidence promotion event), or one of the existing strategy-adaptation kinds already logged today (parallel-dispatch switch, sequential fallback, worktree enablement, reassignment, branch-creation skip).
+- `at` — ISO-8601 UTC timestamp of when the adaptation was recorded.
+- `stage` — the pipeline stage the adaptation was recorded against (e.g., `implement`, `verify`, `review`). For a reflection beat this is the stage that just finished.
+- `note` — a short human-readable note. For a reflection beat this is the bounded self-critique paragraph (one paragraph, roughly 80 words or fewer).
+- `action_taken` — what the team manager did in response. One of `logged` (recorded only; no plan change), `proposed-addition` (proposed adding work through the existing mid-run plan-adjustment mechanism), `proposed-resequence` (proposed re-ordering through the same mechanism), or `escalated` (surfaced to the user — used whenever a reflection beat identifies work that should be removed, since scope reduction always requires user approval).
+
+**Write lifecycle:** The team manager appends one entry to `adaptations` each time it makes an adaptation. Reflection-beat entries are appended at each pipeline stage transition (see Phase 3 Step 5). Strategy-adaptation entries are appended when the corresponding runtime condition fires. Each entry is written immediately when the adaptation is decided, before the next dispatch proceeds.
+
+**Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `[]`. No migration is required.
+
 ## Task Description Fields
 
 Each task uses one of two description modes — never both simultaneously:

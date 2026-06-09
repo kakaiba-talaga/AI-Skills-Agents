@@ -8,6 +8,30 @@ A coordination skill that manages a team of specialized agents working on a shar
 
 `/ops` is a coordination skill that runs a full AI agent pipeline for you. Give it a goal — a spec, a bug report, a plan — and it breaks the work into tasks, assigns each to the right specialist agent (executor, verifier, code-reviewer, etc.), and drives the pipeline to completion while tracking progress and handling failures. It is the right tool when work spans multiple stages or agents (e.g., implement → verify → review → document). For a single, self-contained command ("rename this variable", "run the linter"), invoke the agent directly instead of routing through `/ops`.
 
+## Is `/ops` agentic AI?
+
+The short answer is: the *file* is not, but the *running system* is — and it qualifies as one of the more advanced forms.
+
+**The artifact vs. runtime distinction.** `SKILL.md` and its companion files are inert Markdown — prompt scaffolding with no weights, no inference, no autonomy. Sitting on disk, the skill is no more "AI" than a screenplay is a performance. "Agentic AI" is a property of the *running system*: the LLM loaded with the skill's instructions, the dispatched agents exercising their tools, and the on-disk state file tying it all together across sessions. The skill is the choreography; the model executing it is the dancer.
+
+**How `/ops` maps onto the standard criteria for agency.** The term "agentic AI" is often used loosely, but it has a reasonably stable set of dimensions in the research and engineering literature. `/ops` satisfies all of them:
+
+| Agentic criterion | How `/ops` delivers it |
+| :--- | :--- |
+| **Goal-directedness** | Takes a spec, decomposes it into a task board, and drives the pipeline to completion without being re-instructed at each step. |
+| **Autonomy** | `--autonomous` mode runs the full pipeline end-to-end — plan → implement → verify → review → document — stopping only at genuine blockers, not routine stage transitions. |
+| **Tool use / world-effecting action** | Dispatched agents edit files, run commands, write commits, and push branches. The team manager itself coordinates via state-file reads and writes. |
+| **Planning & decomposition** | Builds a dependency graph of tasks, assigns each to a specialist agent, and sequences or parallelizes them based on the graph. |
+| **Persistent memory and state** | Every run writes a mandatory state file at `.ops-state/<run-id>-board.json`. Cross-run patterns (which modules need a more capable model, where parallel dispatch causes conflicts) are recorded as project memory and recalled on future runs. |
+| **Feedback loops and self-correction** | Verification failures trigger a fix cycle (executor → verifier, up to 3 loops). Agent failures trigger debugger diagnosis, then model escalation (sonnet → opus), before reaching user escalation. |
+| **Multi-agent delegation** | The defining feature: `/ops` never implements, verifies, or reviews anything itself. All work is delegated to specialist agents via fully self-contained briefs. |
+
+**What kind of agentic system it is.** In the taxonomy of agentic architectures, `/ops` is an **orchestrator-worker** (manager-worker) system — a *meta-agent* that coordinates specialist subagents rather than acting as a single tool-using agent. This is distinct from a standalone agent that happens to call tools, and from a decentralized swarm where agents coordinate peer-to-peer. The README's own description — "the person in front of a task board, moving tickets and briefing team members — never picking up a wrench" — is the orchestrator pattern stated in plain language.
+
+**Bounded autonomy as a design choice.** `/ops` deliberately fuses deterministic rails with genuine runtime agency. The non-negotiables (state file on disk, self-contained briefs, lane boundaries that prevent review agents from editing files) are not restrictions on agency — they are what make the autonomy *trustworthy enough to run unattended*. The rails enforce correctness; the agency decides *which* agent to dispatch, *when* to parallelize, *how* to adapt when a task fails, and *whether* to escalate mid-run scope changes to the user or handle them automatically. That is the line separating "agentic" from mere "automation": runtime decisions made on observed state, rather than following a predetermined script.
+
+**The verdict.** The specification file is not AI. In execution it instantiates a higher-order agentic system — a meta-agent orchestrator — with persistent state, feedback loops, multi-agent delegation, and self-correction. Those are the properties that place it firmly in the "agentic" category, well past the simpler "tool-using" baseline.
+
 ## Words this skill uses
 
 | Term | Plain meaning |
@@ -173,6 +197,7 @@ The team manager adapts strategy at runtime instead of rigidly following the ini
 - **Model escalation** — if an agent fails twice on sonnet, the 3rd attempt runs on opus before escalating to the user. Extends the failure handling from 3 strikes to 4 (sonnet → sonnet+context → opus → user).
 - **Strategy adaptation** — switches between sequential and parallel dispatch based on throughput and file conflicts. Escalates to worktree isolation if parallel agents keep conflicting.
 - **Cross-run learning** — records patterns from completed runs (which modules need opus, where parallel dispatch causes conflicts, which agent types fit which task patterns) as project memory. Recalled patterns inform future runs as soft defaults. Patterns are stored at `~/.claude/projects/<project>/memory/feedback_team_patterns.md` — created automatically after the first run that produces learnings worth recording.
+- **Reflection beat** — at each pipeline stage transition, the team manager records a short self-critique of whether the remaining plan still holds; it can propose additions or re-sequencing, but escalates any scope reduction to the user rather than acting.
 
 ### Timing and Estimation
 
