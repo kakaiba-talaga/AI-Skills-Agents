@@ -20,7 +20,7 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 
 > **Harness note:** LB1/LB2 below are harness-agnostic. Claude Code uses `Bash` / `Agent`; Cursor uses `Shell` / `Task` plus `TodoWrite` as a **display layer only**. On Cursor, every status change must follow the Write → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)** — never update `TodoWrite` without writing the board file first. Hub-specific Cursor wording lives in `SKILL.cursor.md` (regenerate with `tooling/transform-cursor-ops.ps1 -Force`); phase companions receive tool/path rewrites on Cursor deploy per `docs/portability-guide.md`.
 
-1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`, where `<slug>` is a short lowercase, hyphen-separated label). Ensure `.ops-state/` exists (create the directory if missing). Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with Read.
+1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`, where `<slug>` is a short lowercase, hyphen-separated label). Ensure `.ops-state/` exists (create the directory if missing). Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with Read. Record `triage_confidence` on the task entry: the `level` (high/medium/low) and the `signals` the Triage Gate noted when it routed this run as trivial.
 2. **Assign agent type:** Apply the Agent Assignment Rules table (Phase 2) — same lookup, same precedence rules. No manual override.
 3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. Use `description_inline` directly to compose the Context, Scope, and Acceptance Criteria sections. The agent has no conversation history — the prompt must be fully self-contained.
 
@@ -28,7 +28,56 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 
    **Memory-injection predicate (trivial path).** The predicate (the yes/no condition that decides this) for trivial runs: trivial runs always have `attempt=1` and `prior_handoff=None`, so the sentinel-marker (a fixed hidden marker the system writes so a later step can detect it) handoff-detection branch never applies. The only gates are the override flag and the `MECHANICAL_AGENTS` list: skip injection when `--memory-inject=off` or when `agent_type` ∈ `MECHANICAL_AGENTS`; otherwise call the selector with `enable_agent_type_intersection=true` (or `false` when `--memory-inject=always`). If the selector returns non-empty bytes, render `## Project Knowledge` **between `## Context` and `## Scope`** in the brief and append the sentinel marker `<!-- project-knowledge:carried -->` at the bottom of that section. If empty bytes are returned, omit the section. The selector call references `skills/cross-memory/brief-injector.md` for the full function signature. The Cursor first-time awareness banner rule from Phase 3 Step 3 applies here as well — check `memory_inject_banner_emitted` and emit the banner once if appropriate.
 4. **Dispatch:** Set the task to `in_progress` in the board file first (`phase-dispatch.md` Step 3 item 1; **Cursor:** include Write → verify → `TodoWrite`). Then spawn the assigned agent using the Agent Dispatch Procedure in `phase-dispatch.md` Step 3 — the agent reads its own definition as its first action. **Claude Code:** `Agent` tool with frontmatter `model`. **Cursor:** `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`; use `generalPurpose` when the type is not in the built-in enum.
-5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+5. **Promotion check (low-confidence trivial only):** If `triage_confidence.level` is not
+   `"low"`, skip this step entirely and proceed to On result. If it is `"low"`, after the
+   executor returns, evaluate its diff:
+
+   - **Empty diff:** the executor produced no changes (e.g., the change was already present).
+     Do not promote — an empty diff cannot contradict the trivial assumption. Append a
+     `type: promotion` entry to the `adaptations` array with the note "triage confidence:
+     low, but empty diff — no promotion", then proceed to On result (the run completes as
+     trivial).
+   - **Non-empty diff:** run `change-analyzer` against the actual diff. This is one shared
+     dispatch per run/stage, not a second mechanism. If a security-surface trigger already
+     dispatched `change-analyzer` on this diff, consume that dispatch's output; if none has,
+     this promotion check **is** the single `change-analyzer` dispatch for the run/stage (a
+     later security-surface trigger dedups against it). Honor the at-most-once-per-run/stage
+     dedup either way. The "contradicts the trivial assumption" verdict is the team manager's
+     **interpretation** of `change-analyzer`'s existing output (its logic-modified,
+     multiple-modules, or security-sensitive classification) — it is **not** a new
+     `change-analyzer` field; `change-analyzer` is unchanged. If that read shows the diff does
+     NOT contradict the trivial assumption (genuinely trivial — typo, one-line additive,
+     doc-only), append a `type: promotion` entry noting "checked, no contradiction — no
+     promotion" and proceed to On result. If the diff DOES contradict the trivial assumption
+     (logic change, multiple modules, an unexpected surface):
+     1. Append a `type: promotion` entry to `adaptations` recording the contradiction reason.
+     2. Do NOT run On result cleanup. Keep the state file and run-id intact; do not
+        `rm _tmp_*`, do not delete `.ops-state/<run-id>-board.json`.
+     3. **Branch isolation (deferred branch on promotion):** Before any code-modifying
+        downstream stage runs, check the current branch. If it is `main`/`master` (or the run
+        otherwise lacks an isolating working branch), trigger deferred branch creation —
+        dispatch `git-master` via the standard Phase 1.5 mechanism — so the promoted pipeline
+        runs on an isolating branch. The trivial path itself does not auto-commit, but
+        downstream stages may, so the branch must exist first. This honors the standing
+        never-commit-to-base posture.
+     4. **Surface the promotion (mode-conditional):** This reuses the existing
+        interactive/autonomous stage-transition branch (`phase-dispatch.md` Step 5 — Stage
+        transition check; do not duplicate the procedure). **Interactive (default):** before
+        entering the pipeline, surface a one-line checkpoint — e.g. "Trivial run promoted to
+        full pipeline — the diff contradicts the trivial assumption (<reason>). Proceed with
+        verify, review, and document? [y/N]". **Autonomous (`--autonomous`):** promote silently
+        and rely on the logged `type: promotion` adaptation, exactly as `--autonomous` proceeds
+        through stage transitions automatically.
+     5. Promote: transition this run into the full pipeline retaining the same run-id and state
+        file. The promoted stages' briefs are derived from the trivial task's `description_inline`
+        — safe with no `plan_file`, because `phase-dispatch.md` Step 3 resolves `description_inline`
+        directly (no `description_ref`/`plan_file` dependency). Continue forward only — verify,
+        then the security-review stage if scheduled, then deslop, review, and document on the
+        already-produced diff. Do NOT backfill Phase 1a or Phase 2.5. LB1/LB2 hold
+        (Non-negotiable #9). See the promotion transition shape below.
+6. **On result:** If this run was promoted in the preceding Promotion check step, skip this step entirely —
+   cleanup, the trivial one-line summary, and completion are owned by the pipeline's Phase 4.
+   Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
 

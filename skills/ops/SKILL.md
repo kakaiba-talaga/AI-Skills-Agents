@@ -90,7 +90,7 @@ All task board operations use the state file as the primary store. **Every mutat
 6. **Cost is opt-in** — skip cost computation unless `--cost` flag set or user asked. Do not compute by default.
 7. **Timing section mandatory** — always include Timing in every dashboard display (mid-run and completion).
 8. **Dashboard gating** — runs with ≤ 2 non-internal tasks: render full dashboard at completion only; stage transitions use one-liner `✓ [stage] complete (Xs)`. Always render full dashboard on `/ops status`.
-9. **Trivial route still enforces LB1 and LB2** — even on the trivial path, a state file is created and verified on disk (LB1) and the agent brief is fully self-contained (LB2). The triage gate never bypasses these invariants.
+9. **Trivial route still enforces LB1 and LB2** — even on the trivial path, a state file is created and verified on disk (LB1) and the agent brief is fully self-contained (LB2). The triage gate never bypasses these invariants. A run promoted from the trivial route to the full pipeline keeps its existing run-id and state file; LB1 (a verified state file on disk) and LB2 (a fully self-contained agent brief) continue to hold across the promotion exactly as on any other pipeline run.
 10. **Nested skill returns are mid-loop events.** A nested-skill return is a **mid-loop checkpoint**, never a terminal event — never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. Run this ritual around every nested-skill invocation (e.g., `/deslop`, `/clickup`):
 
     **Write-before** (immediately before invoking the nested skill):
@@ -140,6 +140,32 @@ Classify the invocation before reading any further. Apply the first matching rul
 **NOT trivial:** "add a new agent for X" (multiple files + stages), "refactor the foo module" (code across modules), "investigate this bug" (implies debugger→executor→verifier chain).
 
 If the predicate (the yes/no condition that decides this) is ambiguous — when you cannot determine with confidence that ALL trivial conditions are met — route to `pipeline`.
+
+**Record confidence and signals.** On every classification — `trivial` or `pipeline` —
+record a `triage_confidence` on the task: a `level` of `high`, `medium`, or `low`, plus
+a short `signals` list naming the observations that drove the call (e.g., "single-sentence
+scope", "touches a code module", "implies a verify-review chain"). This is categorical, not
+numeric. Record it the same way Phase 1a renders its tier decision with a signals line. The
+record is instrumentation: it does not change routing by itself.
+
+**Low-confidence trivial promotion.** When the gate classified `trivial` at `low`
+confidence, do not trust the call blindly. After the executor returns its diff, run the
+post-executor `change-analyzer` carve-out (see Edge Cases — Trivial/mechanical changes)
+against the actual diff. "Contradicts the trivial assumption" is the team manager's read
+of `change-analyzer`'s existing output — its logic-modified, multiple-modules, or
+security-sensitive classification — not a new analyzer field. If the diff contradicts the
+trivial assumption — it touches logic, multiple modules, or a surface a trivial change
+should not — promote the run to the full pipeline: keep the same run-id and state file,
+skip the trivial cleanup, and continue forward through verify, then the security-review
+stage if scheduled, then deslop, review, and document on the already-produced diff. In
+**interactive** mode, surface a one-line promotion checkpoint before entering the pipeline
+(reuse the existing stage-transition checkpoint); in **autonomous** mode, promote silently
+and rely on the logged adaptation. If the run is on `main`/`master` (or otherwise lacks an
+isolating working branch), trigger deferred branch creation before any code-modifying
+downstream stage. Do not re-run Phase 1a or Phase 2.5 — the promotion runs forward only.
+`high`- and `medium`-confidence `trivial` classifications are not checked and never
+promote. Log every promotion (and every low-confidence-trivial run that was checked but
+not promoted) in the `adaptations` array with `type: promotion`.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/phase-intake.md` for Phase 1 intake (starting-point table, trivial dispatch including **LB1 — mandatory**, save subcommand, brainstorm gate, plan persistence, Phase 1a, Phase 1.5, Phase 2 task board creation, and Agent Assignment Rules). If the file is missing, stop — cannot proceed without intake procedures.
 
@@ -471,6 +497,16 @@ With `ralph`, wraps the workflow in a `/ralph-loop` persistence loop (plan → i
 **Trivial/mechanical changes:** For trivial/mechanical fixes (no behavior change, no new logic — e.g., a typo fix, adding a line, removing duplicates), skip verify/deslop/review stages. **Always log it as an adaptation**: "Adapted: skipped verify/deslop/review stages — all changes are trivial mechanical fixes." Never silently skip stages. **Exception — security surface:** trivial-skip may NOT short-circuit a diff that plausibly touches a security surface (security surface = code touching auth, secrets/credential handling, input validation, cryptography, file or network I/O, or permissions configuration). The team manager does not classify security sensitivity — it routes. If a trivial diff touches any file that could plausibly match a security surface (when in any doubt, route to the classifier), the team manager **must dispatch `change-analyzer`** before applying the skip, then honor `change-analyzer`'s `security-review` recommendation per the stage-transition rule below. Only a diff that `change-analyzer` clears (or an unambiguously non-sensitive trivial change, such as a typo fix in a plain prose `.md` file) may bypass this routing. Log the routing to `change-analyzer` as an adaptation. `--security-review=off` suppresses the security-review output of this routing.
 
 **Per-stage conditional skip:** When the trivial skip does not apply, dispatch a **change-analyzer** agent (see `~/.claude/agents/change-analyzer.md`) with the current diff to get per-stage run/skip recommendations for verify, deslop, review, and security-review. When `change-analyzer` returns `security-review: run`, dispatch `security-reviewer` before deslop/code-review, consistent with the pipeline order shown above. This decision is made **post-executor against the actual diff** — it is NOT evaluated at Phase 2.5b, which fires pre-executor on planned `files_touched`. Apply all recommendations subject to the idempotency rule: `security-reviewer` is dispatched at most once per run/stage regardless of how many inputs recommend it.
+
+The same post-executor `change-analyzer` read also serves the low-confidence-trivial
+promotion check (see Triage Gate — Low-confidence trivial promotion). The two checks
+share a single dispatch per run/stage; they never fire two. The relationship is
+conditional: if a security-surface trigger already dispatched `change-analyzer` on this
+diff, the promotion check consumes that dispatch's output; if none has, the promotion
+check **is** the single `change-analyzer` dispatch for this run/stage, and any later
+security-surface trigger dedups against it. Either way `change-analyzer` is invoked at
+most once per run/stage, no matter how many of its outputs (security-review routing,
+stage skips, the team manager's contradiction read) are consumed.
 
 **Conflicting agent outputs:** If two agents produce conflicting changes (e.g., both modify a shared config), flag the conflict to the user rather than picking a winner.
 

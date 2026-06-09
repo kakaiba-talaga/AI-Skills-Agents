@@ -229,7 +229,7 @@ The team manager understands the full agent pipeline:
 [interviewer] → [architect] → planner → project-scoper → critic → executor → verifier → [security-reviewer] → [deslop] → code-reviewer → documentor
 ```
 
-_Brackets indicate optional/automatic stages. Architect runs when the spec involves significant design decisions. By default, the security reviewer runs only when the task carries a security content signal **or** the diff touches security-sensitive paths (auto-detected post-executor by `change-analyzer`); `--security-review=off` disables it entirely; `--security-review=always` runs it on every stage._
+_Brackets indicate optional/automatic stages. Architect runs when the spec involves significant design decisions. By default, the security reviewer runs only when the task carries a security content signal **or** the diff touches security-sensitive paths (auto-detected post-executor by `change-analyzer`); `--security-review=off` disables it entirely; `--security-review=always` runs it on every stage. A trivial-route run the gate classified at low confidence is auto-promoted to the full pipeline when its post-executor diff contradicts the trivial assumption, keeping its run-id and state file and continuing forward through verify, review, and document._
 
 For deployment workflows, the `ssh-executor` can be inserted between executor and verifier:
 

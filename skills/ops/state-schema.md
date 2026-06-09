@@ -40,6 +40,7 @@ The state file JSON structure:
       "model_used": "opus",
       "attempts": 1,
       "adaptation": null,
+      "triage_confidence": null,
       "handoff_file": null,
       "_internal": false
     },
@@ -61,6 +62,7 @@ The state file JSON structure:
       "model_used": null,
       "attempts": 0,
       "adaptation": null,
+      "triage_confidence": null,
       "handoff_file": null,
       "_internal": false
     }
@@ -172,6 +174,43 @@ Field meanings:
 
 **Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `[]`. No migration is required.
 
+### triage_confidence
+
+Per-task field recording how confident the Triage Gate was when it classified the
+run, and which signals drove the call. Present on the task created at triage time
+(trivial-path runs carry it on their single task entry; pipeline runs carry it on
+the task that anchors the classification).
+
+**Type:** `null` or object.
+
+**When set (object):**
+
+```json
+{
+  "level": "low",
+  "signals": [
+    "single-sentence scope but touches a code module",
+    "no explicit `plan` request, but wording implies a multi-file edit"
+  ]
+}
+```
+
+Field meanings:
+
+- `level` — the gate's confidence in the classification. One of `high`, `medium`,
+  or `low`. There is no numeric score; the gate reasons categorically, the same way
+  Phase 1a renders its tier decision with a signals line.
+- `signals` — a list of short human-readable strings naming the observations that
+  drove the classification. Mirrors the signal prose Phase 1a already displays.
+
+A `low`-confidence `trivial` classification is the only case that can trigger a
+post-executor promotion check. The promotion event itself is not stored here — it
+is appended to the run-level `adaptations` array with `type: promotion`.
+
+**Backward compatibility:** Additive field. State files written before this field was
+introduced will not have it; the team manager treats absence as `null`. No migration
+is required.
+
 ## Task Description Fields
 
 Each task uses one of two description modes — never both simultaneously:
@@ -214,6 +253,7 @@ Used when `plan_file` is null — trivial-path runs or runs without a persisted 
   "model_used": null,
   "attempts": 0,
   "adaptation": null,
+  "triage_confidence": null,
   "handoff_file": null,
   "_internal": false
 }
