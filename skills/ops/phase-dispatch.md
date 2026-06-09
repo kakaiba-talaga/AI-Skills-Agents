@@ -451,6 +451,15 @@ Orphan detection is handled by the **work-verifier** agent (see `~/.claude/agent
 
 **Step 5 — Stage transition check.** When all tasks in a pipeline stage finish:
 
+**Reflection beat (pipeline route only).** Before rendering the stage summary and dashboard, perform one short self-critique: given what the stage that just finished produced, does the remaining plan still hold — is any downstream task now redundant, mis-sequenced, or under-specified? Write the answer as a single bounded paragraph (one paragraph, roughly 80 words or fewer) and append it to the run-level `adaptations` array with `type: reflection`, the finishing stage, and an `action_taken` value. Do this exactly once per stage transition. The beat runs only on the `pipeline` route — the trivial route has no stage transitions, so it never fires there. **The beat does NOT fire after the final stage:** once the last stage finishes there is no remaining plan to reflect on, so reflecting would only produce a vacuous "nothing left" entry. Fire it only on transitions *into* a subsequent stage. If nothing is flagged on a firing transition, still write a single-line "no remaining-plan concern" entry with `action_taken: logged`, so the log shows the beat ran.
+
+The beat is advisory and additive-only. Branch on what it surfaces:
+
+- **Addition or re-sequencing** — if the beat finds work to add or a step to re-order, route it through the existing Mid-run plan adjustment mechanisms (see Adaptability) and record the entry with `action_taken: proposed-addition` or `proposed-resequence`. Both are already-allowed adaptations. **A re-sequence may only re-order tasks — it must never orphan, drop, or cancel a task.** A re-sequence that would remove a task from the plan is a scope reduction in disguise: treat it as a reduction and escalate (next branch) rather than recording it as `proposed-resequence`.
+- **Reduction** — if the beat finds work that should be removed (a task now redundant), do not remove or mark-cancelled any task. Escalate to the user and record the entry with `action_taken: escalated`. Scope reduction always requires user approval (see the Adaptability guardrail).
+
+These two branches are mutually exclusive for a given finding. The beat only writes the note and, at most, proposes through the existing mechanism or escalates. It does not call the planner, does not re-score estimates, and does not mutate the dependency graph itself.
+
 | Mode | Behavior |
 | :--- | :--- |
 | Interactive (default) | Show stage summary + dashboard (`phase-completion.md`; full if ≥ 3 tasks; one-liner per task if ≤ 2). Ask user to proceed, adjust, or stop. |
