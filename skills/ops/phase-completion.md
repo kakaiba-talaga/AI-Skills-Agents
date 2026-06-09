@@ -31,7 +31,7 @@ When every task is `completed`:
    > **Reference:** See `~/.claude/skills/ops/cost-tracking.md` for token estimation heuristics, model pricing, and cost dashboard format. If the file is missing, proceed without cost tracking.
 
 6. Display the final task board (with per-task durations).
-7. Summarize: what was accomplished, how many tasks, retries, escalations, the reflection-beat count (number of `adaptations` entries with `type: reflection` recorded this run), total time (and estimated cost if `--cost` was set).
+7. Summarize: what was accomplished, how many tasks, retries, escalations, the reflection-beat count (number of `adaptations` entries with `type: reflection` recorded this run), the re-plan count (number of `adaptations` entries with `type: replan` recorded this run), total time (and estimated cost if `--cost` was set).
 8. List all files changed across all agents.
 9. **Clean up ephemeral (short-lived; this run only) temp files, handoffs, state, and advisory preflight run artifacts.**
 
@@ -96,7 +96,7 @@ Health indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2
 - (show checklist if preflight was run this session)
 
 ### Adaptations
-- (list any mid-run adaptations made — strategy switches, plan adjustments, and reflection-beat notes from the `adaptations` log; reflection-beat entries have `type: reflection` and show the finishing stage plus the `action_taken`)
+- (list any mid-run adaptations made — strategy switches, plan adjustments, and reflection-beat notes from the `adaptations` log; reflection-beat entries have `type: reflection` and show the finishing stage plus the `action_taken`; re-plan entries have `type: replan` and show the finishing stage plus the `action_taken` (`logged`, `replanned`, or `replan-escalated`))
 
 ### Escalations
 - (none)
