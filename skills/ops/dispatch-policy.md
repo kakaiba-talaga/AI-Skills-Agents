@@ -37,7 +37,7 @@ When dispatching a parallel batch, apply the foreground/background decision per-
 
 ## Interaction with Health Monitoring
 
-Background agents are subject to health monitoring by the team manager. The team manager checks background agent health at every check-in event — after foreground agents return, after background completion notifications, and before responding to user messages. Emit `⚠️ SLOW` when elapsed exceeds 1.5× estimate and `🔴 OVERRUN` when elapsed exceeds 2.5× estimate.
+Background agents are subject to health monitoring by the team manager. The team manager checks background agent health at every check-in event — after foreground agents return, after background completion notifications, and before responding to user messages. Emit `⚠️ SLOW` when elapsed exceeds 1.5× estimate and `🔴 OVERRUN` when elapsed exceeds 2.5× estimate. A sustained `OVERRUN` may also trigger the health-action sub-step defined in Phase 3 Step 4 of `phase-dispatch.md`.
 
 ## Interaction with Worktree Isolation
 
