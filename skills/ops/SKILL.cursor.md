@@ -29,6 +29,7 @@ Parse arguments as follows:
 - `--corpus-search` / `--corpus-search=off` — Phase 2.5c: fire `corpus-search` on every eligible task, or disable for the run.
 - `--memory-inject=off|auto|always` — control `## Project Knowledge` injection into agent briefs (default `auto`).
 - `--security-review=off|always` — controls `[security-reviewer]` stage auto-fire. Absent: the stage fires when the task carries a security content signal or `change-analyzer` returns `security-review: run` on the post-executor diff. `off`: never auto-fire `security-reviewer` this run. `always`: auto-fire `security-reviewer` on every stage transition. Registered here alongside the other global run flags rather than a phase sub-file because it gates a pipeline stage, not a Phase-2.5 preflight.
+- `--no-adaptation-memory` — skip the Phase 4 capture step that writes this run's adaptations to the durable cross-run ledger. The ledger captures by default (gated by the write-threshold — a run with no actionable adaptation writes nothing); this flag is the opt-out, suppressing the capture for the run.
 - `--tdd` — opt-in mode: executor follows the RED-GREEN-REFACTOR discipline from `skills/ops/tdd-discipline.md`. Verifier adds a TDD-discipline check.
 - `ralph` — wrap the entire workflow in a `/ralph-loop` persistence loop (see Ralph Integration).
 
@@ -42,7 +43,7 @@ If the argument is `help`, read and display the help card:
 
 ```text
 Commands: /ops <spec> | plan | execute | status | resume | save | ralph "<goal>" | help
-Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log | --security-review=off|always
+Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log | --security-review=off|always | --no-adaptation-memory
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor
 Retry: 3 attempts with narrowed scope and debugger diagnosis, then escalate to user

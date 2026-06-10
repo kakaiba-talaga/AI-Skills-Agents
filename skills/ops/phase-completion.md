@@ -6,7 +6,7 @@
 
 When every task is `completed`:
 
-**If `tasks.length == 1` (single-task run):** collapse Phase 4 to steps 1, 2, 9, and 10 only. Skip steps 3 (final verification — redundant for 1 task), 4 (timing summary — trivially one line; include in step 10 summary instead), 5 (cost — opt-in per Non-negotiable #6), 6 (final task board — redundant with the step 10 summary), 7 (narrative summary — fold into step 10), 8 (file list — include in step 10). For single-task runs, step 10 should be one concise paragraph: what was done, the file(s) changed, the actual duration, and next steps.
+**If `tasks.length == 1` (single-task run):** collapse Phase 4 to steps 1, 2, 9, and 10 only — plus the ledger capture (step 7a). Skip steps 3–8 (include timing and file list in step 10 instead). The collapsed path runs the **step-7a ledger capture before step 9** deletes the board. The same threshold gate applies: write only when the run produced an actionable adaptation (an actionable `triage_confidence` counts); a run with nothing actionable skips the write. Step 10 is one concise paragraph: what was done, file(s) changed, actual duration, and next steps.
 
 **Otherwise (multi-task run):** execute all 10 steps as specified below.
 
@@ -31,7 +31,17 @@ When every task is `completed`:
    > **Reference:** See `~/.claude/skills/ops/cost-tracking.md` for token estimation heuristics, model pricing, and cost dashboard format. If the file is missing, proceed without cost tracking.
 
 6. Display the final task board (with per-task durations).
-7. Summarize: what was accomplished, how many tasks, retries, escalations, the reflection-beat count (number of `adaptations` entries with `type: reflection` recorded this run), the re-plan count (number of `adaptations` entries with `type: replan` recorded this run), the preflight-yield count (number of `adaptations` entries with `type: preflight-yield` recorded this run; optionally broken down by yield value (`changed-brief` / `confirmed` / `no-yield`) or by `query_type` when the sub-field is present), the health-action count (number of `adaptations` entries with `type: health-action` recorded this run), total time (and estimated cost if `--cost` was set).
+7. Summarize: what was accomplished, how many tasks, retries, escalations, the reflection-beat count (number of `adaptations` entries with `type: reflection` recorded this run), the re-plan count (number of `adaptations` entries with `type: replan` recorded this run), the preflight-yield count (number of `adaptations` entries with `type: preflight-yield` recorded this run; optionally broken down by yield value (`changed-brief` / `confirmed` / `no-yield`) or by `query_type` when the sub-field is present), the health-action count (number of `adaptations` entries with `type: health-action` recorded this run), the applied-prior count (number of `adaptations` entries with `type: prior-applied` recorded this run), total time (and estimated cost if `--cost` was set).
+
+   **7a. Capture the run's adaptations to the durable ledger.** After computing the per-type counts above, and **before** step 9 deletes this run's board file, write a per-run rollup record to the durable adaptation ledger in the project memory directory (`~/.claude/projects/<project>/memory/`). The record carries the `run_id`, the project slug, the per-`type` adaptation counts just computed (`reflection` / `promotion` / `replan` / `preflight-yield` / `health-action` / `prior-applied`), the file-pairs that forced any parallel-to-sequential adaptation this run, the plan-validation tier, and whether a critic REVISE occurred (see `state-schema.md` → adaptation ledger for the record shape). The write:
+
+   - **Is threshold-gated.** Skip the write entirely when the run produced **zero actionable adaptations** — a run of only `no-concern` reflections has nothing worth persisting. Capture only when the run made at least one actionable adaptation.
+   - **Is redacted unconditionally and non-interactively.** Run the record body through **Passes A and B** of the redaction pipeline (`skills/cross-memory/redaction.md` — the `<private>` strip pass and the regex denylist pass) before writing. These two passes run non-interactively: the confirmation gate is **not** invoked, because this is a default-on, no-prompt write. There is no opt-out from redaction on this persistent file.
+   - **Is keyed by project slug.** The record is stored under this project's slug; a record never applies to another project.
+   - **Applies the rolling 10-run window on write.** Append the new record, then trim the ledger to the most recent 10 runs for this project.
+   - **Writes the dedicated ledger file directly.** This is a non-interactive write to the dedicated ledger file — it does not route through `/cross-memory save`.
+
+   **Hard ordering invariant:** the capture writes the ledger **before** this run's board file is deleted in step 9. There is no path in which the board is deleted before the ledger is written — the ledger derives entirely from the board's `adaptations` and `triage_confidence`, so a delete-first ordering would persist nothing. The `--no-adaptation-memory` flag skips this capture step entirely for the run.
 8. List all files changed across all agents.
 9. **Clean up ephemeral (short-lived; this run only) temp files, handoffs, state, and advisory preflight run artifacts.**
 
@@ -48,6 +58,7 @@ When every task is `completed`:
    **Never delete:**
    - `docs/plan/` — plan documents are persistent deliverable artifacts; provenance (origin — which run created it) does not make them ephemeral
    - `docs/ops-dispatch-log.md` — persistent audit trail written only when `--dispatch-log` is set (see `dispatch-log.md`)
+   - The durable adaptation ledger in the project memory directory (`~/.claude/projects/<project>/memory/`) — the cross-run learning corpus; it must survive the board's deletion, which is the entire reason it lives outside the per-run board
    - Any other run's handoff subdirectory under `.agents/handoffs/` or state files under `.ops-state/`
    - `.code-intel/index.sqlite` — persistent shared infrastructure
    - `.code-intel/index.sqlite-wal` and `.code-intel/index.sqlite-shm` — WAL/SHM sidecars (`.sqlite-wal` and `.sqlite-shm` — SQLite companion files; deleting them can corrupt the database)
@@ -96,7 +107,7 @@ Health indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2
 - (show checklist if preflight was run this session)
 
 ### Adaptations
-- (list any mid-run adaptations made — strategy switches, plan adjustments, and reflection-beat notes from the `adaptations` log; reflection-beat entries have `type: reflection` and show the finishing stage plus the `action_taken`; re-plan entries have `type: replan` and show the finishing stage plus the `action_taken` (`logged`, `replanned`, or `replan-escalated`); preflight-yield entries have `type: preflight-yield` and show the answering preflight kind (the `query_type`, e.g. `find_callers` or `evidence_search`) plus the categorical yield value (`changed-brief`, `confirmed`, or `no-yield`); health-action entries have `type: health-action` and show the affected task plus the `action_taken` (`diagnosed-alive`, `re-dispatched`, or `re-dispatch-escalated`))
+- (list any mid-run adaptations made — strategy switches, plan adjustments, and reflection-beat notes from the `adaptations` log; reflection-beat entries have `type: reflection` and show the finishing stage plus the `action_taken`; re-plan entries have `type: replan` and show the finishing stage plus the `action_taken` (`logged`, `replanned`, or `replan-escalated`); preflight-yield entries have `type: preflight-yield` and show the answering preflight kind (the `query_type`, e.g. `find_callers` or `evidence_search`) plus the categorical yield value (`changed-brief`, `confirmed`, or `no-yield`); health-action entries have `type: health-action` and show the affected task plus the `action_taken` (`diagnosed-alive`, `re-dispatched`, or `re-dispatch-escalated`); prior-applied entries have `type: prior-applied` and show which consumer fired (e.g. `tier-upgrade` or `file-conflict`) plus what default it changed)
 
 ### Escalations
 - (none)

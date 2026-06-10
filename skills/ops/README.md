@@ -128,6 +128,7 @@ The team manager auto-detects which agent to assign based on task content:
 | `--code-intel[=off]` | Phase 2.5b: fire `code-intel` on every code-modifying task (`--code-intel`) or disable it (`=off`) |
 | `--corpus-search[=off]` | Phase 2.5c: fire `corpus-search` on every eligible task or disable it (`=off`) |
 | `--memory-inject=off\|auto\|always` | Control `## Project Knowledge` injection into agent briefs (default `auto`) |
+| `--no-adaptation-memory` | Skip the Phase 4 capture that writes this run's adaptations to the durable cross-run ledger (capture is on by default, threshold-gated) |
 | `ralph` | Wrap workflow in a `/ralph-loop` for iterative metric-driven goals |
 
 ## Key Features
@@ -200,6 +201,7 @@ The team manager adapts strategy at runtime instead of rigidly following the ini
 - **Reflection beat** — at each pipeline stage transition, the team manager records a short self-critique of whether the remaining plan still holds; it can propose additions or re-sequencing, but escalates any scope reduction to the user rather than acting.
 - **Dynamic re-planning** — when a finished stage materially invalidates two or more remaining tasks (making them impossible, redundant, or falsely-assumed), the team manager dispatches the planner on the unfinished task graph, routes the revision through the critic REVISE loop, and rewrites the remaining board only on a critic-accepted result that drops no scope; scope-dropping revisions and non-convergence escalate to the user.
 - **Health-monitoring that acts** — beyond displaying `⚠️ SLOW` / `🔴 OVERRUN` / `👻 ORPHAN?` flags, the orchestrator dispatches the read-only `work-verifier` on a sustained `OVERRUN` to diagnose the agent's work-state; only on a confirmed orphan (orphan-shaped work-state plus no live agent signal) does it re-dispatch once via the existing retry-then-escalate rule — a slow-but-alive agent is never re-dispatched.
+- **Adaptation memory** — at Phase 4 completion (before the per-run board is deleted), the team manager appends a rollup record to a durable, per-project adaptation ledger at `~/.claude/projects/<project>/memory/`. The ledger captures per-type adaptation counts, file-conflict pairs, plan-validation tier, and whether a critic REVISE occurred. It holds a rolling 10-run window, is gitignored, and is never cleaned up at Phase 4 — it is the corpus future runs draw on. Capture is threshold-gated: runs that produce no actionable adaptation write nothing. Use `--no-adaptation-memory` to skip the capture for a run.
 
 ### Timing and Estimation
 

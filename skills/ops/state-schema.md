@@ -164,7 +164,7 @@ This run-level `adaptations` array is distinct from the existing per-task `adapt
 
 Field meanings:
 
-- `type` — the kind of adaptation. One of `reflection` (a post-stage reflection-beat note), `promotion` (a triage-confidence promotion event), `replan` (a mid-run re-plan of the remaining task graph), `preflight-yield` (a post-dispatch annotation recording whether a hypothesis-added preflight changed the brief), `health-action` (a sustained-`OVERRUN` diagnose-and-recover event — the orchestrator dispatched the read-only diagnostician, evaluated the work-state verdict, and either confirmed the agent alive or recovered a confirmed orphan), or one of the existing strategy-adaptation kinds already logged today (parallel-dispatch switch, sequential fallback, worktree enablement, reassignment, branch-creation skip).
+- `type` — the kind of adaptation. One of `reflection` (a post-stage reflection-beat note), `promotion` (a triage-confidence promotion event), `replan` (a mid-run re-plan of the remaining task graph), `preflight-yield` (a post-dispatch annotation recording whether a hypothesis-added preflight changed the brief), `health-action` (a sustained-`OVERRUN` diagnose-and-recover event — the orchestrator dispatched the read-only diagnostician, evaluated the work-state verdict, and either confirmed the agent alive or recovered a confirmed orphan), `prior-applied` (a run-start event recording that a learned prior changed a default this run — which consumer fired and what default it changed), or one of the existing strategy-adaptation kinds already logged today (parallel-dispatch switch, sequential fallback, worktree enablement, reassignment, branch-creation skip).
 - `at` — ISO-8601 UTC timestamp of when the adaptation was recorded.
 - `stage` — the pipeline stage the adaptation was recorded against (e.g., `implement`, `verify`, `review`). For a reflection beat this is the stage that just finished.
 - `note` — a short human-readable note. For a reflection beat this is the bounded self-critique paragraph (one paragraph, roughly 80 words or fewer).
@@ -211,6 +211,66 @@ is appended to the run-level `adaptations` array with `type: promotion`.
 **Backward compatibility:** Additive field. State files written before this field was
 introduced will not have it; the team manager treats absence as `null`. No migration
 is required.
+
+### adaptation ledger
+
+A **persistent, cross-run learning file** — distinct from every field above. Each field
+above lives in the per-run board (`.ops-state/<run-id>-board.json`), which is deleted at
+Phase 4 completion. The adaptation ledger lives in the **project memory directory**
+(`~/.claude/projects/<project>/memory/`, alongside the timing-patterns memory file) and is
+**not part of the per-run board**. Its lifecycle is the inverse of the board's: the board is
+ephemeral and deleted when the run ends; the ledger **survives that deletion** and accrues
+across runs. The file sits outside the repository tree, is **gitignored**, and is **never
+cleaned up** at Phase 4 — it is the corpus future runs learn from.
+
+**Per-run rollup record shape.** The ledger does not store raw per-event prose. At completion,
+the team manager appends **one rollup record per run**, keyed by project. Each record names
+six fields:
+
+- `run_id` — the completing run's `run_id`.
+- `project` — the project slug the run executed against. A record learned in one project never
+  applies in another; the ledger is per-project-isolated.
+- `adaptation_counts` — the per-`type` adaptation counts already computed for the Phase 4
+  summary: `reflection`, `promotion`, `replan`, `preflight-yield`, `health-action`, and
+  `prior-applied`.
+- `file_conflict_pairs` — the file-pairs that forced a parallel-to-sequential adaptation this
+  run (the pairs a future run consults when pre-sequencing a known-conflicting dispatch).
+- `plan_validation_tier` — the plan-validation tier this run ran at.
+- `critic_revise` — whether a critic REVISE occurred this run.
+
+**Window and occurrence bar.** The ledger holds a **rolling 10-run window** per project — on
+write, the newest record is appended and the file is trimmed to the most recent 10 runs. A
+pattern is recorded the first time it appears but is treated as a learnable signal only once it
+has been observed in **at least 2 runs** within the window; a pattern seen in a single run is
+recorded and waits, never acting on one-run noise. This ≥2-occurrence rule is a forward-looking
+constraint: it specifies how the deferred read-half (not yet shipped) must evaluate the ledger
+when it applies learned priors to future runs.
+
+**Example record:**
+
+```json
+{
+  "run_id": "20260610-143002-a1b2",
+  "project": "ai-skills-agents",
+  "adaptation_counts": {
+    "reflection": 4,
+    "promotion": 1,
+    "replan": 0,
+    "preflight-yield": 2,
+    "health-action": 0,
+    "prior-applied": 0
+  },
+  "file_conflict_pairs": [
+    ["skills/ops/SKILL.md", "skills/ops/phase-completion.md"]
+  ],
+  "plan_validation_tier": 2,
+  "critic_revise": false
+}
+```
+
+**Backward compatibility:** The ledger is a new file. A project with no ledger yet has nothing
+to read; the first run that produces an actionable adaptation creates it. Absence of the file is
+treated as an empty corpus. No migration is required.
 
 ## Task Description Fields
 
