@@ -75,7 +75,7 @@ Past user incident: the team manager wrapped its dashboard output in fences and 
 ### Active
 - <agent> → Task #N: "<subject>" (in_progress, Xs elapsed) [health indicator]
 
-Health indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2.5×), 🔴 OVERRUN (> 2.5×), 👻 ORPHAN? (elapsed > agent-type timeout, no completion received)
+Health indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2.5×), 🔴 OVERRUN (> 2.5×; a sustained OVERRUN may trigger a diagnose-and-recover action — see Phase 3 Step 4 in `phase-dispatch.md`), 👻 ORPHAN? (elapsed > agent-type timeout, no completion received)
 
 ### Task Board
 | # | Task | Agent | Status | Est. | Actual | Blocked By |
