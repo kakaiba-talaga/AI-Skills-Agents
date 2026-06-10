@@ -8,10 +8,15 @@ Before each code-modifying executor dispatch in Phase 3 Step 2, the team manager
 
 #### Trigger predicate
 
-Evaluate the predicate `(ii) OR (iv)` against each code-modifying task at Phase 3 Step 2, before composing the executor brief:
+Evaluate the predicate `(ii) OR (iv) OR (vi)` against each code-modifying task at Phase 3 Step 2, before composing the executor brief:
 
 - **(ii)** `files_touched > 1` — the task touches more than one file.
 - **(iv)** The task brief contains at least one *risk keyword* (case-insensitive match): `refactor`, `rename`, `delete`, `breaking change`, `migrate`, `deprecate`, `extract`, `move`.
+- **(vi) Information-need hypothesis** — before evaluating the keyword/structural terms above, the orchestrator forms a single categorical hypothesis against the task's **planned** `files_touched` and brief contents (the pre-executor moment): *"I lack the answer that `<query_type>` would give, and that gap is a risk for this task."* The `<query_type>` is bounded to the six code-intel query types listed under the dispatch contract (`find_definition`, `find_callers`, `find_dependencies`, `impact_analysis`, `find_implementations`, `execution_flow`) — no new query type is invented, and no numeric threshold is used; the judgment is categorical. The hypothesis term fires `code-intel` only when **(a)** a genuine, risk-relevant code-intel `query_type` would answer the gap, **and (b)** neither `(ii)` nor `(iv)` matched for this task. It can only *add* the dispatch the keyword/structural path missed.
+
+The keyword/structural predicate `(ii) OR (iv)` is retained **unchanged as an unconditional floor**: any match on `(ii)` or `(iv)` fires `code-intel` regardless of the hypothesis verdict. The wiring is `(ii) OR (iv) OR (vi)` — an `OR`, never an `AND`, never a veto. The hypothesis term `(vi)` can never suppress, gate, or remove a dispatch the keyword/structural path would have fired.
+
+**Dedup invariant (at most once per task/stage).** For a single task/stage, `code-intel` fires **at most once**. The hypothesis term `(vi)` is a no-op when a code-intel preflight already fired for this task/stage **by any path** — the keyword/structural path (`(ii)` or `(iv)`), the `--code-intel=always` flag, or a dual preflight sequence. In all those cases the hypothesis is already answered by the in-flight or returned report, so `(vi)` adds nothing. The hypothesis term only adds a dispatch when no code-intel preflight fired by any path.
 
 If the predicate matches, dispatch `code-intel` synchronously (wait for the report path) before composing the executor brief. Synchronous dispatch closes the door on race conditions with mid-Phase-3 work.
 
@@ -22,7 +27,7 @@ If the predicate matches, dispatch `code-intel` synchronously (wait for the repo
 
 #### Dispatch trigger point
 
-The team manager dispatches `code-intel` during **Phase 3 Step 2 (Batch parallel work), before each code-modifying executor dispatch**. The team manager evaluates `(ii) OR (iv)` against the task's `files_touched` and brief contents at that moment; if matched (or `--code-intel` is set), dispatches `code-intel` synchronously and waits for the JSON response before composing the executor brief.
+The team manager dispatches `code-intel` during **Phase 3 Step 2 (Batch parallel work), before each code-modifying executor dispatch**. The team manager evaluates `(ii) OR (iv) OR (vi)` against the task's `files_touched` and brief contents at that moment; if matched (or `--code-intel` is set), dispatches `code-intel` synchronously and waits for the JSON response before composing the executor brief. A hypothesis-added dispatch (matched via `(vi)` alone) uses the **same** JSON-fenced brief and the **same** per-call hard caps as any other Phase 2.5b dispatch (`max_results`, `max_depth`, `max_files`, `max_wall_clock_s` below) verbatim — no new caps and no cap bypass — with the same `output_mode: "disk"` and the same synchronous, advisory, never-blocking behavior: no mode branch and no per-dispatch checkpoint.
 
 #### First-time index build
 
@@ -70,6 +75,16 @@ For `output_mode: "disk"` (the orchestrator default), `code-intel` returns this 
 
 For `output_mode: "inline"`: includes `report_inline` (full Markdown), omits `report_path`. For `output_mode: "both"`: both populated, but `report_inline` carries only the summary and path — not duplicate full content.
 
+#### Yield record (post-return annotation)
+
+After a hypothesis-added `code-intel` dispatch returns, the team manager records one entry in the run-level `adaptations` array (see `state-schema.md`) with `type: preflight-yield`, the categorical yield value, and the answering `query_type` sub-field. The yield value is judged against the returned report versus the brief the orchestrator then composes — the post-dispatch moment — and is one of three categories:
+
+- `changed-brief` — the returned evidence altered what the orchestrator wrote into the executor brief.
+- `confirmed` — the evidence was consulted and matched the orchestrator's prior assumption (a useful negative signal).
+- `no-yield` — the preflight returned nothing the orchestrator used, **or** the dispatch was refused or returned empty. A refused or empty-report dispatch records `no-yield` with the refusal/empty reason in the `note`.
+
+The team manager **records yield only; it never reads prior yield to decide a dispatch**. This annotation is bookkeeping for a future capability to learn by category; nothing in Phase 2.5b consults it.
+
 #### State cache invalidation
 
 After `code-intel` returns from a Phase 2.5b dispatch, the team manager invalidates (marks the cached copy stale so it is re-read from disk) its state cache (read-on-next-Step-1) before composing the executor brief. `code-intel` is an agent rather than a nested skill, so the nested-skill-return rule at Phase 3 Step 1 does not strictly fire on its own — but because `code-intel` writes a report to disk that the executor must subsequently read, invalidation is required to keep the executor's view consistent.
@@ -82,13 +97,15 @@ If `code-intel` returns `status: refused` for any reason (timeout, symbol-not-fo
 2. Attaches the refusal reason to the executor's brief so the executor knows the consultation was attempted but did not yield results.
 3. Proceeds. Phase 2.5b is *advisory* — refusal does not block the executor.
 
+A hypothesis-added dispatch (matched via `(vi)` alone) that returns `status: refused` reuses these steps verbatim — attach the reason, proceed, never block — and records yield `no-yield` per the **Yield record** step above.
+
 #### Dispatch log entry
 
 When `--dispatch-log` is set, Phase 2.5b dispatches append to `docs/ops-dispatch-log.md` following the standard dispatch-log entry format (timestamp, agent name, task ID, brief excerpt, return status). When `--dispatch-log` is not set, no log entry is written — matching the existing per-dispatch behavior in `dispatch-log.md`.
 
 #### Attaching to the executor brief
 
-After a successful Phase 2.5b dispatch, append a `Code Intelligence Context:` block to the executor's brief:
+After a successful Phase 2.5b dispatch, append a `Code Intelligence Context:` block to the executor's brief. A hypothesis-added dispatch (matched via `(vi)` alone) appends the **same** block — the hypothesis path does not invent a different attachment:
 
 > **Literal agent-brief text — keep fenced.** The block below is the exact text appended to the executor's prompt string, not a user-facing UI output. Do not unfence it.
 
@@ -109,11 +126,16 @@ Before each `executor`, `debugger`, or `documentor` dispatch in Phase 3 Step 2, 
 
 #### Trigger predicate
 
-Evaluate the predicate `(i) OR (ii) OR (iii)` against each dispatch where `agent_type` ∈ `{executor, debugger, documentor}` at Phase 3 Step 2, before composing the consumer brief. When Phase 2.5b also matches for an `executor` task, run Phase 2.5b first, then Phase 2.5c (see **Dual preflight sequence** below).
+Evaluate the predicate `(i) OR (ii) OR (iii) OR (iv)` against each dispatch where `agent_type` ∈ `{executor, debugger, documentor}` at Phase 3 Step 2, before composing the consumer brief. When Phase 2.5b also matches for an `executor` task, run Phase 2.5b first, then Phase 2.5c (see **Dual preflight sequence** below).
 
 - **(i) Investigation keyword** — the task brief contains at least one (case-insensitive): `find evidence`, `where is`, `where are`, `grep for`, `search for`, `locate`, `verify that`, `confirm that`, `investigate`, `trace`, `mentions`, `documented in`, `free-text`, `corpus`, `string match`.
 - **(ii) Consumer agent + non-symbol task** — `agent_type` ∈ `{debugger, documentor}` AND the **symbol-extraction algorithm** (below) returns no extractable primary symbol. Clause (ii) passes only when all three ordered checks fail.
 - **(iii) Rename/migration cue** — code-modifying task (`agent_type == executor`) AND the brief contains at least one *risk keyword* from Phase 2.5b (`refactor`, `rename`, `delete`, `breaking change`, `migrate`, `deprecate`, `extract`, `move`) AND at least one textual migration cue: `update references`, `rename mentions`, `docs mention`, `string replace`, `across repo`, `all occurrences`.
+- **(iv) Information-need hypothesis** — before evaluating the keyword/structural terms above, the orchestrator forms a single categorical hypothesis against the task's **planned** scope and brief contents (the pre-composition moment): *"I lack the answer that `<query_type>` would give, and that gap is a risk for this task."* The `<query_type>` is bounded to the four corpus-search query types listed under the dispatch contract (`evidence_search`, `locate`, `verify_claim`, `trace_reference`) — no new query type is invented, and no numeric threshold is used; the judgment is categorical. The hypothesis term fires `corpus-search` only when **(a)** a genuine, risk-relevant corpus-search `query_type` would answer a textual-evidence gap, **and (b)** none of `(i)`, `(ii)`, `(iii)` matched for this task. It can only *add* the dispatch the keyword/structural path missed.
+
+The keyword/structural predicate `(i) OR (ii) OR (iii)` is retained **unchanged as an unconditional floor**: any match on `(i)`, `(ii)`, or `(iii)` fires `corpus-search` regardless of the hypothesis verdict. The wiring is `(i) OR (ii) OR (iii) OR (iv)` — an `OR`, never an `AND`, never a veto. The hypothesis term `(iv)` can never suppress, gate, or remove a dispatch the keyword/structural path would have fired.
+
+**Dedup invariant (at most once per task/stage).** For a single task/stage, `corpus-search` fires **at most once**. The hypothesis term `(iv)` is a no-op when a corpus-search preflight already fired for this task/stage **by any path** — the keyword/structural path (`(i)`, `(ii)`, or `(iii)`), the `--corpus-search=always` flag, or the dual preflight sequence. In all those cases the hypothesis is already answered by the in-flight or returned report, so `(iv)` adds nothing. The hypothesis term only adds a dispatch when no corpus-search preflight fired by any path.
 
 If the predicate matches (and `--corpus-search=off` is not set), dispatch `corpus-search` synchronously (wait for the report path) before composing the consumer brief.
 
@@ -134,9 +156,11 @@ Clause (ii) passes only when **all three checks fail** — no extractable primar
 
 #### Dispatch trigger point
 
-The team manager dispatches `corpus-search` during **Phase 3 Step 2 (Batch parallel work), before composing the brief** for tasks where `agent_type` ∈ `{executor, debugger, documentor}`. Evaluate `(i) OR (ii) OR (iii)` against the task brief at that moment; if matched (or `--corpus-search` is set), dispatch `corpus-search` synchronously and wait for the JSON response before composing the consumer brief.
+The team manager dispatches `corpus-search` during **Phase 3 Step 2 (Batch parallel work), before composing the brief** for tasks where `agent_type` ∈ `{executor, debugger, documentor}`. Evaluate `(i) OR (ii) OR (iii) OR (iv)` against the task brief at that moment; if matched (or `--corpus-search` is set), dispatch `corpus-search` synchronously and wait for the JSON response before composing the consumer brief. A hypothesis-added dispatch (matched via `(iv)` alone) uses the **same** JSON-fenced brief and the **same** per-call hard caps as any other Phase 2.5c dispatch (single-preflight `max_results`, `max_hops`, `max_files`, `max_wall_clock_s`, and the dual-preflight caps, both below) verbatim — no new caps and no cap bypass — with the same `output_mode: "disk"` and the same synchronous, advisory, never-blocking behavior: no mode branch and no per-dispatch checkpoint. The hypothesis term `(iv)` changes only *whether* Phase 2.5c fires — never *how* it composes the brief: a hypothesis-added dispatch follows the **Dual preflight sequence** and standalone seed rules below exactly as a keyword-matched dispatch would.
 
 **Dual preflight sequence (when both Phase 2.5b and 2.5c match on an executor task):**
+
+This sequence applies whenever Phase 2.5b ran for the `executor` task — whether 2.5b matched via its keyword/structural predicate **or** fired via its own hypothesis clause `(vi)`. A hypothesis-added 2.5c dispatch on such a task honors this ordering and these seed rules unchanged; the hypothesis term `(iv)` changes only *whether* 2.5c fires, never *how* the brief is composed once it does.
 
 1. Dispatch **code-intel** (Phase 2.5b); wait for JSON response.
 2. Invalidate state cache (read-on-next-Step-1).
@@ -144,7 +168,7 @@ The team manager dispatches `corpus-search` during **Phase 3 Step 2 (Batch paral
 4. Invalidate state cache again.
 5. Attach **both** `Code Intelligence Context:` and `Corpus Search Context:` blocks to the executor brief.
 
-When Phase 2.5b did **not** run, use `query_type: "evidence_search"` with `query` derived from the task subject or investigative string in the brief.
+When Phase 2.5b did **not** run (the standalone, non-dual case — including a standalone hypothesis-added 2.5c dispatch), use `query_type: "evidence_search"` with `query` derived from the task subject or investigative string in the brief. The hypothesis clause does not introduce a different seed source — it derives the standalone seed exactly as the existing standalone path does.
 
 #### Dispatch contract — what the team manager passes in
 
@@ -206,6 +230,16 @@ For `output_mode: "disk"` (the orchestrator default), `corpus-search` returns th
 
 For `output_mode: "inline"`: includes `report_inline` (full Markdown), omits `report_path`. For `output_mode: "both"`: both populated, but `report_inline` carries only the summary and path — not duplicate full content.
 
+#### Yield record (post-return annotation)
+
+After a hypothesis-added `corpus-search` dispatch returns, the team manager records one entry in the run-level `adaptations` array (see `state-schema.md`) with `type: preflight-yield`, the categorical yield value, and the answering `query_type` sub-field. The yield value is judged against the returned report versus the brief the orchestrator then composes — the post-dispatch moment — and is one of three categories:
+
+- `changed-brief` — the returned evidence altered what the orchestrator wrote into the consumer brief.
+- `confirmed` — the evidence was consulted and matched the orchestrator's prior assumption (a useful negative signal).
+- `no-yield` — the preflight returned nothing the orchestrator used, **or** the dispatch was refused or returned empty. A refused or empty-report dispatch records `no-yield` with the refusal/empty reason in the `note`.
+
+The team manager **records yield only; it never reads prior yield to decide a dispatch**. This annotation is bookkeeping for a future capability to learn by category; nothing in Phase 2.5c consults it.
+
 #### State cache invalidation
 
 After `corpus-search` returns from a Phase 2.5c dispatch, the team manager invalidates its state cache (read-on-next-Step-1) before composing the consumer brief. `corpus-search` is an agent rather than a nested skill, so the nested-skill-return rule at Phase 3 Step 1 does not strictly fire on its own — but because `corpus-search` writes a report to disk that the consumer must subsequently read, invalidation is required to keep the consumer's view consistent.
@@ -218,13 +252,15 @@ If `corpus-search` returns `status: refused` for any reason (timeout, hard-cap h
 2. Attaches the refusal reason to the consumer's brief so the consumer knows the consultation was attempted but did not yield results.
 3. Proceeds. Phase 2.5c is *advisory* — refusal does not block the consumer.
 
+A hypothesis-added dispatch (matched via `(iv)` alone) that returns `status: refused` reuses these steps verbatim — attach the reason, proceed, never block — and records yield `no-yield` per the **Yield record** step above.
+
 #### Dispatch log entry
 
 When `--dispatch-log` is set, Phase 2.5c dispatches append to `docs/ops-dispatch-log.md` following the standard dispatch-log entry format (timestamp, agent name `corpus-search`, task ID, brief excerpt, return status). When `--dispatch-log` is not set, no log entry is written — matching the existing per-dispatch behavior in `dispatch-log.md`.
 
 #### Attaching to the consumer brief
 
-After a successful Phase 2.5c dispatch, append a `Corpus Search Context:` block to the consumer's brief (`executor`, `debugger`, or `documentor`):
+After a successful Phase 2.5c dispatch, append a `Corpus Search Context:` block to the consumer's brief (`executor`, `debugger`, or `documentor`). A hypothesis-added dispatch (matched via `(iv)` alone) appends the **same** block — including the dual-preflight path-token reflection (`trace_reference-<slug>.md`) where applicable — the hypothesis path does not invent a different attachment:
 
 > **Literal agent-brief text — keep fenced.** The block below is the exact text appended to the consumer's prompt string, not a user-facing UI output. Do not unfence it.
 

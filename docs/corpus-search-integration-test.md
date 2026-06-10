@@ -199,12 +199,13 @@ Run-scoped directory absent post-Phase-4; `docs/corpus-search/` not deleted.
 
 ## Quick reference — predicate clauses (Phase 2.5c)
 
-For manual test design, Phase 2.5c fires when `(i) OR (ii) OR (iii)`:
+For manual test design, Phase 2.5c fires when `(i) OR (ii) OR (iii) OR (iv)`:
 
 | Clause | Condition |
 | :--- | :--- |
 | **(i)** | Brief contains investigation keyword: `find evidence`, `where is`, `grep for`, `search for`, `locate`, `verify that`, `investigate`, `trace`, `mentions`, etc. |
 | **(ii)** | Consumer is `debugger` or `documentor` AND symbol-extraction algorithm finds no primary symbol |
 | **(iii)** | Consumer is `executor` AND brief has risk keyword (`rename`, `refactor`, …) AND migration cue (`update references`, `rename mentions`, …) |
+| **(iv)** | Orchestrator forms a genuine information-need hypothesis — it lacks the answer a specific corpus-search `query_type` would give and that gap is a risk for the task — and none of `(i)`, `(ii)`, `(iii)` matched; additive only, never suppressing a keyword match |
 
 Override flags: `--corpus-search=always` forces dispatch; `--corpus-search=off` disables Phase 2.5c for the run.

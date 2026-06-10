@@ -212,12 +212,13 @@ Run-scoped directory absent post-Phase-4; index database and WAL/SHM sidecars re
 
 ## Quick reference — predicate clauses (Phase 2.5b)
 
-For manual test design, Phase 2.5b fires when `(ii) OR (iv)` on code-modifying executor tasks:
+For manual test design, Phase 2.5b fires when `(ii) OR (iv) OR (vi)` on code-modifying executor tasks:
 
 | Clause | Condition |
 | :--- | :--- |
 | **(ii)** | `files_touched > 1` — the task touches more than one file |
 | **(iv)** | Brief contains at least one risk keyword: `refactor`, `rename`, `delete`, `breaking change`, `migrate`, `deprecate`, `extract`, `move` |
+| **(vi)** | Orchestrator forms a genuine information-need hypothesis — it lacks the answer a specific code-intel `query_type` would give and that gap is a risk for the task — and neither `(ii)` nor `(iv)` matched; additive only, never suppressing a keyword match |
 
 Override flags: `--code-intel=always` forces dispatch; `--code-intel=off` disables Phase 2.5b for the run.
 
