@@ -19,6 +19,7 @@ Parse arguments as follows:
 - `--no-branch` — skip automatic working branch creation; work directly on the current branch.
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
+- `--budget=<N>` — set an optional run-level dispatch-count ceiling the orchestrator consults at cost-affecting choice points (off by default). The budget is **advisory and escalation-only**: a tight budget can defer or escalate a spending choice, but it never silently drops work and **never skips a verification or correctness check** — those rails (the verification-gate ritual in `verification-gate.md` and the Verify → Fix 3-loop cap) sit above the budget, not below it.
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
 - `--code-intel` / `--code-intel=off` — Phase 2.5b: fire `code-intel` on every code-modifying task, or disable for the run.

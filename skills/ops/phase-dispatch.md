@@ -20,6 +20,10 @@ The keyword/structural predicate `(ii) OR (iv)` is retained **unchanged as an un
 
 If the predicate matches, dispatch `code-intel` synchronously (wait for the report path) before composing the executor brief. Synchronous dispatch closes the door on race conditions with mid-Phase-3 work.
 
+#### Budget governor (preflight consultation)
+
+This consultation runs only when the user set a run-level dispatch-count ceiling with `--budget`; when no budget is set it is a strict no-op and the preflight fires exactly as it does today. When a budget is set, before firing this advisory preflight the orchestrator consults the budget: at ceiling, it **may skip this low-yield advisory preflight**. Because Phase 2.5b is advisory and never-blocking — its output enriches the executor brief but never gates it — skipping a preflight never harms correctness; it is declining an optional lookup, **not** a task drop and **not** a scope reduction. A skip records a `type: budget-escalation` adaptation with `action_taken: budget-skipped` (see `state-schema.md`); the executor task itself still dispatches. The budget never skips, shortens, or marks-satisfied any verification or correctness gate — only this optional, advisory preflight.
+
 #### Flags
 
 - `--code-intel` — alias for `--code-intel=always`. Fires `code-intel` on every code-modifying task regardless of predicate.
@@ -138,6 +142,10 @@ The keyword/structural predicate `(i) OR (ii) OR (iii)` is retained **unchanged 
 **Dedup invariant (at most once per task/stage).** For a single task/stage, `corpus-search` fires **at most once**. The hypothesis term `(iv)` is a no-op when a corpus-search preflight already fired for this task/stage **by any path** — the keyword/structural path (`(i)`, `(ii)`, or `(iii)`), the `--corpus-search=always` flag, or the dual preflight sequence. In all those cases the hypothesis is already answered by the in-flight or returned report, so `(iv)` adds nothing. The hypothesis term only adds a dispatch when no corpus-search preflight fired by any path.
 
 If the predicate matches (and `--corpus-search=off` is not set), dispatch `corpus-search` synchronously (wait for the report path) before composing the consumer brief.
+
+#### Budget governor (preflight consultation)
+
+This consultation runs only when the user set a run-level dispatch-count ceiling with `--budget`; when no budget is set it is a strict no-op and the preflight fires exactly as it does today. When a budget is set, before firing this advisory preflight the orchestrator consults the budget: at ceiling, it **may skip this low-yield advisory preflight**. Because Phase 2.5c is advisory and never-blocking — its output enriches the consumer brief but never gates it — skipping a preflight never harms correctness; it is declining an optional lookup, **not** a task drop and **not** a scope reduction. A skip records a `type: budget-escalation` adaptation with `action_taken: budget-skipped` (see `state-schema.md`); the consumer task itself still dispatches. The budget never skips, shortens, or marks-satisfied any verification or correctness gate — only this optional, advisory preflight.
 
 #### Symbol-extraction algorithm (clause (ii))
 
@@ -512,6 +520,19 @@ The re-dispatched orphan inherits the **same foreground/background and worktree 
 - Do not mark the task `failed` or increment the attempt counter on a NEEDS_CLARIFICATION return. The re-dispatch after clarification is attempt 1.
 
 Orphan detection is handled by the **work-verifier** agent (see `~/.claude/agents/work-verifier.md`), which includes timeout budgets per agent type and orphan detection heuristics.
+
+**Budget governor (model-escalation consultation).** This sub-step runs only when the user set a run-level dispatch-count ceiling with `--budget`. When no budget is set, the entire sub-step is a strict no-op: there is no accumulator, no consultation, and no `budget` object written to the state file, and every path below behaves byte-for-byte as it does on a run without a budget.
+
+When a budget **is** set, the orchestrator maintains `budget.consumed_so_far` (see `state-schema.md`) as a running count of dispatches in the run, incrementing it as dispatches complete. The accumulator only counts; it **never interrupts, kills, or re-dispatches an agent that is already running** to enforce the budget — in-flight work always runs to completion under the existing parallel-safety rules. The governor is consulted only *before* a new, not-yet-started cost-affecting action.
+
+Before a **model escalation** — the "Failed — 3rd attempt" escalate-model action in the outcome table above, where a task is about to be retried on a higher model tier — the orchestrator consults the budget:
+
+- **Near ceiling (a fixed default of 80% of the ceiling consumed, first crossing only).** Surface a one-line advisory — "budget ~80% consumed; the next escalation would spend more" — and **proceed** with the escalation. The note is informational and **never blocks, in any mode** (interactive, supervised, autonomous). It fires **once per threshold crossing**: set `budget.near_note_fired` so subsequent choice points below the at-ceiling line stay silent and the run does not degrade into confirmation-prompt noise. Append a `type: budget-escalation` adaptation with `action_taken: budget-near`.
+- **At ceiling (this escalation would cross the ceiling).** **Escalate to the user** — in interactive, supervised, **and** autonomous mode alike; like a blocker, a budget ceiling is a decision point the user must resolve, never silently auto-resolved. Flush `budget.consumed_so_far` and `budget.near_note_fired` to the state file **before** the escalation surfaces, so a `resume` mid-escalation recovers the budget context. The escalation states the task, the action about to be taken (escalate this task to the higher model tier), the estimated marginal cost (one more dispatch), and exactly three options: **spend it** (proceed with the escalation), **defer the task with user approval**, or **stop the run**. It **never** offers "silently drop the task" — hitting the ceiling escalates; it never drops, skips, or marks-done a task to stay under budget. Record the user's resolution with the matching `action_taken` (`budget-escalated` when the escalation surfaces, then `budget-spent` or `budget-deferred` for the resolution).
+
+**Escalation composition (one decision point, never two stacked stops).** When an at-ceiling budget escalation and the existing "Failed — 4th attempt" escalate-to-user action fire on the **same task**, they compose into **one** decision point: the budget trade-off is surfaced *as part of* that single escalate-to-user stop, not a second stop layered on top of it.
+
+**Never above a correctness gate.** This consultation is wired only in front of the model-escalation choice. It is **never** placed above the Verify → Fix loop or its 3-loop cap, the agent-level verification-gate ritual (`verification-gate.md`), the deliverables-on-disk / timing / lane non-negotiables, or the security-review stage. A budget ceiling can defer or escalate a *cost* choice; it can never cause a correctness gate to be skipped, shortened, or marked satisfied without fresh evidence.
 
 **Step 5 — Stage transition check.** When all tasks in a pipeline stage finish:
 

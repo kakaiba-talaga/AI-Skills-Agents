@@ -53,6 +53,15 @@ In **autonomous mode**, display the tier decision and proceed automatically. The
 
 In **supervised mode**, show the tier decision and wait for approval before each agent dispatch (same as other tasks in supervised mode).
 
+## Budget Governor (Critique-Tier Consultation)
+
+This consultation runs only when the user set a run-level dispatch-count ceiling with `--budget`; when no budget is set it is a strict no-op and the tier decision is made exactly as it is today. When a budget is set, and the tier decision would select Tier 3 (the full critic loop) for a low-risk plan while the budget is at ceiling, the orchestrator **informs the escalation** of the trade-off: the Tier-3 critic cost versus the cheaper Tier-2 scoping pass. It surfaces this as part of the always-visible tier decision and lets the user or the existing tier rules make the call.
+
+Two distinctions are load-bearing, and the consultation must never blur them:
+
+- **The governor only informs an already-visible tier decision; it never collapses Tier 3 to Tier 2 unilaterally.** The tier decision is always visible and the team manager never silently skips validation — a unilateral down-tier would be a silent scope reduction, which is forbidden. A tight budget can surface the cheaper-tier trade-off; it can never quietly choose the cheaper tier on the user's behalf.
+- **Down-tiering an upstream plan critique is categorically distinct from skipping the post-executor verification gate.** The Tier-3 critique here is an *upstream plan review* that runs before any executor — a review of the plan, not of executed work. The post-executor verification gate, which checks the correctness of deliverables that executors actually produced, is **never** budget-skippable. Preferring the cheaper critique tier for a low-risk plan must never read as, and must never become, skipping verification.
+
 ## What the Project-Scoper Adds (Tier 2 and 3)
 
 - **Gap analysis** — what the plan missed (edge cases, error handling, dependencies)
