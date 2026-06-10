@@ -120,6 +120,7 @@ The team manager auto-detects which agent to assign based on task content:
 | `--no-branch` | Skip working branch creation, work on current branch |
 | `--no-deslop` | Skip the deslop cleanup stage after verification |
 | `--cost` | Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default) |
+| `--budget=<N>` | Optional run-level dispatch-count ceiling the orchestrator consults at cost-affecting choice points (off by default). Advisory and escalation-only: a tight budget can defer or escalate a spending choice but never silently drops work and never skips a verification or correctness check. |
 | `--brainstorm` | Run interviewer + architect and require design approval before planner |
 | `--tdd` | Executor follows RED-GREEN-REFACTOR discipline; verifier adds a TDD-discipline check |
 | `--skip-baseline` | With `--worktree`, skip the baseline test-suite check (only the `.gitignore` enforcement runs) |

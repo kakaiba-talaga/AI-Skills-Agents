@@ -164,16 +164,46 @@ This run-level `adaptations` array is distinct from the existing per-task `adapt
 
 Field meanings:
 
-- `type` — the kind of adaptation. One of `reflection` (a post-stage reflection-beat note), `promotion` (a triage-confidence promotion event), `replan` (a mid-run re-plan of the remaining task graph), `preflight-yield` (a post-dispatch annotation recording whether a hypothesis-added preflight changed the brief), `health-action` (a sustained-`OVERRUN` diagnose-and-recover event — the orchestrator dispatched the read-only diagnostician, evaluated the work-state verdict, and either confirmed the agent alive or recovered a confirmed orphan), `prior-applied` (a run-start event recording that a learned prior changed a default this run — which consumer fired and what default it changed), or one of the existing strategy-adaptation kinds already logged today (parallel-dispatch switch, sequential fallback, worktree enablement, reassignment, branch-creation skip).
+- `type` — the kind of adaptation. One of `reflection` (a post-stage reflection-beat note), `promotion` (a triage-confidence promotion event), `replan` (a mid-run re-plan of the remaining task graph), `preflight-yield` (a post-dispatch annotation recording whether a hypothesis-added preflight changed the brief), `health-action` (a sustained-`OVERRUN` diagnose-and-recover event — the orchestrator dispatched the read-only diagnostician, evaluated the work-state verdict, and either confirmed the agent alive or recovered a confirmed orphan), `prior-applied` (a run-start event recording that a learned prior changed a default this run — which consumer fired and what default it changed), `budget-escalation` (a run-level budget event recorded only when a budget ceiling is set — a near-ceiling note surfaced and the run proceeded, or an at-ceiling escalation surfaced the spend/defer/stop trade-off to the user at a cost-affecting choice point), or one of the existing strategy-adaptation kinds already logged today (parallel-dispatch switch, sequential fallback, worktree enablement, reassignment, branch-creation skip).
 - `at` — ISO-8601 UTC timestamp of when the adaptation was recorded.
 - `stage` — the pipeline stage the adaptation was recorded against (e.g., `implement`, `verify`, `review`). For a reflection beat this is the stage that just finished.
 - `note` — a short human-readable note. For a reflection beat this is the bounded self-critique paragraph (one paragraph, roughly 80 words or fewer).
-- `action_taken` — what the team manager did in response. One of `logged` (recorded only; no plan change), `proposed-addition` (proposed adding work through the existing mid-run plan-adjustment mechanism), `proposed-resequence` (proposed re-ordering through the same mechanism), `escalated` (surfaced to the user — used whenever a reflection beat identifies work that should be removed, since scope reduction always requires user approval), `replanned` (the remaining task board was rewritten following a critic-ACCEPTED re-plan that dropped no scope), or `replan-escalated` (the re-plan crossed the scope-drop or escalation path — triggered by any of: the proposed re-plan would drop committed scope, requiring user approval before the rewrite is applied or declined; the re-plan loop exhausted its retry cap without the critic converging on ACCEPT; or the critic issued REVISE without converging after the allowed iterations). For `type: preflight-yield` entries, `action_taken` is one of the categorical yield values: `changed-brief` (the returned evidence altered what the orchestrator wrote into the brief), `confirmed` (the evidence was consulted and matched the orchestrator's prior assumption — a useful negative signal), or `no-yield` (the preflight returned nothing the orchestrator used, or the dispatch was refused or returned empty). For `type: health-action` entries, `action_taken` is one of: `diagnosed-alive` (the work-verifier found the work landed or the orchestrator's own signal showed the agent still live — no re-dispatch), `re-dispatched` (a confirmed orphan was re-dispatched once per the retry rule), or `re-dispatch-escalated` (the reused retry rule escalated to the user — the orphan re-dispatch also orphaned or failed, or the orphan recovery otherwise stopped for the user).
+- `action_taken` — what the team manager did in response. One of `logged` (recorded only; no plan change), `proposed-addition` (proposed adding work through the existing mid-run plan-adjustment mechanism), `proposed-resequence` (proposed re-ordering through the same mechanism), `escalated` (surfaced to the user — used whenever a reflection beat identifies work that should be removed, since scope reduction always requires user approval), `replanned` (the remaining task board was rewritten following a critic-ACCEPTED re-plan that dropped no scope), or `replan-escalated` (the re-plan crossed the scope-drop or escalation path — triggered by any of: the proposed re-plan would drop committed scope, requiring user approval before the rewrite is applied or declined; the re-plan loop exhausted its retry cap without the critic converging on ACCEPT; or the critic issued REVISE without converging after the allowed iterations). For `type: preflight-yield` entries, `action_taken` is one of the categorical yield values: `changed-brief` (the returned evidence altered what the orchestrator wrote into the brief), `confirmed` (the evidence was consulted and matched the orchestrator's prior assumption — a useful negative signal), or `no-yield` (the preflight returned nothing the orchestrator used, or the dispatch was refused or returned empty). For `type: health-action` entries, `action_taken` is one of: `diagnosed-alive` (the work-verifier found the work landed or the orchestrator's own signal showed the agent still live — no re-dispatch), `re-dispatched` (a confirmed orphan was re-dispatched once per the retry rule), or `re-dispatch-escalated` (the reused retry rule escalated to the user — the orphan re-dispatch also orphaned or failed, or the orphan recovery otherwise stopped for the user). For `type: budget-escalation` entries, `action_taken` is one of: `budget-near` (the near-ceiling note surfaced at a cost-affecting choice point and the run proceeded — informational, never blocking), `budget-escalated` (an at-ceiling escalation surfaced the trade-off to the user at a cost-affecting choice point and waited for the user's decision), `budget-deferred` (the user's resolution of an at-ceiling escalation was to defer the task — recorded only with user approval, never a unilateral drop), `budget-spent` (the user's resolution was to spend the budget and proceed with the cost-affecting action), or `budget-skipped` (the governor skipped a low-yield advisory preflight at ceiling — no user interaction). An at-ceiling event that escalates to the user appends two entries: `budget-escalated` when the escalation surfaces, then `budget-spent` or `budget-deferred` on the user's resolution.
 - `query_type` *(optional)* — present on `type: preflight-yield` entries only. Records which preflight query type the hypothesis-added dispatch answered — one of the six code-intel query types (`find_definition`, `find_callers`, `find_dependencies`, `impact_analysis`, `find_implementations`, `execution_flow`) or the four corpus-search query types (`evidence_search`, `locate`, `verify_claim`, `trace_reference`). Allows a future capability to learn which query categories produce useful evidence. Absence is tolerated; older entries without this field are valid.
 
 **Write lifecycle:** The team manager appends one entry to `adaptations` each time it makes an adaptation. Reflection-beat entries are appended at each pipeline stage transition (see Phase 3 Step 5). Strategy-adaptation entries are appended when the corresponding runtime condition fires. Each entry is written immediately when the adaptation is decided, before the next dispatch proceeds.
 
 **Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `[]`. No migration is required.
+
+### budget
+
+Root-level object recording the run-level dispatch-count budget when the user sets a ceiling with `--budget`. It is the backing store for the budget governor — the running tally the orchestrator consults at cost-affecting choice points, and the source a `resume` reads to recover the budget context mid-run.
+
+**Type:** `null` or object (absence treated as "no budget set").
+
+**When null (or absent):** No budget ceiling was set for this run. The budget governor is fully inert — no accumulator, no consultation, no near/at-ceiling evaluation. This is the default; the budget is optional. Every cost-affecting choice point behaves exactly as it does on a run without a budget.
+
+**When set (object):**
+
+```json
+{
+  "unit": "dispatch-count",
+  "ceiling": 40,
+  "consumed_so_far": 31,
+  "near_note_fired": true
+}
+```
+
+Field meanings:
+
+- `unit` — the budget unit. The string `"dispatch-count"`: the ceiling and the running tally are both counts of agent dispatches in the run. (Dispatch count is exact and is read from the dispatch bookkeeping that already exists.)
+- `ceiling` — the user-supplied integer ceiling, the value passed to `--budget=<N>`.
+- `consumed_so_far` — the running count of dispatches in the run, updated as dispatches complete.
+- `near_note_fired` — boolean recording whether the near-ceiling note has already fired for the current threshold crossing. The near-ceiling note fires once per crossing, not on every choice point past the near-ceiling line; this flag suppresses the repeat. Persisting it in the state object lets the once-per-crossing rule survive a `resume`.
+
+**Write lifecycle:** `consumed_so_far` and `near_note_fired` are flushed to the state file **before** an at-ceiling escalation surfaces to the user — pinned to the same before-the-stop point the `adaptations` event log uses ("written immediately when the adaptation is decided, before the next dispatch proceeds"). Flushing before the stop means a `resume` of a run interrupted mid-escalation recovers the full budget context: the ceiling, the consumed-so-far tally, and whether the near-ceiling note already fired this crossing.
+
+**Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `null` (no budget set). No migration is required.
 
 ### triage_confidence
 
@@ -231,8 +261,8 @@ six fields:
 - `project` — the project slug the run executed against. A record learned in one project never
   applies in another; the ledger is per-project-isolated.
 - `adaptation_counts` — the per-`type` adaptation counts already computed for the Phase 4
-  summary: `reflection`, `promotion`, `replan`, `preflight-yield`, `health-action`, and
-  `prior-applied`.
+  summary: `reflection`, `promotion`, `replan`, `preflight-yield`, `health-action`,
+  `prior-applied`, and `budget-escalation`.
 - `file_conflict_pairs` — the file-pairs that forced a parallel-to-sequential adaptation this
   run (the pairs a future run consults when pre-sequencing a known-conflicting dispatch).
 - `plan_validation_tier` — the plan-validation tier this run ran at.
@@ -258,7 +288,8 @@ when it applies learned priors to future runs.
     "replan": 0,
     "preflight-yield": 2,
     "health-action": 0,
-    "prior-applied": 0
+    "prior-applied": 0,
+    "budget-escalation": 0
   },
   "file_conflict_pairs": [
     ["skills/ops/SKILL.md", "skills/ops/phase-completion.md"]

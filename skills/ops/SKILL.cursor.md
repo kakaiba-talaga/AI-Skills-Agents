@@ -23,6 +23,7 @@ Parse arguments as follows:
 - `--no-branch` — skip automatic working branch creation; work directly on the current branch.
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
+- `--budget=<N>` — set an optional run-level dispatch-count ceiling the orchestrator consults at cost-affecting choice points (off by default). The budget is **advisory and escalation-only**: a tight budget can defer or escalate a spending choice, but it never silently drops work and **never skips a verification or correctness check** — those rails (the verification-gate ritual in `verification-gate.md` and the Verify → Fix 3-loop cap) sit above the budget, not below it.
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
 - `--code-intel` / `--code-intel=off` — Phase 2.5b: fire `code-intel` on every code-modifying task, or disable for the run.
@@ -43,7 +44,7 @@ If the argument is `help`, read and display the help card:
 
 ```text
 Commands: /ops <spec> | plan | execute | status | resume | save | ralph "<goal>" | help
-Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log | --security-review=off|always | --no-adaptation-memory
+Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --budget=<N> | --brainstorm | --dispatch-log | --security-review=off|always | --no-adaptation-memory
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor
 Retry: 3 attempts with narrowed scope and debugger diagnosis, then escalate to user
