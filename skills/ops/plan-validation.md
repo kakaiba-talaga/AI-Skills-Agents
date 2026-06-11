@@ -55,7 +55,7 @@ In **supervised mode**, show the tier decision and wait for approval before each
 
 ## Budget Governor (Critique-Tier Consultation)
 
-This consultation runs only when the user set a run-level dispatch-count ceiling with `--budget`; when no budget is set it is a strict no-op and the tier decision is made exactly as it is today. When a budget is set, and the tier decision would select Tier 3 (the full critic loop) for a low-risk plan while the budget is at ceiling, the orchestrator **informs the escalation** of the trade-off: the Tier-3 critic cost versus the cheaper Tier-2 scoping pass. It surfaces this as part of the always-visible tier decision and lets the user or the existing tier rules make the call.
+This consultation runs only when the user set a run-level dispatch-count ceiling with `--budget`; when no budget is set it is a strict no-op and the tier decision is made exactly as it is today. When a budget is set, and the tier decision would select Tier 3 (the full critic loop) for a low-risk plan while the budget is at ceiling, the orchestrator **informs the escalation** of the trade-off: the Tier-3 critic cost versus the cheaper Tier-2 scoping pass. It surfaces this as part of the always-visible tier decision and lets the user or the existing tier rules make the call. In autonomous mode, this consultation surfaces to the user and waits — it does not silently proceed, in the same way the model-escalation stop holds in autonomous mode.
 
 Two distinctions are load-bearing, and the consultation must never blur them:
 

@@ -476,7 +476,8 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | File | Content | Loaded when |
 | :--- | :--- | :--- |
 | `phase-intake.md` | Phase 1 intake, trivial dispatch (**LB1**), save subcommand, brainstorm gate, plan persistence, Phase 1a/1.5/2 task board | Triage routes to `pipeline`, `trivial`, or `save` |
-| `phase-dispatch.md` | Phase 2.5b/2.5c advisory preflight, Phase 2.5 validation, Phase 3 dispatch loop (**LB2**, memory injection, agent dispatch); **Cursor:** § state file sync (Write → verify → TodoWrite) | Task board ready; through dispatch |
+| `phase-preflights.md` | Phase 2.5b/2.5c advisory preflights — code-intel and corpus-search — with the shared preflight blocks (budget-governor guard, yield-record, refusal-handling, dispatch-log entry) | Phase 2.5 entry |
+| `phase-dispatch.md` | Phase 2.5 validation, Phase 3 dispatch loop (**LB2**, memory injection, agent dispatch); **Cursor:** § state file sync (Write → verify → TodoWrite) | Task board ready; through dispatch |
 | `phase-completion.md` | Phase 4 completion ceremony, status dashboard, cleanup | All tasks done; `status` route |
 
 The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase pointer index. See the **Companion index** table in `SKILL.md` for MUST vs See on branch-only companions.

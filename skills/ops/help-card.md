@@ -24,6 +24,8 @@
   --no-branch      Skip working branch creation, work on current branch
   --no-deslop      Skip the deslop cleanup stage after verification
   --cost           Enable cost estimate reporting in Phase 4 and the completion dashboard (off by default)
+  --budget=<N>     Optional run-level dispatch-count ceiling, advisory/escalation-only (never drops work or skips a correctness check)
+  --no-adaptation-memory  Skip the Phase 4 durable-ledger capture of this run's adaptations
   --brainstorm     Run interviewer → architect and require design approval before planning
   --dispatch-log   Opt-in audit log: append each dispatch to docs/ops-dispatch-log.md (off by default)
   --security-review  off|always  By default runs only when the change looks security-related; off disables it; always runs it on every stage

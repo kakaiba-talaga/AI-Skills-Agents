@@ -68,7 +68,7 @@ ANCHOR: > **Reference:** You MUST Read `~/.claude/skills/ops/help-card.md` for t
 
 ```text
 Commands: /ops <spec> | plan | execute | status | resume | save | ralph "<goal>" | help
-Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --brainstorm | --dispatch-log | --security-review=off|always
+Flags: --autonomous | --supervised | --parallel N | --agents <list> | --dry-run | --worktree | --no-branch | --no-deslop | --cost | --budget=<N> | --brainstorm | --dispatch-log | --security-review=off|always | --no-adaptation-memory
 Mid-run: stop | pause | status | skip <stage/#N> | drop #N | do #N next | add <task> | reprioritize
 Pipeline: executor → verifier → deslop → code-reviewer → documentor
 Retry: 3 attempts with narrowed scope and debugger diagnosis, then escalate to user
