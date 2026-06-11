@@ -57,6 +57,8 @@
   Model escalation   sonnet → opus on 3rd failure before escalating to user
   Strategy shift     Sequential ↔ parallel based on conflicts and throughput
   Cross-run learning Recalls patterns from past runs (agent fit, model needs)
+  Adaptation memory  Phase 4 writes a rollup to the durable per-project ledger (--no-adaptation-memory to skip)
+  Budget governor    Consults the --budget=<N> dispatch ceiling at cost choice points; escalation-only, never skips verification
 
 ### Timing (always tracked)
   Per-task           Start/end timestamps, duration

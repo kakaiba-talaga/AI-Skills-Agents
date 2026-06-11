@@ -1,6 +1,6 @@
 # Maintenance Note
 
-This file references skills and their output badges by name. When a skill is added, renamed, removed, or has its output tagging changed, update the table and rules below to match. Skills live in `~/.claude/commands/` and `~/.claude/skills/`. Check for an `## Output Tagging` or `## Output tagging` section in each skill file to find its badge.
+This file references skills and their output badges by name. When a skill is added, renamed, removed, or has its output tagging changed, update the table and rules below to match. Skills live in `~/.claude/skills/`. Check for an `## Output Tagging` or `## Output tagging` section in each skill file to find its badge.
 
 **Cursor mirror:** Every section below (except this Maintenance Note) is mirrored one-to-one as a per-section rule under `.cursor/rules/*.mdc` (for example, *Communication Style* → `communication-style.mdc`), deployed to Cursor via `tooling/deploy-manifest.json` (`cursor` → `rules`). `documentation-sync.mdc` is intentionally excluded — it mirrors this repo's `CLAUDE.md`, not a section here. Any change to a section must be applied to its `.mdc` and vice-versa; the coupling is tracked in the Documentation Sync map in `CLAUDE.md`.
 

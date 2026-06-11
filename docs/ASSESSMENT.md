@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-05-24 (corpus-search v1 ship)
-**Previous assessment:** 2026-05-19 (ops save subcommand), 2026-05-14 (cross-memory v1.1 + v1.2 + skill optimization), 2026-05-09 (cross-memory v1 ship), 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-06-11 (agentic vectors + preflights extraction)
+**Previous assessment:** 2026-06-01 (research agent), 2026-05-24 (corpus-search v1 ship), 2026-05-19 (ops save subcommand), 2026-05-14 (cross-memory v1.1 + v1.2 + skill optimization), 2026-05-09 (cross-memory v1 ship), 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -54,7 +54,7 @@
 | Doc Sync | `skills/doc-sync/` | 2 | ~83 | Documentation audit and sync against codebase |
 | Kickoff | `skills/kickoff/` | 7 | 451 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
 | Linter | `skills/linter/` | 2 | ~141 | Source file linting with auto-fix and incremental cache |
-| Ops | `skills/ops/` | 21 | 1,223 (Claude), ~1,250 (Cursor) | Multi-agent task orchestration, dispatch, and tracking (Phase 2.5b code-intel + Phase 2.5c corpus-search preflight) |
+| Ops | `skills/ops/` | 25 | 567 (Claude), 611 (Cursor) — phase flow extracted into companions | Multi-agent task orchestration, dispatch, and tracking (Phase 2.5b/2.5c advisory preflights in `phase-preflights.md`; budget governor `--budget=<N>`; durable adaptation ledger with `--no-adaptation-memory` opt-out; health-action recovery) |
 | Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
 | Using AI Skills Agents | `skills/using-ai-skills-agents/` | 1 | ~83 | Usage/onboarding guide for this repo's agents and skills (single-file, instructional) |
@@ -151,6 +151,18 @@ The seven tracked plans (`code-intel-agent-{requirements,scoping,design,plan,cri
 | unify-ops-state-management-plan.md | Plan to unify ops state management across Claude Code and Cursor |
 
 ---
+
+## Changes Since Last Assessment (2026-06-11 — agentic vectors + preflights extraction)
+
+Five agentic-improvement vectors and a structural remediation shipped to `skills/ops/` across commits `3482a5a` (health-action), `7fb6dbe` (adaptation-ledger write-half), `65712ea` (budget governor), and `30f444e` (preflights extraction + remediation):
+
+| Change | Summary |
+| :--- | :--- |
+| **Health-monitoring that acts** | Sustained-`OVERRUN` background agents are diagnosed via the read-only `work-verifier`; confirmed orphans re-dispatch once under the existing retry-then-escalate rule (`type: health-action` adaptations). |
+| **Durable adaptation ledger (write-half)** | Phase 4 step 7a writes a per-run rollup (per-type adaptation counts, file-conflict pairs, plan-validation tier, critic-REVISE flag) to a gitignored per-project ledger before the run board is deleted; threshold-gated, unconditionally redacted, rolling 10-run window; `--no-adaptation-memory` opts out. The read-half (soft priors) is gated on corpus accrual; the `prior-applied` enum value is reserved for it. |
+| **Standing budget governor** | Optional `--budget=<N>` dispatch-count ceiling consulted at a closed registry of cost-affecting choice points (2.5b/2.5c preflights, at-ceiling new-dispatch escalation, critique-tier); advisory and escalation-only — never above a verification or correctness gate. New `budget-escalation` adaptation type with `budget-near/escalated/deferred/spent/skipped` outcomes. |
+| **Advisory-preflights extraction** | Phase 2.5b/2.5c contracts moved from `phase-dispatch.md` into the new `skills/ops/phase-preflights.md` companion with duplicated paragraph pairs unified; `phase-dispatch.md` retitled `# Phase 3 dispatch loop` (70.3KB → 44.2KB on the eager MUST-read path, under both extraction thresholds). Doc-sync map rows re-pointed. |
+| **File count** | `skills/ops/` 21 → 25 files (`phase-preflights.md` + Vector-series companions). |
 
 ## Changes Since Last Assessment (2026-06-01 — research agent)
 
@@ -685,7 +697,7 @@ Skills invoked within pipeline stages:
 | Skills (deslop) | 2 | 2 |
 | Skills (doc-sync) | 2 | 2 |
 | Skills (linter) | 2 | 2 |
-| Skills (ops) | 21 (incl. SKILL.cursor.md, SKILL.cursor.additions.md, brief-contract.md, dispatch-log.md, verification-gate.md) | 21 |
+| Skills (ops) | 25 (incl. SKILL.cursor.md, SKILL.cursor.additions.md, brief-contract.md, dispatch-log.md, verification-gate.md, phase-preflights.md) | 25 |
 | Skills (deploy) | 9 (incl. SKILL.cursor.md) | 9 |
 | Skills (ralph-loop) | 16 (incl. SKILL.cursor.md, 5 templates + templates README) | 16 |
 | Skills (timing-calibrator) | 2 | 2 |
@@ -705,4 +717,4 @@ Skills invoked within pipeline stages:
 
 ---
 
-*Assessment updated 2026-06-01 (research agent). Files assessed: 23 agents, 13 skills (ops phase companions `phase-intake.md` / `phase-dispatch.md` / `phase-completion.md`; `agents/_shared/` orchestrator briefs; prior corpus-search v1 ship baseline). See `CLAUDE.md` Documentation Sync map for doc-to-code links. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*
+*Assessment updated 2026-06-11 (agentic vectors + preflights extraction). Files assessed: 23 agents, 13 skills (ops phase companions `phase-intake.md` / `phase-preflights.md` / `phase-dispatch.md` / `phase-completion.md`; `agents/_shared/` orchestrator briefs; prior research-agent baseline). See `CLAUDE.md` Documentation Sync map for doc-to-code links. Active issues: 0. Carried from previous: 2. Deferred backlog: 27 MAJORs + 19 MINORs (see docs/agent-audits/tier-a-opus-4-7-audit.md).*
