@@ -75,6 +75,9 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
         then the security-review stage if scheduled, then deslop, review, and document on the
         already-produced diff. Do NOT backfill Phase 1a or Phase 2.5. LB1/LB2 hold
         (Non-negotiable #9). See the promotion transition shape below.
+
+   Each `type: promotion` entry sets `action_taken` to one of the values defined in `state-schema.md`: `promoted` (classification promoted to pipeline), `checked-no-promotion` (diff evaluated, trivial assumption stood), or `empty-diff-no-promotion` (no diff to evaluate — promotion skipped).
+
 6. **On result:** If this run was promoted in the preceding Promotion check step, skip this step entirely —
    cleanup, the trivial one-line summary, and completion are owned by the pipeline's Phase 4.
    Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.

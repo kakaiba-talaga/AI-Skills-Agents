@@ -24,6 +24,13 @@ Parse arguments as follows:
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
 - `--budget=<N>` — set an optional run-level dispatch-count ceiling the orchestrator consults at cost-affecting choice points (off by default). The budget is **advisory and escalation-only**: a tight budget can defer or escalate a spending choice, but it never silently drops work and **never skips a verification or correctness check** — those rails (the verification-gate ritual in `verification-gate.md` and the Verify → Fix 3-loop cap) sit above the budget, not below it.
+
+  **Consultation registry (closed enumeration).** Every site where the budget governor fires is listed here:
+
+  1. **Phase 2.5b advisory preflight** (`phase-preflights.md`) — *silent skip-eligible at ceiling*: the governor may skip the code-intel preflight without surfacing it to the user (advisory; never blocks a dispatch).
+  2. **Phase 2.5c advisory preflight** (`phase-preflights.md`) — *silent skip-eligible at ceiling*: same behavior with the corpus-search preflight.
+  3. **At-ceiling new-dispatch escalation** (`phase-dispatch.md` **Budget governor (model-escalation consultation)** sub-step and **Step 5b**) — *escalates to the user at ceiling*: covers both the model-escalation consultation (Step 4) and the re-plan planner/critic re-dispatch consultation (Step 5b); both are instances of the same at-ceiling semantics and the registry names this site once.
+  4. **Critique-tier consultation** (`plan-validation.md`) — *informs the already-visible tier decision*: at ceiling, the governor surfaces the Tier-3 cost trade-off as part of the always-visible tier decision; the tier call and its visibility rules are unchanged.
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
 - `--code-intel` / `--code-intel=off` — Phase 2.5b: fire `code-intel` on every code-modifying task, or disable for the run.
@@ -199,7 +206,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/phase-intake.md` for Phase 1 intake (starting-point table, trivial dispatch including **LB1 — mandatory**, save subcommand, brainstorm gate, plan persistence, Phase 1a, Phase 1.5, Phase 2 task board creation, and Agent Assignment Rules). If the file is missing, stop — cannot proceed without intake procedures.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/phase-dispatch.md` for Phase 2.5b/2.5c preflight (checks run before dispatch), Phase 2.5 preflight validation, and Phase 3 dispatch loop (including **LB2 — mandatory** `description_ref` resolution, memory injection, and Agent Dispatch Procedure). If the file is missing, stop.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/phase-preflights.md` for the Phase 2.5b/2.5c advisory preflights (checks run before dispatch). If `phase-preflights.md` is missing, skip the advisory preflights — they are advisory and never block a dispatch. You MUST Read `~/.cursor/skills/ops/phase-dispatch.md` for Phase 2.5 preflight validation and the Phase 3 dispatch loop (including **LB2 — mandatory** `description_ref` resolution, memory injection, and Agent Dispatch Procedure). If `phase-dispatch.md` is missing, stop.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/phase-completion.md` for Phase 4 completion steps/process and Status Dashboard rendering. If the file is missing, proceed using Non-negotiables #3, #4, #7, and #8 for minimum completion behavior.
 
@@ -208,7 +215,8 @@ not promoted) in the `adaptations` array with `type: promotion`.
 | Phase | Companion | Purpose |
 | :--- | :--- | :--- |
 | 1 / 1a / 1.5 / 2 | `phase-intake.md` | Plan, branch, task board (LB1 at board creation) |
-| 2.5b / 2.5c / 2.5 | `phase-dispatch.md` | Advisory preflight, environment check |
+| 2.5b / 2.5c | `phase-preflights.md` | Advisory preflight (code-intel, corpus-search) |
+| 2.5 | `phase-dispatch.md` | Preflight validation (environment check) |
 | 3 | `phase-dispatch.md` | Dispatch loop (LB2 before each spawn) |
 | 4 | `phase-completion.md` | Deliverables, timing, cleanup, completion menu |
 
@@ -218,6 +226,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 | :--- | :--- |
 | `phase-intake.md` | After triage routes to `pipeline` or `trivial` / `save` |
 | `phase-dispatch.md` | Task board ready; before and during dispatch |
+| `phase-preflights.md` | At the Phase 2.5 entry; before a Phase 3 Step 2 dispatch (2.5b/2.5c advisory preflights) |
 | `phase-completion.md` | All tasks completed; `status` dashboard |
 | `state-schema.md` | Any state file read/write (MUST) |
 | `handoffs.md` | Writing or reading handoffs (MUST) |
