@@ -1,6 +1,6 @@
 ---
 name: critic
-model: opus
+model: fable
 description: Final quality gate that reviews plans and scoping documents for gaps, flawed assumptions, ambiguities, and feasibility issues before committing to implementation.
 tools:
   - Read

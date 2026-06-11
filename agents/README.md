@@ -8,13 +8,13 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 | Agent | Model | Description |
 | :--- | :---: | :--- |
-| [architect](architect.md) | opus | Explores design alternatives and produces Architecture Decision Documents (ADDs) that define component boundaries, evaluate trade-offs, and establish the structural foundation before planning begins. |
+| [architect](architect.md) | fable | Explores design alternatives and produces Architecture Decision Documents (ADDs) that define component boundaries, evaluate trade-offs, and establish the structural foundation before planning begins. |
 | [change-analyzer](change-analyzer.md) | sonnet | Analyzes a git diff to classify changes and recommend which pipeline stages (verify, deslop, review, security-review) to run or skip. Returns per-stage recommendations with justification. Also recommends the security-review stage when the diff touches security-sensitive paths, providing the single classification signal the team manager uses to auto-schedule `security-reviewer`. |
 | [code-intel](code-intel.md) | opus | Indexes the project into a SQLite-backed symbol graph and answers structural queries (callers, dependencies, impact, implementations, execution flow) for other agents and orchestrators. Prevents silent breakage by replacing structural guessing with citable lookups. |
 | [code-reviewer](code-reviewer.md) | sonnet | Two-stage code review (spec compliance then quality) for pipeline and targeted module reviews. Severity-rated findings with verdicts. For standalone diff reviews, see `code-reviewer-diff` or use the `/code-review` slash command. |
 | [code-reviewer-diff](code-reviewer-diff.md) | sonnet | Standalone diff review variant. Full diff-gathering protocol, exclusion filters, cross-file impact analysis, language-specific checks. Used when `/code-review` skill is unavailable. |
 | [corpus-search](corpus-search.md) | opus | Terminal-native multi-hop corpus search for free-text evidence, file location, claim verification, and reference tracing — every finding cites path:line. Dispatched by `/ops` Phase 2.5c and standalone for investigative tasks. |
-| [critic](critic.md) | opus | Final quality gate. Reviews plans and scoping documents for flawed assumptions, gaps, ambiguities, and feasibility issues. Verdicts: ACCEPT / ACCEPT WITH RESERVATIONS / REVISE / REJECT. |
+| [critic](critic.md) | fable | Final quality gate. Reviews plans and scoping documents for flawed assumptions, gaps, ambiguities, and feasibility issues. Verdicts: ACCEPT / ACCEPT WITH RESERVATIONS / REVISE / REJECT. |
 | [cross-memory](cross-memory.md) | opus | Handles three intents: synthesize curated context blocks from the cross-memory store (User preferences / Project context / Harness rules / Notes); audit the store for staleness, duplicates, contradictions, and redaction misses; distill durable memories from project artifacts (git history, plan docs, handoffs, optional transcripts). Dispatched by `/ops`, `/kickoff`, and peer agents for `synthesize`; by `/cross-memory audit` for `audit`; by `/cross-memory reflect` for `distill`. |
 | [debugger](debugger.md) | opus | Runtime bug investigation — hypothesis-driven root cause analysis, circuit breaker, similar pattern scan, regression verification. For build errors, see `debugger-build`. Available at any pipeline stage. |
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
@@ -34,7 +34,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, research, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, documentor, executor, git-master, preflight, rollback, ssh-executor, verifier, work-verifier.
+The pipeline's design and plan-quality gates use **fable**: architect, critic. Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: code-intel, corpus-search, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, research, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, documentor, executor, git-master, preflight, rollback, ssh-executor, verifier, work-verifier.
 
 ### Overriding the default model
 

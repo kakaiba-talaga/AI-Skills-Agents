@@ -1,6 +1,6 @@
 ---
 name: architect
-model: opus
+model: fable
 description: Explores design alternatives and produces Architecture Decision Documents (ADDs) that define component boundaries, evaluate trade-offs, and establish the structural foundation before planning begins.
 tools:
   - Read
