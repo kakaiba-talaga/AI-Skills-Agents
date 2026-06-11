@@ -218,7 +218,7 @@ Each hit is one row in an **Evidence** table:
 
 | # | Path:Line | Span | Snippet | Hop | Confidence |
 | :--- | :--- | :--- | :--- | :---: | :--- |
-| 1 | `skills/ops/SKILL.md:367` | L367–L380 | `### Phase 2.5b — Code Intelligence Preflight` | 0 | direct |
+| 1 | `skills/ops/phase-preflights.md:7` | L7–L20 | `### Phase 2.5b — Code Intelligence Preflight (advisory)` | 0 | direct |
 
 - **Path:Line** uses `` `relative/path:line` `` (1-based line number).
 - **Span** is inclusive line range shown in the snippet (`Lstart–Lend`).

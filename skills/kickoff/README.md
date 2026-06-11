@@ -7,7 +7,7 @@ Use it at the beginning of a new project before any code exists.
 ## How it works
 
 ```
-Scaffold templates --> Interview --> [Architect] --> Plan --> [Critique] --> [Scope] --> Populate --> Handoff to /next
+Scaffold templates --> Interview --> [Architect] --> Plan --> [Critique] --> [Scope] --> Populate --> Configure --> Handoff to /next
                                         ^                        ^              ^
                                    complex only            complex only   optional
 ```
@@ -19,7 +19,8 @@ Scaffold templates --> Interview --> [Architect] --> Plan --> [Critique] --> [Sc
 5. **Critique** *(complex projects only)* — the `critic` agent validates the plan for feasibility and completeness. The planner revises up to twice if the critic rejects.
 6. **Scope** *(optional, prompted)* — the `project-scoper` agent adds effort estimates and a gap analysis. Does not block the workflow if skipped or if it fails.
 7. **Populate** — fills `plan/INDEX.md`, `plan/QUEUE.md`, and `plan/BLOCKERS.md` with concrete content from the planner's output. Creates individual plan stub documents from the template.
-8. **Handoff** — displays a summary of everything created and tells you to run `/next` to begin executing.
+8. **Configure** — generates `.claude/settings.json` in the target project with tech-stack-derived Bash permissions, universal tool/shell/git permissions, and deny rules. If the file already exists, new entries are merged in.
+9. **Handoff** — displays a summary of everything created (including the permissions configured) and tells you to run `/next` to begin executing.
 
 ## Quick start
 
@@ -82,6 +83,9 @@ plan/
 
 .claude/commands/
   next.md                       # The /next command for phase-by-phase execution
+
+.claude/
+  settings.json                 # Tech-stack-derived permissions (Phase 6.5 Configure; merged if it already exists)
 ```
 
 `--dry-run` creates only the `plan/` files and `.claude/commands/next.md`. It does not create the `docs/` files.
@@ -178,6 +182,7 @@ Stub files are named `plan/<NN>-<kebab-case-name>.md` — for example, `plan/01-
 | **Critique** | After 2 failed revision rounds, proceeds with a risk warning. |
 | **Scope** | Logs "Scope estimates unavailable." Proceeds to populate without blocking. |
 | **Populate** | Fails loudly if any marker is missing. Reports which files succeeded and which failed. Waits for you to fix before retrying. |
+| **Configure** | If `.claude/settings.json` cannot be written, logs a warning and proceeds to handoff. Not a hard stop. |
 
 ## Conflict detection
 

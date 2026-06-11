@@ -10,7 +10,7 @@
 - **Git repository:** working tree inside a git repo (`git rev-parse HEAD` succeeds) — required for `db_indexed_sha` stamping and staleness checks.
 - **Indexer runtime:** at least one Tier-1 or Tier-2 language runtime available for this repo (Python is sufficient for AI-Skills-Agents).
 - **SQLite:** `sqlite3` CLI available on PATH for index inspection during manual tests.
-- **Ops skill:** `/ops` skill deployed; Phase 2.5b advisory preflight is implemented in `skills/ops/phase-dispatch.md` (loaded from the ops hub after triage routes to pipeline).
+- **Ops skill:** `/ops` skill deployed; Phase 2.5b advisory preflight is implemented in `skills/ops/phase-preflights.md` (loaded from the ops hub after triage routes to pipeline).
 
 ---
 
