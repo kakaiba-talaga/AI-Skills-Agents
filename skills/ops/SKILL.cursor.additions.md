@@ -355,7 +355,7 @@ ANCHOR: | **Failed — 2nd attempt** | Dispatch a **debugger** agent (or **debug
 
 @@PATCH
 ACTION: replace
-ANCHOR: | **Failed — 3rd attempt** | Escalate model (e.g., sonnet → opus) and re-dispatch with full error history. Skip if already on opus. See Model Escalation in Adaptability. |
+ANCHOR: | **Failed — 3rd attempt** | Escalate model (sonnet → opus, opus → fable) and re-dispatch with full error history. Skip if already on fable; security-reviewer caps at opus and never escalates to fable. See Model Escalation in Adaptability. |
 @@STOP
 | **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
 @@CONTENT
@@ -520,7 +520,7 @@ ANCHOR: | Environment/dependency blocker | Create blocker task, pause chain, ale
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: | 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on opus or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |
+ANCHOR: | 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on fable — or on opus for security-reviewer (see the escalation ceiling exception) — or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |
 @@CONTENT
 | 3 consecutive failures on same task | Escalate to user with: task, all attempts, errors, debugger findings, your diagnosis |
 @@END

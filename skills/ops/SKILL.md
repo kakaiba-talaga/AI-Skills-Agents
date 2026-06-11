@@ -419,7 +419,7 @@ The team manager may create **internal bookkeeping tasks** (merge branches, fina
 | :--- | :--- |
 | Criteria not met (soft fail) | Re-dispatch with feedback: what specifically failed and why |
 | Environment/dependency blocker | Create blocker task, pause chain, alert user |
-| 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on opus or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |
+| 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on fable — or on opus for security-reviewer (see the escalation ceiling exception) — or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |
 | Agent reports plan is wrong | Pause chain, present the issue, suggest re-plan |
 | Agent timeout or crash | Retry once with same brief, then escalate |
 
@@ -462,9 +462,13 @@ The team manager adapts strategy based on runtime conditions. Every adaptation i
 ```
 1st attempt: assigned model (from frontmatter)
 2nd attempt: same model, with error context and narrowed scope
-3rd attempt: escalate model (sonnet → opus), with full error history
+3rd attempt: escalate model (sonnet → opus, opus → fable), with full error history
 4th attempt: escalate to user
 ```
+
+**At-ceiling short-circuit:** if the assigned model is already fable, the 3rd-attempt escalation has no higher tier — skip it and escalate directly to the user (a 3-attempt ceiling rather than 4).
+
+**Escalation ceiling exception:** `security-reviewer` never escalates to fable — Fable 5's cybersecurity safety classifiers can refuse security-analysis content mid-run, which would wedge the stage. If `security-reviewer` fails 3 times on opus, escalate to the user instead.
 
 > **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.
 

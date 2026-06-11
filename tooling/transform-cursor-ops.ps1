@@ -569,7 +569,7 @@ rep(
 # PATCH 27 — Step 4 outcome: Failed 3rd + remove 4th
 # ---------------------------------------------------------------------------
 rep(
-    "| **Failed — 3rd attempt** | Escalate model (e.g., sonnet → opus) and re-dispatch with full error history. Skip if already on opus. See Model Escalation in Adaptability. |\n| **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |",
+    "| **Failed — 3rd attempt** | Escalate model (sonnet → opus, opus → fable) and re-dispatch with full error history. Skip if already on fable; security-reviewer caps at opus and never escalates to fable. See Model Escalation in Adaptability. |\n| **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |",
     "| **Failed — 3rd attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |",
 )
 
@@ -780,7 +780,7 @@ rep(
 )
 
 rep(
-    "| 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on opus or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |",
+    "| 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on fable — or on opus for security-reviewer (see the escalation ceiling exception) — or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |",
     "| 3 consecutive failures on same task | Escalate to user with: task, all attempts, errors, debugger findings, your diagnosis |",
 )
 
@@ -838,7 +838,7 @@ rep(
 # PATCH 49 — Model escalation → Retry strategy
 # ---------------------------------------------------------------------------
 rep(
-    "### Model escalation\n\n> **Algorithm steps — keep fenced.** The block below is a reference enumeration for internal logic, not a user-facing UI output. Do not unfence it.\n\n```\n1st attempt: assigned model (from frontmatter)\n2nd attempt: same model, with error context and narrowed scope\n3rd attempt: escalate model (sonnet → opus), with full error history\n4th attempt: escalate to user\n```\n\n> **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.",
+    "### Model escalation\n\n> **Algorithm steps — keep fenced.** The block below is a reference enumeration for internal logic, not a user-facing UI output. Do not unfence it.\n\n```\n1st attempt: assigned model (from frontmatter)\n2nd attempt: same model, with error context and narrowed scope\n3rd attempt: escalate model (sonnet → opus, opus → fable), with full error history\n4th attempt: escalate to user\n```\n\n**At-ceiling short-circuit:** if the assigned model is already fable, the 3rd-attempt escalation has no higher tier — skip it and escalate directly to the user (a 3-attempt ceiling rather than 4).\n\n**Escalation ceiling exception:** `security-reviewer` never escalates to fable — Fable 5's cybersecurity safety classifiers can refuse security-analysis content mid-run, which would wedge the stage. If `security-reviewer` fails 3 times on opus, escalate to the user instead.\n\n> **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.",
     """### Retry strategy
 
 When an agent fails, the team-manager retries with increasing context before escalating:
