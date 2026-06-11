@@ -2,7 +2,7 @@
 
 > **Parent:** `~/.claude/skills/ops/SKILL.md` — Non-negotiables #3, #4, #6, #7, #8 govern completion behavior.
 
-### Phase 4 — Completion
+## Phase 4 — Completion
 
 When every task is `completed`:
 

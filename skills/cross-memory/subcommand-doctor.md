@@ -4,7 +4,7 @@
 
 Read-only structural and integration health check. Doctor inspects the canonical store, sentinel blocks, redaction surface, mirror consistency, and adapter-detection state. It never writes, repairs, or auto-corrects.
 
-### Command syntax
+## Command syntax
 
 ```
 /cross-memory doctor \
@@ -18,7 +18,7 @@ Read-only structural and integration health check. Doctor inspects the canonical
 
 No positional arguments. The flags `--harness`, `--scope`, `--json`, and `--verbose` are defined in `## Shared flag parsing` above — their semantics are not redefined here.
 
-### Mutual-exclusion rules
+## Mutual-exclusion rules
 
 The three mode flags interact with the following constraints:
 
@@ -42,11 +42,11 @@ The three mode flags interact with the following constraints:
   error: unknown check name 'foo'. See ## Check-name vocabulary for valid names.
   ```
 
-### Mode selection and default check sets
+## Mode selection and default check sets
 
 Doctor operates in one of four modes depending on which flags are present. Each mode selects a distinct set of checks to run.
 
-#### Default mode (no flags)
+### Default mode (no flags)
 
 When neither `--pre-deploy`, `--post-deploy`, nor `--check` is present, doctor runs a balanced read-only sweep covering the four groups most likely to surface regressions without requiring harness-side writes or cross-harness coordination.
 
@@ -66,7 +66,7 @@ When neither `--pre-deploy`, `--post-deploy`, nor `--check` is present, doctor r
 
 Check identifiers used above are defined in `## Check-name vocabulary`. Cross-reference each by group when adding new default-mode checks.
 
-#### Pre-deploy mode (`--pre-deploy`)
+### Pre-deploy mode (`--pre-deploy`)
 
 Selects the six-check shorthand for validating the local repository state before a deploy run. All six checks are read-only. This mode is appropriate as a pre-flight step in CI or before running `tooling/deploy.{ps1,sh}`.
 
@@ -81,7 +81,7 @@ Selects the six-check shorthand for validating the local repository state before
 
 Full check definitions, finding shapes, and PASS/WARN/FAIL criteria are documented in `### Check definitions (full table)` below.
 
-#### Post-deploy mode (`--post-deploy`)
+### Post-deploy mode (`--post-deploy`)
 
 Selects the five-check shorthand for validating a deployed state. Designed to run after `tooling/deploy.{ps1,sh}` completes, using the second harness as the invoking context.
 
@@ -99,7 +99,7 @@ Selects the five-check shorthand for validating a deployed state. Designed to ru
 
 Full check definitions, finding shapes, and PASS/WARN/FAIL criteria are documented in `### Check definitions (full table)` below.
 
-#### Post-deploy walk (Claude Code)
+### Post-deploy walk (Claude Code)
 
 The following six-step procedure constitutes the operator-facing validation walk for a single-harness Claude Code post-deploy invocation. Execute the steps in order; each step is a prerequisite for the next.
 
@@ -119,7 +119,7 @@ The following six-step procedure constitutes the operator-facing validation walk
 
 6. **Assert overall verdict.** Confirm the overall verdict is `pass`. Any `warn` or `fail` finding must be resolved before the deployment is considered healthy.
 
-#### Post-deploy walk (Cursor)
+### Post-deploy walk (Cursor)
 
 The following six-step procedure constitutes the operator-facing validation walk for a Cursor post-deploy invocation. Execute the steps in order; each step is a prerequisite for the next. Step 0 of the cross-harness gate (a save performed in Claude Code) must have completed before this walk begins.
 
@@ -137,11 +137,11 @@ The following six-step procedure constitutes the operator-facing validation walk
 
 5. **Assert the cross-harness round-trip passes.** Verify that `cross-harness-roundtrip` returns `pass` with the canonical path of the test memory landed by the Step 0 Claude Code save. This constitutes a behavioral walk of SC-2: a memory saved in harness A (Claude Code) is locatable via `recall` in harness B (Cursor).
 
-6. **Assert the SC behavioral sub-findings.** Verify that the `sc-behavioral-walk` findings are: SC-2, SC-3, SC-4, SC-5 return `pass`; SC-1, SC-15, and SC-16 return `not-applicable` with `reason: "cursor injection surface (update_sentinel_block) is a documented v1 no-op"`. The overall `sc-behavioral-walk` verdict is `pass` because `not-applicable` is treated as `pass` under the `not-applicable = pass` aggregation rule (see `### Output formats and exit codes`). Confirm the overall doctor verdict is `pass`.
+6. **Assert the SC behavioral sub-findings.** Verify that the `sc-behavioral-walk` findings are: SC-2, SC-3, SC-4, SC-5 return `pass`; SC-1, SC-15, and SC-16 return `not-applicable` with `reason: "cursor injection surface (update_sentinel_block) is a documented v1 no-op"`. The overall `sc-behavioral-walk` verdict is `pass` because `not-applicable` is treated as `pass` under the `not-applicable = pass` aggregation rule (see `## Output formats and exit codes`). Confirm the overall doctor verdict is `pass`.
 
 **Cursor slash-command parity note.** Cursor slash-command parity (whether `/cross-memory <subcommand>` parses correctly in Cursor's composer) is verified at deploy time as part of the cross-harness gate. If `/cross-memory <subcommand>` does not parse in Cursor's composer, a `tooling/transform-cursor-cross-memory.{ps1,sh}` transform is required; that transform is a deferred contingent path and is not part of the v1.1 deliverable.
 
-### Targeted check mode (`--check <name>`)
+## Targeted check mode (`--check <name>`)
 
 When one or more `--check <name>` flags are present (and neither `--pre-deploy` nor `--post-deploy` is set), doctor runs exactly the named checks — no implicit additions. Multiple checks can be passed in a single invocation:
 
@@ -165,9 +165,9 @@ An unrecognized `--check` argument — one that matches neither an individual ch
 error: unknown check name 'foo'. See ## Check-name vocabulary for valid names.
 ```
 
-When a named check's per-harness applicability determines it does not apply to the active harness (for example, `sentinel-region-content-parses` under `--harness cursor` at v1), the check returns `not-applicable` rather than `pass` or `fail`. Output formats and exit-code semantics for `not-applicable` are documented in `### Output formats and exit codes` below.
+When a named check's per-harness applicability determines it does not apply to the active harness (for example, `sentinel-region-content-parses` under `--harness cursor` at v1), the check returns `not-applicable` rather than `pass` or `fail`. Output formats and exit-code semantics for `not-applicable` are documented in `## Output formats and exit codes` below.
 
-### Group A — canonical-integrity (5 checks)
+## Group A — canonical-integrity (5 checks)
 
 These checks verify the internal consistency of the canonical store at `~/.cross-memory/`. All five are read-only and apply under every harness.
 
@@ -179,7 +179,7 @@ These checks verify the internal consistency of the canonical store at `~/.cross
 | `canonical-no-duplicate-slugs` | Within each scope directory, asserts that no two files share the same slug (derived from the `name` frontmatter field). Duplicate slugs create ambiguous recall results and can cause one file to shadow another. | `{ scope: string, slug: string, files: string[] }` | All slugs are unique within each scope | — | Any two files in the same scope share a slug. Finding lists the duplicate slug and the full paths of both files. |
 | `canonical-archive-not-indexed` | Asserts that `~/.cross-memory/archive/MEMORY.md` does not exist. Per the invariant in `indexing.md` § 3, the archive directory is intentionally not indexed — archived memories are historical state accessed by direct directory traversal, not by an index. A `MEMORY.md` in the archive would be written only by an out-of-spec tool and must be flagged. | `{ archive_path: string }` | `~/.cross-memory/archive/MEMORY.md` is absent | — | `~/.cross-memory/archive/MEMORY.md` exists. Finding includes the archive path that was found. |
 
-### Group B — mirror-consistency (3 checks)
+## Group B — mirror-consistency (3 checks)
 
 These checks verify the consistency of adapter-managed mirror copies against the canonical store. All three are read-only. Group B reuses each adapter's existing read-only `detect_collisions` contract — no new adapter operations are introduced by doctor at v1.1.
 
@@ -189,7 +189,7 @@ These checks verify the consistency of adapter-managed mirror copies against the
 | `mirror-canonical-source-exists` | For every sidecar entry, verifies that the recorded `canonical_source` path exists on disk. A missing source means the canonical file was deleted or moved outside the canonical store without updating the sidecar. | `{ sidecar_entry: string, canonical_source: string }` | Every sidecar entry's canonical source file exists on disk | — | Any canonical source path referenced in the sidecar is absent from disk. Finding lists the broken sidecar entry and the canonical path that was not found. |
 | `mirror-detect-collisions` | Calls each active adapter's read-only `detect_collisions` contract and reports the three-state classification for every mirror file: `native` (file exists only as a mirror, no user edits), `stale-mirror` (mirror is older than the canonical source), or `user-edited` (mirror has been modified independently since it was written). Doctor reports the classification and **takes no action** — no overwriting, no quarantining, no merging. | `{ mirror_path: string, classification: "native" \| "stale-mirror" \| "user-edited" }` | No collisions found, or all collisions are classified as `native` | One or more collisions classified as `stale-mirror` or `user-edited`. These states are informational — doctor does not take corrective action. Finding lists each collision with its classification. | — |
 
-### Group C — sentinel-markers (3 checks)
+## Group C — sentinel-markers (3 checks)
 
 These checks verify the integrity of the sentinel-bounded `[CROSS-MEMORY]` injection region in the harness-native `MEMORY.md`. Per-harness applicability is load-bearing for this group.
 
@@ -205,11 +205,11 @@ These checks verify the integrity of the sentinel-bounded `[CROSS-MEMORY]` injec
 | `sentinel-region-bytes-fingerprint` | At v1.1, operates as an intra-run check only. Computes a SHA-256 fingerprint of the bytes **outside** the sentinel region (i.e., the user-managed content above the begin marker and below the end marker) at run start, then again at run end, and compares the two. A mismatch indicates that the skill modified bytes it should not have touched — only the bytes between the markers are ever written by the skill. | `{ harness: string, start_fingerprint: string, end_fingerprint: string }` (fingerprints truncated to first 16 hex characters in human output) | Start and end fingerprints are identical | — | Fingerprints differ. Finding includes the harness name and both truncated fingerprints. | `reason: "cursor adapter update_sentinel_block is a v1 no-op; no sentinel region exists to fingerprint around"`. Generic: same reason. |
 | `sentinel-region-content-parses` | Reads the bytes between the sentinel markers and asserts they parse as a valid `[CROSS-MEMORY]` injection block. An empty region (zero bytes) is also a valid state and returns PASS. A region whose content is malformed — for example, truncated mid-entry or containing bytes from a non-cross-memory write — returns FAIL. | `{ harness: string, parser_error: string \| null }` | Content between the markers parses as a valid injection block (or the region is empty) | — | Content does not parse. Finding includes the harness name and the parser error message. | `reason: "cursor adapter update_sentinel_block is a v1 no-op; no sentinel region to parse"`. Generic: same reason. |
 
-#### Group C and init's step-4 self-check
+### Group C and init's step-4 self-check
 
 The Group C checks double as init's step-4 self-check primitives. After init writes the sentinel block under `--harness claude-code`, it immediately runs `sentinel-marker-count` and `sentinel-region-content-parses` as read-only self-checks against the file it just wrote. If either check would report `fail`, init fails fast and emits a structured violation report rather than proceeding to the step 5 summary. Under `--harness cursor` or `--harness generic`, init's step 4 reports `sentinel=skipped` and these two self-checks return `not-applicable` rather than running — so init always succeeds on those harnesses regardless of Group C state. See `subcommand-init.md § Reuse of doctor's check primitives` for the full step-4 behavior table.
 
-### Group D — redaction-surface (3 checks)
+## Group D — redaction-surface (3 checks)
 
 These checks verify that the redaction layer is healthy and that no sensitive content has slipped through into the canonical store. All three are read-only. They apply under every harness.
 
@@ -219,7 +219,7 @@ These checks verify that the redaction layer is healthy and that no sensitive co
 | `redaction-sampling-scan` | Samples N memories per scope (default 10, capped at 30) and scans each memory body against the Pass-B regex set from `redaction.md`. Sampling is non-deterministic; the finding records the sample size and seed (or the full sample list) for reproducibility. Each suspicious match is emitted as a separate finding entry — the match is never reported verbatim; only a redacted excerpt is included. Doctor does not modify any memory regardless of findings. | `{ file: string, scope: string, regex_name: string, redacted_excerpt: string }` per match; `{ sample_size: number, seed: string \| null, sample_list: string[] }` for the run summary | No regex matches across all sampled memories | One or more matches found across the sample. Each match is an independent finding with the file path, scope name, regex name, and a redacted excerpt. This is informational — operators must inspect and resolve matches manually using `forget` or `save --no-redact` with the corrected body. | — |
 | `redaction-overridden-flag-audit` | Surfaces every memory whose frontmatter contains `redaction_overridden_at`. Override timestamps indicate a deliberate operator decision to bypass the redaction gate; this check makes those decisions visible in the doctor report so they can be reviewed periodically. Doctor does not remove or modify any override. | `{ file: string, scope: string, override_timestamp: string, override_reason: string \| null }` per overridden memory | No memories with `redaction_overridden_at` set in frontmatter | One or more memories with `redaction_overridden_at` set. Each override is a separate finding with the file path, scope, override timestamp, and override reason if present in frontmatter. This is informational — operators may have legitimate reasons to override. | — |
 
-### Group E pre-deploy — deploy-target-prep (2 checks)
+## Group E pre-deploy — deploy-target-prep (2 checks)
 
 These checks are intended to run before deploying a new version of the cross-memory skill. They verify that the deployment manifest and installed artifacts are consistent with the repo. Both are read-only.
 
@@ -228,7 +228,7 @@ These checks are intended to run before deploying a new version of the cross-mem
 | `deploy-manifest-coverage` | Globs the patterns defined in `tooling/deploy-manifest.json` and asserts that all eight cross-memory files are covered: six skill files (`SKILL.md`, `redaction.md`, `indexing.md`, `adapter-claude-code.md`, `adapter-cursor.md`, `adapter-generic.md`), the agent definition (`agents/cross-memory.md`), and the redaction reference. Also confirms that exclusion patterns in the manifest do not unintentionally drop any of the eight files. Finding lists which file(s) are missing from manifest coverage when the check fails. | `{ uncovered_files: string[] }` | All eight cross-memory files are covered by at least one manifest glob, and no exclusion pattern removes them. | — | One or more of the eight files is not covered by any manifest glob, or is covered but then removed by an exclusion pattern. Finding lists each uncovered or excluded-out file path. |
 | `stale-shipped-artifacts` | Globs `~/.claude/skills/cross-memory/`, `~/.cursor/skills/cross-memory/`, and `~/.claude/agents/cross-memory.md` for files that have no source counterpart in the repo. This check assumes cross-harness directory reads are read-only and accessible from either harness session — it does not require switching harnesses to perform the glob. Doctor does not delete any stale artifact. Finding lists each stale path and the missing repo counterpart. | `{ stale_path: string, missing_repo_counterpart: string }` per stale file | No stale files found in any of the three target locations. | One or more stale files found (i.e., a file is present in a deploy target but has no matching source file in the repo). Each stale file is a separate finding. This is informational — doctor does not delete. | — |
 
-### Group E post-deploy — cross-harness-validation (3 checks)
+## Group E post-deploy — cross-harness-validation (3 checks)
 
 These checks validate that the deployed skill behaves correctly across harness boundaries. They are intended to run after a successful deploy and are the primary integration gate for the v1.1 acceptance criteria.
 
@@ -238,7 +238,7 @@ These checks validate that the deployed skill behaves correctly across harness b
 | `adapter-detection` | Re-runs the five-step adapter selection chain (see `adapter-selection.md`) and reports which step resolved the active harness. The five steps, in precedence order, are: `cli-flag` → `config-field` → `env-var` → `manifest-probe` → `generic-fallback`. The generic fallback is always defined, so the chain cannot silently fail to select a harness. Always emits a single finding with the winning step name and the resolved harness name. | `{ winning_step: "cli-flag" \| "config-field" \| "env-var" \| "manifest-probe" \| "generic-fallback", harness: string }` | A harness was resolved via any of the five steps. (The `generic-fallback` is a valid PASS — it means the harness was not explicitly configured, which is allowed.) | — | The adapter selection chain itself errors before any step can resolve (the generic fallback should prevent this; a FAIL here indicates a structural error in the chain logic). |
 | `sc-behavioral-walk` | Walks the seven contract-only-verified scenarios (SC-1, SC-2, SC-3, SC-4, SC-5, SC-15, SC-16) as small in-place behavioral checks. Each scenario emits its own sub-finding with a verdict of `pass`, `fail`, `warn`, or `not-applicable`. The per-harness applicability matrix below determines whether each SC is walked, delegated to `cross-harness-roundtrip`, or returned as `not-applicable`. | Array of `{ sc: string, verdict: "pass" \| "fail" \| "warn" \| "not-applicable", reason: string \| null }` — one entry per SC | All walked SCs return `pass` (and any `not-applicable` SCs are treated as `pass` for aggregation). | Any walked SC returns `warn`. | Any walked SC returns `fail`. |
 
-#### `sc-behavioral-walk` per-harness applicability matrix
+### `sc-behavioral-walk` per-harness applicability matrix
 
 | SC | What it verifies | Under `--harness claude-code` | Under `--harness cursor` |
 | :--- | :--- | :--- | :--- |
@@ -250,9 +250,9 @@ These checks validate that the deployed skill behaves correctly across harness b
 | SC-15 | `<private>` redaction suppresses content from the always-on tier output | Walked behaviorally — confirms redacted content does not appear in the populated `[CROSS-MEMORY]` block. | **`not-applicable`** — the `[CROSS-MEMORY]` block is itself absent at v1; redaction itself remains contract-verified via Group D `redaction-sampling-scan`. |
 | SC-16 | `[CROSS-MEMORY]` injection block format is correct | Walked behaviorally — `sentinel-region-content-parses` is the same primitive. | **`not-applicable`** — same reason as SC-1. |
 
-Under `--harness claude-code` the walk emits **seven** sub-findings, one per SC, each with verdict `pass` / `fail` / `warn`. Under `--harness cursor` the walk emits **four behavioral** sub-findings (SC-2, SC-3, SC-4, SC-5) plus **three** `not-applicable` sub-findings (SC-1, SC-15, SC-16) each with `reason: "cursor injection surface (update_sentinel_block) is a documented v1 no-op"`. Doctor's overall-verdict aggregation treats `not-applicable` as `pass`, so an otherwise-healthy Cursor walk still returns overall `pass`. Cross-reference `### Output formats and exit codes` below for the formal aggregation rule.
+Under `--harness claude-code` the walk emits **seven** sub-findings, one per SC, each with verdict `pass` / `fail` / `warn`. Under `--harness cursor` the walk emits **four behavioral** sub-findings (SC-2, SC-3, SC-4, SC-5) plus **three** `not-applicable` sub-findings (SC-1, SC-15, SC-16) each with `reason: "cursor injection surface (update_sentinel_block) is a documented v1 no-op"`. Doctor's overall-verdict aggregation treats `not-applicable` as `pass`, so an otherwise-healthy Cursor walk still returns overall `pass`. Cross-reference `## Output formats and exit codes` below for the formal aggregation rule.
 
-### Adapter detection delegation
+## Adapter detection delegation
 
 The `adapter-detection` check contains **no precedence logic of its own**. It delegates entirely to the five-step chain defined in `adapter-selection.md`. Any future change to harness selection logic — adding a step, reordering existing steps, changing timeout behavior — must be made in `adapter-selection.md` only. Init and doctor both call that chain; neither duplicates it.
 
@@ -265,12 +265,12 @@ This `harness` + `harness_selection_step` pair is surfaced in the following plac
 | Init human-readable summary | `subcommand-init.md § Step 5 — Summary output → Human-readable summary` | `harness=<name>` in the summary line |
 | Init JSON output | `subcommand-init.md § Step 5 — Summary output → JSON output` | `harness` and `harness_selection_step` as top-level keys |
 | Init verbose trace | `subcommand-init.md § Step 5 — Summary output → Verbose mode` | `harness=<name> (selected by <step>)` on the step-2 trace line |
-| Doctor human report | `### Output formats and exit codes → Human-readable report` | `harness` listed in the per-check finding under `adapter-detection` |
-| Doctor JSON output | `### Output formats and exit codes → JSON report` | `harness` and `harness_selection_step` as top-level keys |
+| Doctor human report | `## Output formats and exit codes → Human-readable report` | `harness` listed in the per-check finding under `adapter-detection` |
+| Doctor JSON output | `## Output formats and exit codes → JSON report` | `harness` and `harness_selection_step` as top-level keys |
 
-### Output formats and exit codes
+## Output formats and exit codes
 
-#### Human-readable report (default)
+### Human-readable report (default)
 
 Doctor emits a structured markdown report to chat. The report contains one section per check group, a per-section verdict line, and a final overall verdict line.
 
@@ -298,7 +298,7 @@ Overall: WARN
 
 Per-section verdict is one of `PASS`, `WARN`, `FAIL`, `NOT-APPLICABLE` (upper-case in the human report). The overall verdict at the bottom is the worst per-section verdict under the aggregation rule below.
 
-#### JSON report (`--json`)
+### JSON report (`--json`)
 
 When `--json` is passed, doctor prints a single JSON object instead of the markdown report. The schema version is `1`. Keys appear in this order:
 
@@ -367,7 +367,7 @@ When the hint suppresses (`fired` is `false`), the object is still present at th
 | `active_project_slug` | string | Slug of the active project, or `null` if no project context. |
 | `overall` | string | Overall verdict (one of the five values below). |
 | `sections` | array | One object per check group. |
-| `reflect_staleness_hint` | object | Staleness nudge state. Always present; `message` is omitted when `fired` is `false`. See `### Reflect staleness hint` below. |
+| `reflect_staleness_hint` | object | Staleness nudge state. Always present; `message` is omitted when `fired` is `false`. See `## Reflect staleness hint` below. |
 
 **`sections[]` object keys:**
 
@@ -380,7 +380,7 @@ When the hint suppresses (`fired` is `false`), the object is still present at th
 
 **Cross-tool key note.** The fields `harness`, `harness_selection_step`, and `timestamp_utc` use the same field names and value shapes as the init JSON schema (documented in `subcommand-init.md § Step 5 — Summary output`). Additions or renames to these three keys must be applied consistently to both subcommands.
 
-#### Exit codes
+### Exit codes
 
 Exit codes apply to the **overall** verdict and are only meaningful when `--json` is set. Under the human-readable report, the skill exits 0 regardless of verdict (chat output is the channel; non-zero exits would break the conversational surface).
 
@@ -392,7 +392,7 @@ Exit codes apply to the **overall** verdict and are only meaningful when `--json
 | `fail` | 2 | At least one check found a definite problem requiring action. |
 | `error` | 3 | At least one check could not complete (e.g., unreadable file, unexpected exception). |
 
-#### Verdict aggregation
+### Verdict aggregation
 
 **The `verdict` field is a string enum with five values:**
 
@@ -423,15 +423,15 @@ A section composed entirely of inapplicable checks reports `not-applicable`. For
 
 **Overall verdict** is the worst per-section verdict under the same ordering. A run where every section is either `pass` or `not-applicable` returns overall `pass` (exit code 0).
 
-#### Read-only by default
+### Read-only by default
 
 Doctor is **read-only at v1.1**. There is no `--repair`, no `--fix`, and no auto-correction. The diagnostic-then-fix workflow is explicit: doctor reports findings; the user dispatches `audit`, `forget`, or `save` to address specific findings. This is a lane-policy constraint, not a missing feature — auto-repair would conflate diagnosis and mutation in a single command.
 
-### Lane boundary
+## Lane boundary
 
 Doctor is **skill-only**. The cross-memory agent is not invoked by doctor, and doctor does not dispatch to any agent. Doctor runs entirely in the skill body and is **read-only** at v1.1 — there is no `--repair`, no `--fix`, and no auto-correction. The diagnostic-then-fix workflow stays explicit: doctor reports findings; the user dispatches `audit`, `forget`, or `save` to address specific findings.
 
-### Cross-references
+## Cross-references
 
 - **Check-name vocabulary** (stable identifier set): `## Check-name vocabulary` above.
 - **Shared flag semantics** (`--harness`, `--scope`, `--json`, `--verbose`): `## Shared flag parsing` above.
@@ -439,7 +439,7 @@ Doctor is **skill-only**. The cross-memory agent is not invoked by doctor, and d
 - **Init's reuse of check primitives**: `subcommand-init.md § Reuse of doctor's check primitives`.
 - **SC behavioral walk per-harness matrix**: `## Check-name vocabulary` Group E (`sc-behavioral-walk` row).
 
-### Reflect staleness hint
+## Reflect staleness hint
 
 After the overall-verdict line is emitted (in all four doctor modes: default, pre-deploy, post-deploy, and targeted), doctor reads the per-project state file and conditionally emits a staleness hint. The hint is a UX nudge — it is **not a doctor check**. It has no verdict (`pass`/`fail`/`warn`), is not part of any check group, and does not influence the overall doctor verdict. It closes AC8: the staleness hint fires when the threshold is crossed and suppresses when `last_reflect_at` is unset.
 

@@ -4,7 +4,7 @@
 
 Archives the named memory and removes its index entry from the scope's `MEMORY.md`. The memory is not permanently deleted — it is moved to `~/.cross-memory/archive/` and remains recoverable. This is the only removal operation at v1; there is no "hard delete."
 
-### Command syntax
+## Command syntax
 
 ```
 /cross-memory forget <name> [--scope <s>]
@@ -12,7 +12,7 @@ Archives the named memory and removes its index entry from the scope's `MEMORY.m
 
 `<name>` is a required positional argument — the memory's `name` slug (the value of the `name` frontmatter field, which is also the slug portion of the canonical filename). `--scope` defaults to `user-global`; accepted values are `user-global`, `project:<slug>`, and `harness:<name>`.
 
-### Step 1 — Lookup
+## Step 1 — Lookup
 
 Resolve the canonical path:
 
@@ -30,7 +30,7 @@ no memory named '<name>' in scope '<scope>'
 
 and abort without further action.
 
-### Step 2 — Confirmation
+## Step 2 — Confirmation
 
 Display the memory's `name`, `type`, `category` (if set), and `scope`, then prompt:
 
@@ -40,7 +40,7 @@ Forget memory '<name>'? It will be archived but not auto-deleted. [y/N]
 
 Default is `N`. Any input other than `y` or `Y` (case-insensitive) aborts without changes.
 
-### Step 3 — Archive
+## Step 3 — Archive
 
 On `y` or `Y` (case-insensitive), move the canonical file to:
 
@@ -58,13 +58,13 @@ Echo the archive path to the user:
 archived: ~/.cross-memory/archive/<original-stem>-<YYYYMMDDTHHMMSSZ>.md
 ```
 
-### Step 4 — MEMORY.md update
+## Step 4 — MEMORY.md update
 
 Remove the memory's index line from the scope's `MEMORY.md`. The indexing module's line-removal rule applies: find the single line that references the canonical filename (by the `[name](path)` link pattern used when the memory was indexed) and delete it. Blank lines immediately surrounding the removed line are preserved; do not compact the file's vertical spacing. If no matching line is found (the memory was never indexed, or the index entry was already removed), skip this step silently — it is not an error.
 
 For `project:<slug>` scope, the relevant `MEMORY.md` is the scope's own index file. The harness-native `MEMORY.md` (e.g., `~/.claude/projects/<slug>/memory/MEMORY.md`) is managed separately by the mirror-remove hook in Step 5.
 
-### Step 5 — Mirror-remove hook
+## Step 5 — Mirror-remove hook
 
 After the canonical archive in Step 3 succeeds, the forget flow determines the active adapter (via the precedence chain in `adapter-selection.md`) and dispatches:
 
@@ -74,11 +74,11 @@ active_adapter.mirror_remove(memory)
 
 Where `memory` is the metadata of the archived memory (its `type`, `name`, `scope`, and the canonical path it occupied before archiving). The dispatch runs _after_ the canonical archive — the canonical operation is committed first and mirror removal follows unconditionally.
 
-#### Success path
+### Success path
 
 The active adapter deletes the harness-native mirror file (e.g., `~/.claude/projects/<slug>/memory/<type>_<name>.md`) and removes its entry from the sidecar manifest. A brief removal confirmation is appended to the user-facing output (e.g., "mirror removed from `~/.claude/projects/<slug>/memory/<type>_<name>.md`").
 
-#### Failure paths
+### Failure paths
 
 **Mirror file absent** — the adapter checks for the mirror file and finds it is not present (already removed by the user or a prior forget). This is not an error. The adapter records the absence and the skill continues without emitting a warning.
 
@@ -88,7 +88,7 @@ The active adapter deletes the harness-native mirror file (e.g., `~/.claude/proj
 
 **Unexpected exception** — if the adapter raises a truly unhandled error, the skill catches it, emits a structured warning naming the exception, and returns success. The canonical archive is preserved.
 
-#### Sentinel block update (forget)
+### Sentinel block update (forget)
 
 After `active_adapter.mirror_remove(memory)` succeeds, the forget flow updates the harness-native `MEMORY.md` sentinel region:
 
@@ -98,11 +98,11 @@ After `active_adapter.mirror_remove(memory)` succeeds, the forget flow updates t
 
 This call follows the same canonical-first failure-isolation rules as `mirror_remove`: a failure here is a structured warning, not an error. The canonical archive still succeeds and `mirror_remove` is not rolled back.
 
-### Atomicity
+## Atomicity
 
 The archive move (Step 3) and the `MEMORY.md` update (Step 4) both follow the write-to-temp-then-rename pattern documented in `subcommand-save.md § Atomicity contract`. Readers always see either the pre-forget or the post-forget state of any affected file — never a torn intermediate.
 
-### Cross-references
+## Cross-references
 
 - **Atomicity contract** (write-to-temp-then-rename semantics, platform notes, readers-side guarantee): `subcommand-save.md § Atomicity contract`.
 - **Archive filename pattern and timestamp format**: `subcommand-save.md § Supersede branch, Step 4`.

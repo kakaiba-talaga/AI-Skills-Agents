@@ -4,7 +4,7 @@
 
 Write a manual checkpoint: flush the current state to disk and write a small save file capturing the conversation-side context that the state file does not preserve — verbal decisions the user made mid-run, the working hypothesis, where the run was headed, and open questions still awaiting a decision. The user-supplied text fields are redacted unconditionally before write. After the save file is written, the subcommand optionally dispatches `/cross-memory reflect` to surface durable memories from the run.
 
-### Command syntax
+## Command syntax
 
 ```
 /ops save
@@ -12,13 +12,13 @@ Write a manual checkpoint: flush the current state to disk and write a small sav
 
 No flags. No positional arguments. The subcommand is only valid inside an active run (a board file must exist at `.ops-state/<run-id>-board.json`).
 
-### Save file schema
+## Save file schema
 
 The save file is JSON and is written to `.ops-state/<run-id>-save.json`, alongside the board file. This keeps Phase 4 cleanup simple and means `/ops resume` finds the save file in the same directory as the board file. The schema is fixed — eight fields, no extensibility bag.
 
 **Redaction applies in-place to field values, not via a schema field.** Secret-shaped substrings inside the four user-supplied text fields are replaced with `[REDACTED:<category>]` tokens before the file is written to disk. There is no per-field "was-redacted" boolean and no envelope flag — the placeholder tokens themselves are the evidence of redaction.
 
-#### Example
+### Example
 
 ```json
 {
@@ -41,7 +41,7 @@ The save file is JSON and is written to `.ops-state/<run-id>-save.json`, alongsi
 }
 ```
 
-#### Field definitions
+### Field definitions
 
 | Field | Type | Required | Redacted in-place? | Meaning |
 | :--- | :--- | :--- | :--- | :--- |
@@ -54,7 +54,7 @@ The save file is JSON and is written to `.ops-state/<run-id>-save.json`, alongsi
 | `open_questions` | string[] | yes (may be empty) | **yes (per-entry)** | Questions awaiting a user decision that would block resume if forgotten. Each entry is redacted independently by Pass A + Pass B. |
 | `cross_skill_state` | object \| null | yes | no | Free-form key-value object for any cross-skill state not captured by the board file's `pending_nested_skill`. Typical keys: `last_nested_skill`, `last_nested_outcome`. Null when nothing applies. Values are sourced from the team manager's own state, not from user free-text, and do not pass through redaction. |
 
-### Invocation flow
+## Invocation flow
 
 When the user types `/ops save`, the team manager executes these nine steps in order.
 
@@ -162,7 +162,7 @@ Apply the clear-after steps of the `pending_nested_skill` ritual:
 
 Do not terminate the active run. `/ops save` returns control to the user, but the run remains in whatever state it was in before save (paused, awaiting next dispatch, between dispatches, etc.).
 
-### `/ops resume` interaction
+## `/ops resume` interaction
 
 When `/ops resume` reads the board file and finds a sibling `<run-id>-save.json` in `.ops-state/`, it:
 
@@ -173,7 +173,7 @@ When `/ops resume` reads the board file and finds a sibling `<run-id>-save.json`
 
 If no save file exists, `/ops resume` behaves exactly as it does today — the save file is purely additive.
 
-### Pause vs save
+## Pause vs save
 
 These two verbs do related but distinct things. `pause` is a mid-run mid-loop interruption — the user types it during an active dispatch loop to say "stop dispatching but keep the state file." The team manager finishes the agents currently running, marks no further pending tasks as dispatched, and waits. Conversation context is still alive. The user can type `resume` in the same conversation window to continue immediately. Pause is the right verb when the user wants a temporary halt without context loss — a coffee break, a quick lookup, a side conversation in the same session.
 
@@ -183,6 +183,6 @@ A mental model: `pause` is a bookmark; `save` is a journal entry. You bookmark a
 
 `/ops save` does not stop dispatch — it is independent of whether the run is currently paused, mid-loop, or between dispatches. The user can pause first, then save, then clear; or save first and keep working; or save once and never resume. The two verbs do not block each other.
 
-### Phase 4 cleanup
+## Phase 4 cleanup
 
 The save file is ephemeral and run-scoped. The Phase 4 cleanup step that deletes the board file also deletes `.ops-state/<run-id>-save.json` if present. No manual cleanup is required.

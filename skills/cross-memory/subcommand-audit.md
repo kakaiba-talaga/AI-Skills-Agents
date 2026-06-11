@@ -4,7 +4,7 @@
 
 Scan the canonical cross-memory store for staleness, duplicates, contradictions, redaction misses, and missing-category curation; render a structured five-section report directly to chat; and offer per-finding actions (refresh, archive, forget, redact-now, categorize) gated by the standard write-path confirmation. No file is written to disk for the audit report.
 
-### Command syntax
+## Command syntax
 
 ```
 /cross-memory audit [--staleness-days <N>]
@@ -12,11 +12,11 @@ Scan the canonical cross-memory store for staleness, duplicates, contradictions,
 
 `--staleness-days <N>` overrides the `staleness_threshold_days` config field for the duration of this invocation. Any other value passed is validated as a positive integer; a non-integer or negative value aborts with a structured error.
 
-### Default values
+## Default values
 
 The staleness threshold defaults to the `staleness_threshold_days` config field (default `90`). When `--staleness-days <N>` is passed, that value supersedes the config field for this invocation only. See `## Config` for the field definition and the config file location.
 
-### Step 1 — Build the brief
+## Step 1 — Build the brief
 
 Compose the labeled-prose brief per the `## Brief Format` section in `agents/cross-memory.md`. The effective staleness threshold `<N>` is the CLI flag value if `--staleness-days` was passed, else the `staleness_threshold_days` config field value, else `90`.
 
@@ -38,17 +38,17 @@ Audit the cross-memory store for staleness, duplicates, contradictions, redactio
 - staleness_threshold_days: <N>
 ```
 
-### Step 2 — Dispatch the cross-memory agent
+## Step 2 — Dispatch the cross-memory agent
 
 Dispatch via the Agent tool with `subagent_type: cross-memory` and the brief built in Step 1. The agent is `model: opus` and reads its own definition at `agents/cross-memory.md` as its first action; the skill does not paste the agent body into the dispatch prompt. The agent inherits the per-agent self-read prompt template documented in `agents/cross-memory.md`.
 
-### Step 3 — Render the agent's report
+## Step 3 — Render the agent's report
 
 The agent's return value is a fenced markdown block matching the `## Output Contract — audit` shape in `agents/cross-memory.md`: five sections (Stale memories, Duplicates, Contradictions, Redaction misses, Recommended actions). The skill renders this block directly to chat.
 
 No file is written to disk for the audit report. There is no `~/.cross-memory/audit-reports/` directory; the lazy-provisioning sequence in `## Config` does not create one. The environment block of the report names the active harness and the precedence step that selected it, consistent with the selection-logging behavior described in `adapter-selection.md`.
 
-### Step 4 — Per-finding actions
+## Step 4 — Per-finding actions
 
 After rendering the report, the skill presents the available per-finding actions. The user picks an action by typing the action name followed by the memory identifier (e.g., `refresh feedback_strict_lane_boundaries`). The skill never auto-applies any action — every action goes through its respective confirmation gate before any change is made.
 
@@ -62,7 +62,7 @@ After rendering the report, the skill presents the available per-finding actions
 
 On any input other than a recognized action-plus-identifier, the skill re-displays the action menu. The session ends when the user issues an empty line or types `done`.
 
-### Cross-references
+## Cross-references
 
 - **Gate 3-4 write-path confirmation pattern**: `subcommand-save.md`.
 - **Full forget flow**: `subcommand-forget.md`.

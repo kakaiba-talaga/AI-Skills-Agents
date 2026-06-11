@@ -14,7 +14,7 @@ Determine the starting point from the parsed arguments:
 
 If no arguments are given, ask the user what they want to manage.
 
-#### Trivial Dispatch
+## Trivial Dispatch
 
 When the triage gate routes to `trivial`, execute these steps and stop — do not proceed to Phase 1a, Phase 2.5, or the full Phase 4 ceremony:
 
@@ -84,13 +84,13 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
 
-#### Save Subcommand
+### Save Subcommand
 
 When the triage gate routes to `save`, the team manager executes a manual checkpoint: it flushes the current run state to disk, writes a redacted save file with conversation-side context captured at this moment, and optionally invokes `/cross-memory reflect` so durable facts are not lost across session boundaries. The save subcommand does not dispatch any pipeline agents and does not advance task status.
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/subcommand-save.md` for the full save flow, schema, ritual values, redaction integration, and resume interaction. If the file is missing, print "save subcommand unavailable" and stop.
 
-#### Brainstorm Gate (opt-in, pre-planning)
+### Brainstorm Gate (opt-in, pre-planning)
 
 When `--brainstorm` is enabled (or the user explicitly requests brainstorm/design-first behavior), run this gate before any planner dispatch:
 
@@ -123,7 +123,7 @@ The plan document is infrastructure — not a deliverable task — written befor
 
 **After this nested skill returns, do not end the turn and do not write "Handing control back."** A nested-skill return is a mid-loop event (see Non-negotiable #10). Before invoking, write `pending_nested_skill` to the state file with `skill: "/clickup"`, `resume_phase: "phase-1-intake"`, and `resume_notes: "return to Phase 1 plan-clarity evaluation"`. After the skill returns, re-read the state file, attach the ClickUp context to the planner/interviewer brief and continue Phase 1 plan-clarity evaluation — either dispatch the planner or the interviewer depending on spec clarity. Then clear `pending_nested_skill` back to `null` and continue.
 
-### Phase 1a — Plan Validation (adaptive)
+## Phase 1a — Plan Validation (adaptive)
 
 **Skip entirely when:** the triage gate routed to `trivial`. Phase 1a runs only on the `pipeline` route.
 
@@ -149,7 +149,7 @@ Render this tier-decision block as plain Markdown, not inside a fence. Output th
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/plan-validation.md` for spec clarity evaluation criteria, plan complexity scoring signals, critic verdict handling, scoper/critic output descriptions, execute-skip detection, mode-specific behavior, and adaptation rules. If the file is missing, proceed using the tier table and display format above.
 
-### Phase 1.5 — Branch Isolation (adaptive)
+## Phase 1.5 — Branch Isolation (adaptive)
 
 Branch isolation is the default — create a working branch before agents modify code. Skip if `--no-branch` is set, or if the command is `status` or `resume`.
 
@@ -172,7 +172,7 @@ When skipping, **always log it as an adaptation**: "Adapted: skipped branch crea
 
 > **Reference:** Dispatch the **git-master** agent (see `~/.claude/agents/git-master.md`) with a branch-workflow task. The git-master's "Branch workflow" section contains the full decision matrix, uncommitted-change handling, naming conventions, completion cleanup, and worktree interaction rules.
 
-### Phase 2 — Task Board Creation
+## Phase 2 — Task Board Creation
 
 Parse the plan into discrete, assignable tasks. Create the state file.
 

@@ -4,7 +4,7 @@
 
 The injection-block formatter consumes the ordered entry list produced by the always-on tier filter and renders the bytes that the harness adapter splices between the `<!-- cross-memory:begin -->` and `<!-- cross-memory:end -->` sentinel markers in the harness-native `MEMORY.md`. The formatter is strictly a renderer: it takes entries in, produces bytes out, and makes no decisions about scope selection, staleness, or deduplication — all of that is the filter's job.
 
-### Output contract
+## Output contract
 
 The formatter's output is **exactly** the bytes the adapter passes to `update_sentinel_block(content)`. The formatter does **not** emit the sentinel marker lines themselves — those are part of the file structure managed by the adapter. The output begins with the `[CROSS-MEMORY]` header line and ends with the last sub-section's last bullet line. There is no trailing blank line and no trailing marker in the formatter's output.
 
@@ -13,7 +13,7 @@ This means:
 - The adapter writes `<!-- cross-memory:begin -->\n`, then the formatter's output, then `\n<!-- cross-memory:end -->` (the exact byte layout is the adapter's concern; the formatter is unaware of it).
 - If the formatter produces zero bytes (see empty-list edge case below), the region between the markers is empty — the markers remain present but contain nothing.
 
-### Block structure
+## Block structure
 
 A fully populated block looks like this:
 
@@ -38,9 +38,9 @@ Key layout rules:
 
 At v1, the block contains **two active sub-sections**: `User Profile:` and `Project Knowledge:`. The `Relevant Memories:` sub-section is reserved in the design but not emitted at v1 (see Relevant Memories below).
 
-### Sub-section sourcing rules
+## Sub-section sourcing rules
 
-#### User Profile
+### User Profile
 
 The `User Profile:` sub-section is populated from two sources, combined in this order:
 
@@ -53,7 +53,7 @@ Additionally, any `tag=always-on` entries from the `user-global` scope that ente
 
 Within each source group, entries are ordered as delivered by the filter (most recently updated first within each group). Source groups appear in the order listed above — Rule 1 entries, then Rule 3 entries, then Rule 4 user-global additions, then Rule 4 harness-scope additions.
 
-#### Project Knowledge
+### Project Knowledge
 
 The `Project Knowledge:` sub-section is populated from:
 
@@ -64,13 +64,13 @@ Entries are ordered as delivered by the filter (most recently updated first with
 
 If no active project slug was resolved (the adapter could not determine the current project), Rule 2 contributes zero entries and the sub-section is omitted from the output.
 
-#### Relevant Memories — deferred at v1
+### Relevant Memories — deferred at v1
 
 The `Relevant Memories:` sub-section is **reserved** in the injection block design but is **not emitted at v1**. Its header line is not written, and no bullets are produced for it. The sub-section will be populated in a future release by a relevance-ranking step that scores memories against the current session context. At v1 the always-on tier surfaces every qualifying memory via type and tag rules rather than ranking — there is no ranking signal to drive a relevance sub-section.
 
 This is not a gap or omission; it is an explicit deferral. The sub-section slot is documented here so the formatter spec is complete: when relevance ranking is introduced post-v1, the `Relevant Memories:` sub-section will be inserted after `Project Knowledge:` and will carry its own drop-priority position in the size budget.
 
-### Bullet format
+## Bullet format
 
 Each memory entry is rendered as a single Markdown list item:
 
@@ -86,11 +86,11 @@ The leading `- ` prefix is literal (hyphen, space). The `<description_with_banne
 
 **No metadata.** The bullet contains only the `description_with_banner` value. No memory `name`, `type`, `category`, `scope`, `verified_at`, or confidence score is rendered. No bullet IDs, no source attribution. The simplest possible line.
 
-### Size budget enforcement
+## Size budget enforcement
 
 The formatter must fit its output within the byte budget configured by `max_inject_chars` (default: 2048 bytes). The budget is measured in UTF-8 encoded bytes of the formatter's full output string. When the output would exceed the budget, sub-sections are dropped in a defined priority order until the output fits.
 
-#### Drop priority
+### Drop priority
 
 Sub-sections drop in this order (last item drops first, first item drops last):
 
@@ -102,7 +102,7 @@ The `Relevant Memories:` sub-section is already deferred at v1 and does not part
 
 Harness-scope entries (Rule 3), folded into User Profile, drop together with User Profile — they do not get independent drop-priority.
 
-#### Sub-section atomicity
+### Sub-section atomicity
 
 A sub-section either fits in full or is dropped entirely. Partial sub-sections are not emitted. The user-experience cost of a half-rendered sub-section (a header with only some of its bullets) is worse than its complete omission, because a partial block gives a misleading picture of the memory tier's content.
 
@@ -114,7 +114,7 @@ When computing whether a sub-section fits within the remaining budget, the forma
 
 If the total byte cost of the sub-section plus all previously committed bytes exceeds `max_inject_chars`, the sub-section is dropped in its entirety.
 
-#### Within-sub-section bullet trimming
+### Within-sub-section bullet trimming
 
 Before applying whole-sub-section drop, the formatter trims individual bullets bottom-to-top (lowest-priority bullet drops first). The filter's sort order establishes priority: within a sub-section, the last entry in the sorted list is the first to be trimmed. Bullets are dropped one at a time until either the sub-section fits within the remaining budget or no bullets remain (in which case the sub-section itself is dropped — an empty sub-section is not emitted).
 
@@ -123,7 +123,7 @@ The combination of bullet trimming and whole-sub-section drop means:
 2. If it does not fit, drop bullets bottom-to-top until it does.
 3. If trimming all bullets still doesn't bring the cost within budget (i.e., even the sub-section header alone overflows), drop the entire sub-section.
 
-### Edge cases
+## Edge cases
 
 | Scenario | Behavior |
 | :--- | :--- |
@@ -135,7 +135,7 @@ The combination of bullet trimming and whole-sub-section drop means:
 | A staleness banner inflates a bullet past 120 characters | The 120-character cap is applied to `description_with_banner` as a whole. The description is shortened to make room for the banner. The banner text is never truncated — only the description is shortened. The truncated description ends with `…`, and the full rendered bullet is exactly 120 characters. |
 | `max_inject_chars` is set below the header length (pathological config) | Emit zero bytes. The formatter does not emit a partial header under any circumstance. |
 
-### Cross-references
+## Cross-references
 
 - **Always-on tier filter** (produces the ordered entry list this formatter consumes): `always-on-tier.md`.
 - **`update_sentinel_block` operation** (how the formatter's output bytes are spliced between the sentinel markers in the harness-native `MEMORY.md`): `adapter-claude-code.md` § 6.

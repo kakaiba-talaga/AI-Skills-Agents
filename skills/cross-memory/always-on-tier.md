@@ -6,7 +6,7 @@ The always-on tier is a session-bootstrap filter that selects which memories sur
 
 The filter is harness-agnostic: it consumes the adapter interface (the active harness and project slug already resolved by detection time) and does not need to know how the resulting block will be spliced into any particular harness's file layout.
 
-### Trigger
+## Trigger
 
 The always-on tier filter is invoked once at session bootstrap, after:
 
@@ -15,7 +15,7 @@ The always-on tier filter is invoked once at session bootstrap, after:
 
 No subcommand invocation is required. The filter fires automatically as part of the adapter's session-start sequence.
 
-### Inputs
+## Inputs
 
 | Input | Source | Notes |
 | :--- | :--- | :--- |
@@ -23,7 +23,7 @@ No subcommand invocation is required. The filter fires automatically as part of 
 | Active project slug | Current working directory → slug-derivation rule | See `indexing.md` § 5 for the exact derivation; `adapter-claude-code.md` § 2 for the Claude Code implementation |
 | `staleness_threshold_days` | `~/.cross-memory/config.yaml`, field `staleness_threshold_days` | Integer; default `90`; used for staleness banner computation |
 
-### Inclusion rules
+## Inclusion rules
 
 Four rules determine which memory entries are selected. Rules are applied in order; the results are merged into a single list before deduplication.
 
@@ -35,7 +35,7 @@ Four rules determine which memory entries are selected. Rules are applied in ord
 
 4. **Tag = `always-on`, across all scopes.** Walk all three scope index files (`~/.cross-memory/user-global/MEMORY.md`, `~/.cross-memory/projects/<active-slug>/MEMORY.md`, and `~/.cross-memory/harnesses/<active-harness>/MEMORY.md`). Select entries whose `tags` array contains `always-on` (case-insensitive match), regardless of type. This is an explicit opt-in mechanism — the user can force any memory into the always-on tier by tagging it `always-on`.
 
-### Deduplication
+## Deduplication
 
 The deduplication key is the memory file's absolute canonical path (e.g., `~/.cross-memory/user-global/rule_no-commit-trailers.md`). If the same canonical path appears in the merged list more than once — for example, because a memory tagged `always-on` also matches a type-based inclusion rule — it is retained exactly once in the output.
 
@@ -43,7 +43,7 @@ When a canonical path appears via multiple routes, no precedence resolution is r
 
 **The archive directory is never walked.** Memories in `~/.cross-memory/archive/` are excluded from all four rules. The archive scope has no `MEMORY.md` index file, so it is structurally unreachable by the filter. Memories move to the archive on `forget` or supersede; once archived they no longer appear in the always-on tier regardless of their type or tags.
 
-### Staleness banner
+## Staleness banner
 
 For each entry in the filtered, deduplicated list, the filter checks whether the entry's `verified_at` frontmatter field indicates a stale memory:
 
@@ -54,7 +54,7 @@ For each entry in the filtered, deduplicated list, the filter checks whether the
 
 **Example:** if `staleness_threshold_days` is `90` and a memory's `verified_at` was 113 days ago, the description `"Use pytest for all new Python tests"` becomes `"Use pytest for all new Python tests (stale: last verified 113 days ago)"` in the output entry.
 
-### Output
+## Output
 
 The filter produces an ordered list of structured entries. Each entry is a tuple:
 
@@ -74,7 +74,7 @@ The list order is: user-global entries first (Rule 1), then project entries (Rul
 
 This list is consumed by the injection-block formatter, which formats the entries into the three sub-sections (`User Profile:`, `Project Knowledge:`, `Relevant Memories:`) and applies the size budget. The always-on filter does not own block layout — that is the injection-block formatter's responsibility (see `injection-block.md`).
 
-### Edge cases
+## Edge cases
 
 | Scenario | Behavior |
 | :--- | :--- |
@@ -86,7 +86,7 @@ This list is consumed by the injection-block formatter, which formats the entrie
 | A memory has `tag: always-on` AND matches a type-based rule | The memory appears in the merged list from two routes (the type rule and Rule 4). Deduplication retains it once. One entry, not two. |
 | A memory's type matches a type rule but the memory is in the archive directory | Excluded. The filter walks only the three canonical scope index files. `~/.cross-memory/archive/` has no `MEMORY.md` and is never walked. |
 
-### Cross-references
+## Cross-references
 
 - **Slug derivation rule** (how the active project slug is computed from the current working directory): `adapter-claude-code.md` § 2.
 - **Claude Code slug derivation and pre-flight confirmation**: `adapter-claude-code.md` § 2.

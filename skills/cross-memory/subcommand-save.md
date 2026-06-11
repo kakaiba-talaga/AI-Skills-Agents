@@ -4,7 +4,7 @@
 
 Persist a new memory entry to the canonical store. Runs four sequential gates: parse → redact → confirm → write.
 
-### Command syntax
+## Command syntax
 
 ```
 /cross-memory save \
@@ -17,7 +17,7 @@ Persist a new memory entry to the canonical store. Runs four sequential gates: p
   -- <body>
 ```
 
-### Default values
+## Default values
 
 | Flag | Default | Notes |
 | :--- | :--- | :--- |
@@ -28,13 +28,13 @@ Persist a new memory entry to the canonical store. Runs four sequential gates: p
 | `--name` | *(derived)* | First 40 characters of the body, slugified: lowercase, non-alphanumeric characters replaced with `-`. |
 | `--no-redact` | `false` | Redaction is on by default. |
 
-### Gate 1 — Parse
+## Gate 1 — Parse
 
 Parse all command-line arguments. Validate each flag value against its enum (type enum and category enum are defined in `schema-validator.md`). On any invalid value, emit the exact validation error string documented in that section and abort — no file is created.
 
 Compose the in-memory candidate object: a `frontmatter` dict containing all required fields and any provided optional fields, and a `body` string containing the literal `-- <body>` text.
 
-### Gate 2 — Redact
+## Gate 2 — Redact
 
 Pass the `body` through the redaction pipeline per `~/.claude/skills/cross-memory/redaction.md`:
 
@@ -57,7 +57,7 @@ Type 'save unredacted' to persist the unredacted memory, or anything else to can
 
 **When `--no-redact` IS set and Pass B matched nothing**: accept silently; no typed confirmation required.
 
-### Gate 3 — Confirm
+## Gate 3 — Confirm
 
 Display the post-redaction candidate — rendered frontmatter followed by body — and request final confirmation.
 
@@ -80,7 +80,7 @@ The default answer is **N** (no silent commits — even on explicit save, when r
 
 **When no redaction fired** (clean explicit save — `redacted: false` or the field is absent): display the standard post-redaction candidate (rendered frontmatter followed by body) and prompt for confirmation. The default answer is **Y** (no surprise; the user explicitly invoked save and no patterns were detected). Any response other than `y` or `Y` (case-insensitive) aborts with no disk write.
 
-### Gate 4 — Write
+## Gate 4 — Write
 
 Resolve the canonical path from `--scope`:
 
@@ -346,4 +346,4 @@ Abort immediately. No file is written, no index entry is created, no mirror hook
 #### Cross-references
 
 - **Redaction pipeline** (Pass A, Pass B): `~/.claude/skills/cross-memory/redaction.md`; mirrors Gate 2 of the explicit save flow.
-- **Gate 4 — Write** (path resolution, MEMORY.md update, mirror hook): `### Gate 4 — Write` above.
+- **Gate 4 — Write** (path resolution, MEMORY.md update, mirror hook): `## Gate 4 — Write` above.

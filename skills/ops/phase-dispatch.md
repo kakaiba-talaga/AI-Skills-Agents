@@ -2,15 +2,15 @@
 
 > **Parent:** `~/.claude/skills/ops/SKILL.md` — Non-negotiables, Agent Briefing Format, and Handoff Documents live in the hub. This file holds the residual Phase 2.5 *validation* entry (a short preamble) and the Phase 3 dispatch loop; the Phase 2.5b/2.5c advisory preflight contracts live in `phase-preflights.md`.
 
-### Phase 2.5b / 2.5c — Advisory preflights (moved)
+## Phase 2.5b / 2.5c — Advisory preflights (moved)
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/phase-preflights.md` for the Phase 2.5b (code-intel) and Phase 2.5c (corpus-search) advisory-preflight contracts — trigger predicates, dispatch contracts, JSON brief/response shapes, and the shared preflight blocks. They run before each Phase 3 Step 2 dispatch. If the file is missing, skip the advisory preflights — they are advisory and never block a dispatch.
 
-### Phase 2.5 — Preflight Validation
+## Phase 2.5 — Preflight Validation
 
 After the task board is created and before the first dispatch, run a preflight check to confirm the environment is ready. Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`). If any critical check fails, stop and report to the user. If standard checks fail, attempt auto-fix once. Warnings are logged but do not block dispatch.
 
-### Cursor: state file sync (mandatory)
+## Cursor: state file sync (mandatory)
 
 > Applies only when the active harness is **Cursor**. Claude Code has no `TodoWrite` tool — skip this section there.
 
@@ -37,7 +37,7 @@ Use **separate tool calls** for steps 3–5. Never treat `TodoWrite` as satisfyi
 
 **Dashboard and `/ops status`:** Derive timing, dependencies, and progress from the board file — not from `TodoWrite`.
 
-### Phase 3 — Dispatch Loop
+## Phase 3 — Dispatch Loop
 
 This is the core orchestration loop. Repeat until all tasks are completed or the user intervenes:
 

@@ -440,7 +440,7 @@ Below is the complete set of permissions needed for agents, skills, and the `/op
 
 If you experience an unexpected permission prompt, find the relevant entry below and add it to your settings.
 
-#### Core tools
+### Core tools
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -456,14 +456,14 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `TodoWrite` | any agent | Legacy todo list |
 | `Skill` | ops | Invoke skills (`/ralph-loop`, `/doc-sync`, `/code-review`, etc.) |
 
-#### State file tools (ops)
+### State file tools (ops)
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
 | `Write` | ops | Create/update `.ops-state/<run-id>-board.json` state file |
 | `Read` | ops | Read state file for resume, status, and dispatch |
 
-#### Plan and worktree tools
+### Plan and worktree tools
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -472,7 +472,7 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `EnterWorktree` | ops (`--worktree`) | Create isolated git worktree for parallel agents |
 | `ExitWorktree` | ops (`--worktree`) | Clean up worktree after agent finishes |
 
-#### Scheduling tools
+### Scheduling tools
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -480,14 +480,14 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `CronDelete` | `/schedule` skill | Remove scheduled jobs |
 | `CronList` | `/schedule` skill | List active scheduled jobs |
 
-#### Bash — Git
+### Bash — Git
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
 | `Bash(git *)` | git-master, all agents | Git operations |
 | `Bash(gh *)` | git-master | GitHub CLI (PRs, issues, checks) |
 
-#### Bash — Python
+### Bash — Python
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -503,7 +503,7 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Bash(black *)` | `/linter` skill | Python formatter |
 | `Bash(mypy *)` | verifier | Python type checker |
 
-#### Bash — Node.js / TypeScript
+### Bash — Node.js / TypeScript
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -513,21 +513,21 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Bash(prettier *)` | `/linter` skill | Code formatter |
 | `Bash(tsc *)` | verifier | TypeScript compiler/checker |
 
-#### Bash — Docker
+### Bash — Docker
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
 | `Bash(docker *)` | executor, debugger | Container operations |
 | `Bash(docker-compose *)` | executor | Multi-container orchestration |
 
-#### Bash — SSH / Remote
+### Bash — SSH / Remote
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
 | `Bash(ssh *)` | ssh-executor | Remote command execution via SSH |
 | `Bash(scp *)` | ssh-executor | File transfer to/from remote hosts |
 
-#### Bash — Shells
+### Bash — Shells
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -537,7 +537,7 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Bash(cmd *)` | any agent (Windows) | Run cmd commands |
 | `Bash(cmd.exe *)` | any agent (Windows) | Run cmd.exe commands |
 
-#### Bash — File operations
+### Bash — File operations
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -551,7 +551,7 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Bash(chmod *)` | executor | Change file permissions |
 | `Bash(find *)` | any agent | Find files |
 
-#### Bash — Text processing
+### Bash — Text processing
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -568,7 +568,7 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Bash(tee *)` | any agent | Write to file and stdout |
 | `Bash(xargs *)` | any agent | Build commands from input |
 
-#### Bash — Utilities
+### Bash — Utilities
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -585,7 +585,7 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Bash(basename *)` | any agent | Extract filename from path |
 | `Bash(curl *)` | any agent | HTTP requests |
 
-#### Bash — Archives
+### Bash — Archives
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
@@ -593,7 +593,7 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Bash(zip *)` | executor | Create zip archives |
 | `Bash(unzip *)` | executor | Extract zip archives |
 
-#### Path-scoped permissions
+### Path-scoped permissions
 
 | Permission | Purpose |
 | :--- | :--- |
@@ -608,7 +608,7 @@ Edit(//c/Users/<username>/.claude/**)
 Write(//c/Users/<username>/.claude/**)
 ```
 
-#### Prompt before allowing (risky)
+### Prompt before allowing (risky)
 
 These are intentionally **not auto-allowed**. If an agent needs one of these, the user will be prompted. Opt in per project only if you trust the build scripts.
 
@@ -638,7 +638,7 @@ To opt in per project, add to `.claude/settings.json`:
 }
 ```
 
-#### Recommended deny list
+### Recommended deny list
 
 These destructive operations should be denied globally to prevent accidental damage:
 

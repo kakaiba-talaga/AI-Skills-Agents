@@ -4,7 +4,7 @@
 
 Bootstrap `~/.cross-memory/` and register the active harness sentinel block. Init is additive only — it never deletes, overwrites, or repairs existing files.
 
-### Command syntax
+## Command syntax
 
 ```
 /cross-memory init \
@@ -16,7 +16,7 @@ Bootstrap `~/.cross-memory/` and register the active harness sentinel block. Ini
 
 No positional arguments. The flags `--harness`, `--scope`, `--json`, and `--verbose` are defined in `## Shared flag parsing` above. There is no `--repair`, `--force`, or `--reset` flag — any modification to existing files is out of scope for init.
 
-### Step 1 — Provisioning
+## Step 1 — Provisioning
 
 Invoke the lazy-provisioning sequence documented in `## Config → Lazy-provisioning sequence`. Init calls that sequence eagerly on every invocation; the same sequence that normally fires lazily on first save is executed up front.
 
@@ -31,7 +31,7 @@ Init does **not** duplicate the directory-creation or config-write logic — it 
 [init] step 1: ~/.cross-memory/ absent; running lazy-provisioning sequence
 ```
 
-### Step 2 — Adapter detection
+## Step 2 — Adapter detection
 
 Run the five-step precedence chain in `adapter-selection.md` (CLI flag → config field → env var → manifest probe → generic fallback) to determine the active harness. Record both the chosen harness name and the precedence step that won; both are included in the step 5 summary line (documented in a later task) and in the `harness_selection_step` field of the `--json` output.
 
@@ -45,7 +45,7 @@ This step makes no writes. It calls the same selection logic invoked at the star
 
 The step-label vocabulary (`cli flag`, `config field`, `env var`, `adapter probe`, `generic fallback`) matches the table in `adapter-selection.md § Selection logging and observability`.
 
-### Step 3 — Reachability probe
+## Step 3 — Reachability probe
 
 Run two check primitives from `## Check-name vocabulary` in read-only mode:
 
@@ -75,7 +75,7 @@ For the `claude-code` and `cursor` harnesses, the probe verifies two things in o
 [init] step 3: generic harness; reachability probe skipped
 ```
 
-### Step 4 — Always-on filter + sentinel write
+## Step 4 — Always-on filter + sentinel write
 
 **Sequencing rule.** The five init steps are sequential, but a warning at step 3 does not abort the sequence. The always-on filter runs regardless of step 3's outcome. The sentinel-block write is skipped only when the adapter has nothing to write to (unreachable harness target or cursor no-op). The step 5 summary still prints in all cases.
 
@@ -115,7 +115,7 @@ After the write, init runs `sentinel-region-content-parses` (from `## Check-name
 [init] step 4: sentinel write skipped (harness target unreachable)
 ```
 
-### Step 4.5 — Reflect staleness check
+## Step 4.5 — Reflect staleness check
 
 After the step 4 verbose trace is emitted and before the step 5 summary line, init reads the per-project state file to determine whether a reflect-staleness hint is warranted.
 
@@ -153,11 +153,11 @@ Where `N` is the computed `delta_days` integer.
 
 The verbose trace records: (1) whether `state.toml` was found; (2) whether `reflect.last_reflect_at` was set; (3) the computed `delta_days`; (4) the threshold value; (5) whether the hint fired or was suppressed.
 
-### Step 5 — Summary output (human / JSON / verbose)
+## Step 5 — Summary output (human / JSON / verbose)
 
 Step 5 emits the invocation result. It makes no writes; it only reads the state accumulated by steps 1–4 and formats it. The summary always prints, regardless of whether earlier steps produced warnings or skips.
 
-#### Human-readable summary
+### Human-readable summary
 
 The summary line shape is:
 
@@ -196,7 +196,7 @@ cross-memory initialized: harness=claude-code, store=provisioned, sentinel=updat
 
 This is a **successful pass**. The sentinel markers were written; the region between them is intentionally empty because the always-on filter returned no entries. This is not a failure or warning condition.
 
-#### JSON output (`--json`)
+### JSON output (`--json`)
 
 When `--json` is passed, step 5 prints a JSON object instead of the human summary line. The schema version is `1`. Keys appear in this order:
 
@@ -254,7 +254,7 @@ Shape: `{ step: 3 | 4, code: <string>, message: <string> }`. The `code` field us
 
 **Cross-tool key note.** The fields `harness`, `harness_selection_step`, and `timestamp_utc` use the same field names and value shapes as the doctor JSON schema. Additions or renames to these three keys must be applied consistently to both subcommands.
 
-#### Verbose mode (`--verbose`)
+### Verbose mode (`--verbose`)
 
 When `--verbose` is set, step 5 prints each step's trace on its own line, then the summary line. The full trace for a successful init looks like:
 
@@ -278,18 +278,18 @@ The trace for a fresh install with an empty store:
 
 The step-5 trace line is identical to the human summary line, prefixed with `[init] step 5:`. When `--json` and `--verbose` are both set, the step traces still print as plain text and the final output line is the JSON object.
 
-### Idempotency contract
+## Idempotency contract
 
 Init is safe to run repeatedly with no state changes between runs. The per-step behavior is:
 
 1. **Step 1** is a no-op if `~/.cross-memory/` already exists. The provisioning sequence exits at its own guard, no files are created or overwritten, and `store` reports `already-present` in the summary.
 2. **Steps 2 and 3** are read-only. They call the adapter-selection chain and the reachability probe respectively, neither of which writes anything.
 3. **Step 4** produces byte-identical sentinel-block content across runs when no canonical-store changes have occurred between them. The always-on filter draws from the same canonical memories on each run; if the filter output is unchanged, the computed bytes are unchanged, and step 4 skips the write entirely. `sentinel` reports `already-current (no change)` in the summary.
-4. **Step 5** prints to chat. It has no on-disk effect. The `timestamp_utc` field emitted in the `--json` output (see `### Step 5 — Summary output (human / JSON / verbose)`) is run-scoped — it changes on every invocation. It lives only in the chat-only JSON object and does not appear inside the sentinel-bounded region; the byte-identical sentinel-content guarantee is therefore unaffected by the timestamp.
+4. **Step 5** prints to chat. It has no on-disk effect. The `timestamp_utc` field emitted in the `--json` output (see `## Step 5 — Summary output (human / JSON / verbose)`) is run-scoped — it changes on every invocation. It lives only in the chat-only JSON object and does not appear inside the sentinel-bounded region; the byte-identical sentinel-content guarantee is therefore unaffected by the timestamp.
 
-The human summary distinguishes the two idempotent-path states explicitly — `store=already-present` and `sentinel=already-current (no change)` — so a user running init defensively (e.g., after pulling a new harness config) can confirm at a glance that nothing changed unexpectedly. See `### Step 5 — Summary output (human / JSON / verbose)` for the full state vocabulary.
+The human summary distinguishes the two idempotent-path states explicitly — `store=already-present` and `sentinel=already-current (no change)` — so a user running init defensively (e.g., after pulling a new harness config) can confirm at a glance that nothing changed unexpectedly. See `## Step 5 — Summary output (human / JSON / verbose)` for the full state vocabulary.
 
-### What init does NOT do
+## What init does NOT do
 
 - **No codebase-fact distillation.** Init makes zero LLM calls. The `--discover` flag (which would trigger an LLM-driven pass to extract project facts from the codebase) is deferred to a future release.
 - **No agent dispatch.** Init runs entirely in the skill body. The cross-memory agent's lane allowlist is not touched by v1.1; init's writes are skill-side only.
@@ -299,7 +299,7 @@ The human summary distinguishes the two idempotent-path states explicitly — `s
 - **No deploy.** Init is not invoked by `tooling/deploy.{ps1,sh}` and does not invoke them.
 - **No project-scope provisioning.** The project-scope `MEMORY.md` for the active project is still created lazily on first save, exactly as today. Init does not create or write project-scope memory files.
 
-### Reuse of doctor's check primitives
+## Reuse of doctor's check primitives
 
 Init does not import or call doctor's checks at runtime. The shared contract is a documentation contract: any check identifier that appears in both subcommands means the **same finding** regardless of which subcommand surfaces it. The identifiers are defined in `## Check-name vocabulary`; each entry below cites the group it belongs to.
 
@@ -313,15 +313,15 @@ Init does not import or call doctor's checks at runtime. The shared contract is 
 2. **Step 3 (reachability probe).** Init runs two checks from `## Check-name vocabulary` against the harness-native file:
    - `adapter-detection` (Group E) — re-runs the adapter selection chain and confirms the harness resolves consistently against the step 2 result.
    - `sentinel-marker-count` (Group C) — reads the active project's harness-native `MEMORY.md` and verifies exactly one begin-marker and one end-marker are present.
-   Both are read-only. See `### Step 3 — Reachability probe` for failure-isolation and verbose-trace details.
+   Both are read-only. See `## Step 3 — Reachability probe` for failure-isolation and verbose-trace details.
 
-3. **After step 4 (sentinel write).** Before printing the step 5 summary, init runs `sentinel-region-content-parses` (Group C) as a self-check against the file it just wrote, to confirm the bytes parse as a valid `[CROSS-MEMORY]` injection block. If this check reports `fail`, init fails fast and emits a structured violation report rather than proceeding to step 5. See `### Step 4 — Always-on filter + sentinel write` for the full behavior table.
+3. **After step 4 (sentinel write).** Before printing the step 5 summary, init runs `sentinel-region-content-parses` (Group C) as a self-check against the file it just wrote, to confirm the bytes parse as a valid `[CROSS-MEMORY]` injection block. If this check reports `fail`, init fails fast and emits a structured violation report rather than proceeding to step 5. See `## Step 4 — Always-on filter + sentinel write` for the full behavior table.
 
 **Consistency guarantee.** A sentinel-marker corruption that init reports during its step 3 probe is the same finding doctor would surface under `--check sentinel-marker-count`: both subcommands use the same check identifier from `## Check-name vocabulary`, and the identifier is the contract.
 
-**Per-harness applicability of the step 4 self-check.** The Group C checks `sentinel-region-bytes-fingerprint` and `sentinel-region-content-parses` return `not-applicable` under the Cursor harness at v1, because `update_sentinel_block` is a documented no-op there (see `## Check-name vocabulary` Group C). Init's step 4 self-check therefore returns `not-applicable` under Cursor — and init still **succeeds**, with the skip noted in the summary line per the state vocabulary in `### Step 5 — Summary output (human / JSON / verbose)`.
+**Per-harness applicability of the step 4 self-check.** The Group C checks `sentinel-region-bytes-fingerprint` and `sentinel-region-content-parses` return `not-applicable` under the Cursor harness at v1, because `update_sentinel_block` is a documented no-op there (see `## Check-name vocabulary` Group C). Init's step 4 self-check therefore returns `not-applicable` under Cursor — and init still **succeeds**, with the skip noted in the summary line per the state vocabulary in `## Step 5 — Summary output (human / JSON / verbose)`.
 
-### Cross-references
+## Cross-references
 
 - **Lazy-provisioning sequence** (step 1 delegate): `## Config → Lazy-provisioning sequence` above.
 - **Adapter selection chain** (step 2): `adapter-selection.md`.
