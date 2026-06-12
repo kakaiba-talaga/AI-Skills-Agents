@@ -23,7 +23,7 @@ Parse arguments as follows:
 - `--no-branch` — skip automatic working branch creation; work directly on the current branch.
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
-- `--budget=<N>` — set an optional run-level dispatch-count ceiling the orchestrator consults at cost-affecting choice points (off by default). The budget is **advisory and escalation-only**: a tight budget can defer or escalate a spending choice, but it never silently drops work and **never skips a verification or correctness check** — those rails (the verification-gate ritual in `verification-gate.md` and the Verify → Fix 3-loop cap) sit above the budget, not below it.
+- `--budget=<N>` — set an optional run-level dispatch-count ceiling the orchestrator consults at cost-affecting choice points (off by default). The budget is **advisory and escalation-only**: a tight budget can defer or escalate a spending choice, but it never silently drops work and **never skips a verification or correctness check** — those rails (the verification-gate ritual in `verification-gate.md` and the Verify → Fix loop cap) sit above the budget, not below it.
 
   **Consultation registry (closed enumeration).** Every site where the budget governor fires is listed here:
 
@@ -389,7 +389,7 @@ executor → verifier → [FAIL] → executor (fix) → verifier (re-verify) →
 
 1. After the verifier reports failures, create a **fix task** in the state file and TodoWrite assigned to the executor. Include the verifier's specific findings (not just "it failed").
 2. After the executor applies fixes, re-dispatch the verifier against the same acceptance criteria.
-3. **Maximum 3 loops** before escalation. If verify fails 3 times, escalate to the user — the task may have a design problem, not an implementation problem.
+3. **Mode-aware loop cap before escalation.** Interactive and supervised modes: maximum **3 loops** before escalating to the user. Autonomous mode: up to **5 loops** before escalating to the user. At the cap, escalate — the task may have a design problem, not an implementation problem. Rungs are informed and escalating: rung 2 adds a debugger or debugger-build re-diagnosis so retries carry new diagnostic context (not blind re-runs); rung 3 escalates the model one tier (see Model Escalation for tiers, the `opus → fable` confirmation gate, the at-ceiling short-circuit, and the security-reviewer opus ceiling). In autonomous mode, rungs 4 and 5 re-run on the already-escalated model (debugger findings from rung 2 carried forward) — the model tier does not climb further and the fable gate does not re-fire. Autonomous extended loops never escalate to fable silently; they run on the post-gate model (opus when the gate defaulted NO).
 4. Each loop iteration writes a new handoff file (with `-iterN` suffix) so context accumulates on disk.
 
 The same pattern applies to code review:
@@ -464,7 +464,7 @@ When escalating, always include enough context for the user to make a decision w
 | Mode | Checkpoints | Stops when |
 | :--- | :--- | :--- |
 | Interactive (default) | After each pipeline stage | User confirms, adjusts, skips, stops, or injects/reprioritizes tasks |
-| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 3x task failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks complete |
+| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 5x verify failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks complete |
 | Supervised (`--supervised`) | After every task | User approves before next dispatch |
 
 ---
@@ -493,7 +493,8 @@ When an agent fails, the team-manager retries with increasing context before esc
 1st attempt: assigned agent with original brief
 2nd attempt: same agent, with error context and narrowed scope
 3rd attempt: dispatch debugger/debugger-build for diagnosis, then re-brief with findings
-4th attempt: escalate to user
+Autonomous only — rungs 4–5: re-dispatch with debugger findings carried forward
+Cap: escalate to user at the Verify → Fix loop cap (3 interactive/supervised, 5 autonomous)
 ```
 
 Note: Cursor does not support model escalation (changing the model between attempts). All subagents run on the session model or `model="fast"`. The retry strategy focuses on improving the brief quality and using diagnostic agents instead.

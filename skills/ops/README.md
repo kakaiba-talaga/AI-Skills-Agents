@@ -23,7 +23,7 @@ The short answer is: the *file* is not, but the *running system* is — and it q
 | **Tool use / world-effecting action** | Dispatched agents edit files, run commands, write commits, and push branches. The team manager itself coordinates via state-file reads and writes. |
 | **Planning & decomposition** | Builds a dependency graph of tasks, assigns each to a specialist agent, and sequences or parallelizes them based on the graph. |
 | **Persistent memory and state** | Every run writes a mandatory state file at `.ops-state/<run-id>-board.json`. Cross-run patterns (which modules need a more capable model, where parallel dispatch causes conflicts) are recorded as project memory and recalled on future runs. |
-| **Feedback loops and self-correction** | Verification failures trigger a fix cycle (executor → verifier, up to 3 loops). Agent failures trigger debugger diagnosis, then model escalation (sonnet → opus, opus → fable — the `opus → fable` step is gated behind a cost confirmation), before reaching user escalation. |
+| **Feedback loops and self-correction** | Verification failures trigger a fix cycle (executor → verifier, up to 3 loops interactive/supervised or up to 5 loops autonomous). Agent failures trigger debugger diagnosis, then model escalation (sonnet → opus, opus → fable — the `opus → fable` step is gated behind a cost confirmation), before reaching user escalation. |
 | **Multi-agent delegation** | The defining feature: `/ops` never implements, verifies, or reviews anything itself. All work is delegated to specialist agents via fully self-contained briefs. |
 
 **What kind of agentic system it is.** In the taxonomy of agentic architectures, `/ops` is an **orchestrator-worker** (manager-worker) system — a *meta-agent* that coordinates specialist subagents rather than acting as a single tool-using agent. This is distinct from a standalone agent that happens to call tools, and from a decentralized swarm where agents coordinate peer-to-peer. The README's own description — "the person in front of a task board, moving tickets and briefing team members — never picking up a wrench" — is the orchestrator pattern stated in plain language.
@@ -66,7 +66,7 @@ The short answer is: the *file* is not, but the *running system* is — and it q
 2. **Plan Validation** — Scores plan complexity and automatically chooses whether to dispatch project-scoper (gap analysis, estimates) and/or critic (feasibility review, verdict) before execution. Three tiers: skip (trivial), scope only (medium), scope + critique (complex/architectural).
 3. **Task Board** — Breaks work into tasks with dependencies, assigns each to a specialist agent.
 4. **Dispatch Loop** — Spawns agents (in parallel where safe), tracks results, handles failures.
-5. **Verify → Fix Loop** — Verification failures trigger fix cycles that loop back until clean (max 3 loops).
+5. **Verify → Fix Loop** — Verification failures trigger fix cycles that loop back until clean (max 3 loops interactive/supervised, up to 5 loops autonomous).
 6. **Completion** — Final integration verification, summary, and next steps.
 
 At any point during or after a run, `/ops save` writes a manual checkpoint: the current task-board state and a snapshot of user-typed conversation context to disk. User-typed text fields are redacted unconditionally before write, so no sensitive content leaks into the saved file.
@@ -164,7 +164,7 @@ Handoff files are scoped per run — each run gets its own subdirectory (e.g., `
 
 ### Verify → Fix Loop
 
-Verification isn't one-shot — it loops. When the verifier finds issues, the executor gets dispatched to fix them, then the verifier re-checks. Max 3 loops before escalation. Same pattern for code review request-changes cycles.
+Verification isn't one-shot — it loops. When the verifier finds issues, the executor gets dispatched to fix them, then the verifier re-checks. Max 3 loops before escalation in interactive/supervised mode; up to 5 loops in autonomous mode (loops 4–5 carry a debugger re-diagnosis and run on the already-escalated model). Same pattern for code review request-changes cycles.
 
 ### Git Worktree Isolation
 
@@ -289,7 +289,7 @@ Skips the planner. Reads the plan from conversation context, builds the task boa
 /ops --autonomous Implement Milestone 4 from the project scoping doc
 ```
 
-Runs the full pipeline end-to-end without pausing. The manager only stops if an agent fails 3 times or hits a blocker that needs human input. Shows a final summary when done.
+Runs the full pipeline end-to-end without pausing. The manager only stops if verify fails 5 times on the same task (the autonomous loop cap) or hits a blocker that needs human input. Shows a final summary when done.
 
 ### Supervised mode for high-risk changes
 
@@ -431,7 +431,7 @@ You can interact with the team manager at any point between agent dispatches:
 - **1st attempt fails**: Re-dispatches with error context appended, narrowed scope.
 - **2nd attempt fails**: Dispatches the **debugger** to diagnose (or **debugger-build** for build/import/type errors), then re-briefs the original agent with a corrected approach.
 - **3rd attempt fails**: Escalates model one tier up (sonnet → opus, opus → fable) with full error history. The `opus → fable` step is gated — the team manager asks before spending `fable`: interactive (and `--supervised`) waits for the user; autonomous waits best-effort ~1 minute, then defaults NO and runs the attempt on `opus`. Skipped if already on fable (or already on opus for `security-reviewer`), or if the failure is a blocker or scope issue.
-- **4th attempt fails**: Escalates to the user with all attempts, errors, and diagnosis.
+- **At the loop cap**: Escalates to the user with all attempts, errors, and diagnosis. Cap is mode-aware: 3 loops in interactive/supervised (so the 3rd failure — after model escalation — escalates to the user), up to 5 loops in autonomous (loops 4–5 re-dispatch on the already-escalated model before escalating to the user at the 5th failure).
 - **Blocker**: Creates a blocker task, pauses the affected chain, continues other chains.
 - **Scope issue**: Re-plans in-place if small; escalates to user if large.
 
@@ -450,7 +450,7 @@ By design, `/ops` creates a working branch before any agents modify code when yo
 `.ops-state/` in your project root. Each run gets its own file named after the run ID (e.g., `.ops-state/caching-layer-2026-04-09-board.json`). The state file, the plan document under `docs/plan/`, and handoff files under `.agents/handoffs/` together hold everything needed for a full session recovery.
 
 **An agent is looping and the task never completes.**
-The team manager retries a failing task up to 4 times (sonnet × 2 → debugger diagnosis → one-tier-up escalation → user escalation, or 3 times if already on fable). The `opus → fable` escalation is gated — autonomous runs default to staying on `opus` unless you approve `fable` within ~1 minute. If you see the same task cycling, type `stop` to halt dispatching, then inspect what the last agent returned. You can then `skip` the task, adjust the plan, and resume.
+The team manager retries a failing task up to the Verify→Fix loop cap: 3 attempts in interactive/supervised mode, 5 in autonomous. The rungs are: base brief → debugger diagnosis → model escalation (sonnet → opus, or → fable if approved), then in autonomous mode rungs 4–5 re-dispatch on the already-escalated model with debugger findings carried forward. The `opus → fable` escalation is gated — autonomous runs default to staying on `opus` unless you approve `fable` within ~1 minute. If you see the same task cycling, type `stop` to halt dispatching, then inspect what the last agent returned. You can then `skip` the task, adjust the plan, and resume.
 
 **`/ops` is running when I just wanted a quick command.**
 `/ops` is intended for multi-stage, multi-agent workflows. For single commands ("run the tests", "format this file"), invoke the agent or skill directly without wrapping in `/ops`.

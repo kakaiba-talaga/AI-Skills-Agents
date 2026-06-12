@@ -357,7 +357,7 @@ ANCHOR: | **Failed — 2nd attempt** | Dispatch a **debugger** agent (or **debug
 ACTION: replace
 ANCHOR: | **Failed — 3rd attempt** | Escalate model (sonnet → opus, opus → fable) and re-dispatch with full error history. Skip if already on fable; security-reviewer caps at opus and never escalates to fable. See Model Escalation in Adaptability. |
 @@STOP
-| **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
+| **Failed — at the loop cap** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. Cap is mode-aware: 3 loops in interactive/supervised, 5 loops in autonomous. In autonomous mode, loops 4 and 5 re-dispatch on the already-escalated model (opus after the fable gate defaults NO) with debugger findings from the 2nd attempt carried forward — the model tier does not climb further and the fable gate does not re-fire. |
 @@CONTENT
 | **Failed — 3rd attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |
 @@END
@@ -520,7 +520,7 @@ ANCHOR: | Environment/dependency blocker | Create blocker task, pause chain, ale
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: | 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on fable — or on opus for security-reviewer (see the escalation ceiling exception) — or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |
+ANCHOR: | 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on fable — or on opus for security-reviewer (see the escalation ceiling exception) — or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis. After model escalation, further failures escalate to the user at the Verify → Fix loop cap (3 interactive/supervised, 5 autonomous). |
 @@CONTENT
 | 3 consecutive failures on same task | Escalate to user with: task, all attempts, errors, debugger findings, your diagnosis |
 @@END
@@ -583,7 +583,8 @@ When an agent fails, the team-manager retries with increasing context before esc
 1st attempt: assigned agent with original brief
 2nd attempt: same agent, with error context and narrowed scope
 3rd attempt: dispatch debugger/debugger-build for diagnosis, then re-brief with findings
-4th attempt: escalate to user
+Autonomous only — rungs 4–5: re-dispatch with debugger findings carried forward
+Cap: escalate to user at the Verify → Fix loop cap (3 interactive/supervised, 5 autonomous)
 ```
 
 Note: Cursor does not support model escalation (changing the model between attempts). All subagents run on the session model or `model="fast"`. The retry strategy focuses on improving the brief quality and using diagnostic agents instead.
