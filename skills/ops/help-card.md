@@ -54,7 +54,7 @@
 
 ### Adaptability
   Plan adjustment    Adds/splits/reorders tasks when agents discover issues
-  Model escalation   sonnet → opus, opus → fable on 3rd failure before escalating to user
+  Model escalation   sonnet → opus, opus → fable on 3rd failure before escalating to user (opus→fable gated — confirm, or autonomous defaults to opus)
   Strategy shift     Sequential ↔ parallel based on conflicts and throughput
   Cross-run learning Recalls patterns from past runs (agent fit, model needs)
   Adaptation memory  Phase 4 writes a rollup to the durable per-project ledger (--no-adaptation-memory to skip)
