@@ -53,7 +53,7 @@ Every agent dispatch in Phases 2–5.5 (interviewer, architect, planner, critic,
 - `## Acceptance Criteria` — testable assertions copied verbatim from the source artifact (typically `docs/kickoff-requirements.md` or a critic verdict). When the dispatched agent's output IS the requirements/criteria (e.g., interviewer), this section names the format expected of that output instead.
 - `## Constraints` — the Shared Brief Constraints block from `brief-contract.md` plus any task-specific scope boundaries.
 
-**Section requirement:** all four headings must be present in every brief composed by this skill. Do not omit a section even when its content is short — empty sections are a smell that triggers downstream improvisation, which the audit at `docs/agent-audits/tier-a-opus-4-7-audit.md` (CC-1) identified as systemic risk.
+**Section requirement:** all four headings must be present in every brief composed by this skill. Do not omit a section even when its content is short — empty sections are a smell that triggers downstream improvisation and are a systemic risk.
 
 **Brief composition is producer-side only.** This rule binds the kickoff skill when it composes briefs; the agents themselves declare per-agent application of the contract in their own `## Brief Format` subsections.
 

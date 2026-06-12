@@ -17,10 +17,8 @@ docs/
 !.cursor/rules
 !.cursor/rules/**
 !docs/*-integration-test.md
-!docs/agents-guide.md
 !docs/ASSESSMENT.md
 !docs/authoring-skills.md
-!docs/agents-guide.md
 !docs/portability-guide.md
 !.github/
 !skills/kickoff/project-template/.claude/

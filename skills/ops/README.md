@@ -189,8 +189,6 @@ Both Claude Code and Cursor support direct `subagent_type` dispatch for all agen
 - **Cursor** — `Task(subagent_type="executor", prompt=<brief>)`.
 - **Claude Code** — `Agent(subagent_type="executor", description="<task subject>", model="<from frontmatter>", prompt=<self-read template + brief>)`. All agents with definition files at `~/.claude/agents/` are auto-registered as `subagent_type` values. The self-read prompt template instructs the agent to read its own definition for full workflow context.
 
-See `docs/portability-guide.md` § Agent Dispatch Mechanism for the full procedure.
-
 ### Adaptability
 
 The team manager adapts strategy at runtime instead of rigidly following the initial plan. All adaptations are logged and visible in the dashboard.
