@@ -68,6 +68,7 @@ The state file JSON structure:
     }
   ],
   "pending_nested_skill": null,
+  "pending_fable_confirm": null,
   "memory_inject_banner_emitted": false
 }
 ```
@@ -204,6 +205,39 @@ Field meanings:
 **Write lifecycle:** `consumed_so_far` and `near_note_fired` are flushed to the state file **before** an at-ceiling escalation surfaces to the user — pinned to the same before-the-stop point the `adaptations` event log uses ("written immediately when the adaptation is decided, before the next dispatch proceeds"). Flushing before the stop means a `resume` of a run interrupted mid-escalation recovers the full budget context: the ceiling, the consumed-so-far tally, and whether the near-ceiling note already fired this crossing.
 
 **Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `null` (no budget set). No migration is required.
+
+### pending_fable_confirm
+
+Root-level field tracking an in-flight `fable`-escalation confirmation in **autonomous mode** — the best-effort ~1-minute wait between asking the user and defaulting NO. It backs the autonomous timeout mechanism (see `phase-dispatch.md` § *`fable`-escalation autonomous timeout*) and lets a `resume` recover an interrupted wait.
+
+**Type:** `null` or object.
+
+**When null (or absent):** No fable-confirm is pending. Steady-state value. In interactive mode this field is never set — the team manager waits for the answer inline and does not arm a deadline.
+
+**When set (object):**
+
+```json
+{
+  "task_id": "task-7",
+  "original_model": "opus",
+  "asked_at": "2026-06-22T14:22:03Z",
+  "deadline": "2026-06-22T14:23:03Z"
+}
+```
+
+Field meanings:
+- `task_id` — the task whose 3rd-attempt escalation is gated.
+- `original_model` — the pre-escalation model the 3rd attempt runs on if the gate resolves NO (always `opus` in practice, since the gate fires only on `opus → fable`).
+- `asked_at` — ISO-8601 UTC timestamp when the confirmation prompt was surfaced.
+- `deadline` — ISO-8601 UTC timestamp, `asked_at` + ~60s. The best-effort SLA. Evaluated at the next orchestrator beat, not by a wall-clock interrupt.
+
+**Lifecycle:** `null` → set (and flushed to disk) immediately before the autonomous confirmation prompt surfaces → cleared back to `null` on resolution (yes within window → escalate to `fable`; no, or deadline passed → run on `original_model`). The before-the-prompt flush mirrors the `budget` object's before-the-stop flush so a `resume` mid-wait recovers the deadline.
+
+**Resume recovery:** A `resume` of a run interrupted while `pending_fable_confirm` is set re-reads the deadline from the state file. If the deadline has already passed, the default-NO path fires immediately on resume. If the deadline has not yet passed, the orchestrator continues waiting until the next beat at or after the deadline.
+
+**Never set in interactive mode.** In interactive (or `--supervised`) mode the team manager waits inline for the user's answer and never arms a deadline; this field remains `null`.
+
+**Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `null`. No migration is required.
 
 ### triage_confidence
 

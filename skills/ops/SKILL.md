@@ -470,6 +470,14 @@ The team manager adapts strategy based on runtime conditions. Every adaptation i
 
 **Escalation ceiling exception:** `security-reviewer` never escalates to fable — Fable 5's cybersecurity safety classifiers can refuse security-analysis content mid-run, which would wedge the stage. If `security-reviewer` fails 3 times on opus, escalate to the user instead.
 
+**`fable`-escalation confirmation gate.** The `opus → fable` step is the only path to `fable` now that no agent defaults to it. Because `fable` is credit-billed at API rates, the team manager never escalates to `fable` silently — it asks the user first, at the 3rd-attempt escalation for an `opus`-tier agent.
+
+- **Interactive mode (and `--supervised`):** ask the user and wait for the answer — no auto-default. **Yes** → escalate the 3rd attempt to `fable`. **No** → do not escalate; run the 3rd attempt on the **original (pre-escalation) `opus` model**. The existing "4th attempt → escalate to user" backstop still applies after a No. `--supervised` mode behaves exactly like interactive here: a human is in the loop, so the gate waits and never arms the 1-minute timeout.
+- **Autonomous mode:** ask the user, then **best-effort wait ~1 minute** (recorded as a `pending_fable_confirm` deadline — see `state-schema.md`). A "yes" arriving within the window → escalate to `fable`. If no reply by the deadline → **default NO** → run the 3rd attempt on the original `opus` model and keep the run unblocked. **Never pause indefinitely in autonomous mode** — this gate is the one model-escalation stop that does *not* block an unattended run, because `fable` is opt-in spend and silence means "don't spend it". The "1 minute" is a best-effort SLA tied to the next orchestrator beat, not a hard real-time guarantee.
+- **`security-reviewer` never reaches this gate.** It caps at `opus` (the Escalation ceiling exception above); its 3rd opus failure escalates directly to the user and never offers a `fable` escalation.
+- **Composition with `--budget` (one decision point, never two stacked stops).** When this gate and an at-ceiling `--budget` escalation fire on the same 3rd-attempt escalation, they compose into a **single** stop: the budget trade-off is surfaced *as part of* the same fable-confirm decision, not a second stop layered on top. This mirrors the "Escalation composition" rule in `phase-dispatch.md`.
+- **At-ceiling short-circuit interaction.** Now that no agent defaults to `fable`, the At-ceiling short-circuit above (assigned model already `fable` → 3-attempt ceiling) is only reachable if a dispatch was *explicitly* spawned on `fable` (e.g., a per-task `model="fable"` override). It is not reachable on any default dispatch.
+
 > **Reference:** The **rollback** agent (see `~/.claude/agents/rollback.md`) handles the rollback procedure. See Failure Handling above for dispatch details.
 
 ### Strategy adaptation
