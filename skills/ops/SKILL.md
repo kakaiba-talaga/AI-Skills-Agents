@@ -19,7 +19,7 @@ Parse arguments as follows:
 - `--no-branch` — skip automatic working branch creation; work directly on the current branch.
 - `--no-deslop` — skip the deslop cleanup stage after verification. Deslop runs by default to clean AI-generated bloat from executor output.
 - `--cost` — enable cost estimate reporting in Phase 4 and the completion dashboard (off by default).
-- `--budget=<N>` — set an optional run-level dispatch-count ceiling the orchestrator consults at cost-affecting choice points (off by default). The budget is **advisory and escalation-only**: a tight budget can defer or escalate a spending choice, but it never silently drops work and **never skips a verification or correctness check** — those rails (the verification-gate ritual in `verification-gate.md` and the Verify → Fix 3-loop cap) sit above the budget, not below it.
+- `--budget=<N>` — set an optional run-level dispatch-count ceiling the orchestrator consults at cost-affecting choice points (off by default). The budget is **advisory and escalation-only**: a tight budget can defer or escalate a spending choice, but it never silently drops work and **never skips a verification or correctness check** — those rails (the verification-gate ritual in `verification-gate.md` and the Verify → Fix loop cap) sit above the budget, not below it.
 
   **Consultation registry (closed enumeration).** Every site where the budget governor fires is listed here:
 
@@ -361,7 +361,7 @@ executor → verifier → [FAIL] → executor (fix) → verifier (re-verify) →
 
 1. After the verifier reports failures, create a **fix task** assigned to the executor. Include the verifier's specific findings (not just "it failed").
 2. After the executor applies fixes, re-dispatch the verifier against the same acceptance criteria.
-3. **Maximum 3 loops** before escalation. If verify fails 3 times, escalate to the user — the task may have a design problem, not an implementation problem.
+3. **Mode-aware loop cap before escalation.** Interactive and supervised modes: maximum **3 loops** before escalating to the user. Autonomous mode: up to **5 loops** before escalating to the user. At the cap, escalate — the task may have a design problem, not an implementation problem. Rungs are informed and escalating: rung 2 adds a debugger or debugger-build re-diagnosis so retries carry new diagnostic context (not blind re-runs); rung 3 escalates the model one tier (see Model Escalation for tiers, the `opus → fable` confirmation gate, the at-ceiling short-circuit, and the security-reviewer opus ceiling). In autonomous mode, rungs 4 and 5 re-run on the already-escalated model (debugger findings from rung 2 carried forward) — the model tier does not climb further and the fable gate does not re-fire. Autonomous extended loops never escalate to fable silently; they run on the post-gate model (opus when the gate defaulted NO).
 4. Each loop iteration writes a new handoff file (with `-iterN` suffix) so context accumulates on disk.
 
 The same pattern applies to code review:
@@ -419,7 +419,7 @@ The team manager may create **internal bookkeeping tasks** (merge branches, fina
 | :--- | :--- |
 | Criteria not met (soft fail) | Re-dispatch with feedback: what specifically failed and why |
 | Environment/dependency blocker | Create blocker task, pause chain, alert user |
-| 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on fable — or on opus for security-reviewer (see the escalation ceiling exception) — or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis |
+| 3 consecutive failures on same task | Escalate model (see Model Escalation). If already on fable — or on opus for security-reviewer (see the escalation ceiling exception) — or failure is a blocker, escalate to user with: task, all attempts, errors, your diagnosis. After model escalation, further failures escalate to the user at the Verify → Fix loop cap (3 interactive/supervised, 5 autonomous). |
 | Agent reports plan is wrong | Pause chain, present the issue, suggest re-plan |
 | Agent timeout or crash | Retry once with same brief, then escalate |
 
@@ -434,7 +434,7 @@ When escalating, always include enough context for the user to make a decision w
 | Mode | Checkpoints | Stops when |
 | :--- | :--- | :--- |
 | Interactive (default) | After each pipeline stage | User confirms, adjusts, skips, stops, or injects/reprioritizes tasks |
-| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 3x task failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks complete |
+| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 5x verify failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks complete |
 | Supervised (`--supervised`) | After every task | User approves before next dispatch |
 
 ---
@@ -461,19 +461,21 @@ The team manager adapts strategy based on runtime conditions. Every adaptation i
 
 ```
 1st attempt: assigned model (from frontmatter)
-2nd attempt: same model, with error context and narrowed scope
+2nd attempt: same model, with error context, narrowed scope, and debugger/debugger-build re-diagnosis
 3rd attempt: escalate model (sonnet → opus, opus → fable), with full error history
-4th attempt: escalate to user
+Cap: escalate to user at the Verify → Fix loop cap (3 interactive/supervised, 5 autonomous)
 ```
 
-**At-ceiling short-circuit:** if the assigned model is already fable, the 3rd-attempt escalation has no higher tier — skip it and escalate directly to the user (a 3-attempt ceiling rather than 4).
+In autonomous mode, after the 3rd-attempt model escalation, rungs 4 and 5 re-dispatch on the already-escalated model (carrying debugger findings from rung 2) before escalating to the user at the 5-loop cap. The model tier does not climb again and the fable gate does not re-fire on those extra rungs. The intentional asymmetry with Cursor: Cursor has no model tiers, so its retry strategy uses a debugger re-diagnosis at rung 3 instead of model escalation — both platforms converge on "extended retries must carry new diagnostic input."
+
+**At-ceiling short-circuit:** if the assigned model is already fable, the 3rd-attempt escalation has no higher tier — skip it and escalate directly to the user (a 3-attempt ceiling on the model-escalation attempt ladder, independent of the mode-aware Verify→Fix loop cap (3 interactive/supervised, 5 autonomous)).
 
 **Escalation ceiling exception:** `security-reviewer` never escalates to fable — Fable 5's cybersecurity safety classifiers can refuse security-analysis content mid-run, which would wedge the stage. If `security-reviewer` fails 3 times on opus, escalate to the user instead.
 
 **`fable`-escalation confirmation gate.** The `opus → fable` step is the only path to `fable` now that no agent defaults to it. Because `fable` is credit-billed at API rates, the team manager never escalates to `fable` silently — it asks the user first, at the 3rd-attempt escalation for an `opus`-tier agent.
 
-- **Interactive mode (and `--supervised`):** ask the user and wait for the answer — no auto-default. **Yes** → escalate the 3rd attempt to `fable`. **No** → do not escalate; run the 3rd attempt on the **original (pre-escalation) `opus` model**. The existing "4th attempt → escalate to user" backstop still applies after a No. `--supervised` mode behaves exactly like interactive here: a human is in the loop, so the gate waits and never arms the 1-minute timeout.
-- **Autonomous mode:** ask the user, then **best-effort wait ~1 minute** (recorded as a `pending_fable_confirm` deadline — see `state-schema.md`). A "yes" arriving within the window → escalate to `fable`. If no reply by the deadline → **default NO** → run the 3rd attempt on the original `opus` model and keep the run unblocked. **Never pause indefinitely in autonomous mode** — this gate is the one model-escalation stop that does *not* block an unattended run, because `fable` is opt-in spend and silence means "don't spend it". The "1 minute" is a best-effort SLA tied to the next orchestrator beat, not a hard real-time guarantee.
+- **Interactive mode (and `--supervised`):** ask the user and wait for the answer — no auto-default. **Yes** → escalate the 3rd attempt to `fable`. **No** → do not escalate; run the 3rd attempt on the **original (pre-escalation) `opus` model**. The Verify → Fix loop cap (3 in interactive/supervised) still applies — the 3rd loop is the last before escalating to the user. `--supervised` mode behaves exactly like interactive here: a human is in the loop, so the gate waits and never arms the 1-minute timeout.
+- **Autonomous mode:** ask the user, then **best-effort wait ~1 minute** (recorded as a `pending_fable_confirm` deadline — see `state-schema.md`). A "yes" arriving within the window → escalate to `fable`. If no reply by the deadline → **default NO** → run the 3rd attempt on the original `opus` model and keep the run unblocked. **Never pause indefinitely in autonomous mode** — this gate is the one model-escalation stop that does *not* block an unattended run, because `fable` is opt-in spend and silence means "don't spend it". The "1 minute" is a best-effort SLA tied to the next orchestrator beat, not a hard real-time guarantee. The Verify → Fix 5-loop cap (autonomous) still applies — rungs 4 and 5 re-dispatch on the post-gate opus model before escalating to the user.
 - **`security-reviewer` never reaches this gate.** It caps at `opus` (the Escalation ceiling exception above); its 3rd opus failure escalates directly to the user and never offers a `fable` escalation.
 - **Composition with `--budget` (one decision point, never two stacked stops).** When this gate and an at-ceiling `--budget` escalation fire on the same 3rd-attempt escalation, they compose into a **single** stop: the budget trade-off is surfaced *as part of* the same fable-confirm decision, not a second stop layered on top. This mirrors the "Escalation composition" rule in `phase-dispatch.md`.
 - **At-ceiling short-circuit interaction.** Now that no agent defaults to `fable`, the At-ceiling short-circuit above (assigned model already `fable` → 3-attempt ceiling) is only reachable if a dispatch was *explicitly* spawned on `fable` (e.g., a per-task `model="fable"` override). It is not reachable on any default dispatch.

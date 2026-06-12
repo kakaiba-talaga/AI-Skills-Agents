@@ -49,7 +49,7 @@
 
 ### Pipeline
   executor → verifier → [security-reviewer] → deslop → code-reviewer → documentor
-  (verify → fix loops up to 3× before escalation)
+  (verify → fix loops: up to 3× interactive/supervised, up to 5× autonomous before escalation)
   (deslop runs by default; --no-deslop to skip)
 
 ### Adaptability
