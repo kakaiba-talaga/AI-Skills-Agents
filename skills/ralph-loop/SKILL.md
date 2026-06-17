@@ -58,7 +58,7 @@ If `--lightweight` is provided, set `lightweight_mode: true` in state. Implies `
    | **Plan** | Explicit target file(s) and function(s). | More than ONE approach. | 1-5 sentences max; numbered steps if multi-step. |
    | **Execute** | Implementation-focused content. | — | Bulleted list of `file:change` pairs summarizing changes. |
    | **Verify** | Per-criterion pass/fail for the current work item. Table when 2+ metrics. | Reporting pass without per-criterion detail. | Bold the overall verdict. |
-   | **Cleanup** | Scope (N files), linter used, fixes applied, regression result. | Broadening scope beyond `context.modified_files` (LB4). | Bullet list. |
+   | **Cleanup** | Scope (N files), linter used, fixes applied, regression result. | Broadening scope beyond `context.modified_files`. | Bullet list. |
    | **Reflect** | (1) assessment + `achieved_percent`, (2) work item status summary, (3) trend (1-2 lines), (4) new learnings as a bullet list, (5) next direction. | Flagging an auto-pause trigger without its assessment context. | 5-part structured output in the order shown. |
 
 4. **No exploratory reasoning in messages.** Deliberation happens internally, not in output.
