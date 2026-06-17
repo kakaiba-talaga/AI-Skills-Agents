@@ -18,11 +18,11 @@ If no arguments are given, ask the user what they want to manage.
 
 When the triage gate routes to `trivial`, execute these steps and stop — do not proceed to Phase 1a, Phase 2.5, or the full Phase 4 ceremony:
 
-> **Harness note:** LB1/LB2 below are harness-agnostic. Claude Code uses `Bash` / `Agent`; Cursor uses `Shell` / `Task` plus `TodoWrite` as a **display layer only**. On Cursor, every status change must follow the Write → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)** — never update `TodoWrite` without writing the board file first. Hub-specific Cursor wording lives in `SKILL.cursor.md` (regenerate with `tooling/transform-cursor-ops.ps1 -Force`).
+> **Harness note:** The steps below are harness-agnostic. Claude Code uses `Bash` / `Agent`; Cursor uses `Shell` / `Task` plus `TodoWrite` as a **display layer only**. On Cursor, every status change must follow the Write → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)** — never update `TodoWrite` without writing the board file first. Hub-specific Cursor wording lives in `SKILL.cursor.md` (regenerate with `tooling/transform-cursor-ops.ps1 -Force`).
 
-1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`, where `<slug>` is a short lowercase, hyphen-separated label). Ensure `.ops-state/` exists (create the directory if missing). Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with Read. Record `triage_confidence` on the task entry: the `level` (high/medium/low) and the `signals` the Triage Gate noted when it routed this run as trivial.
+1. **Create state file (mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`, where `<slug>` is a short lowercase, hyphen-separated label). Ensure `.ops-state/` exists (create the directory if missing). Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with Read. Record `triage_confidence` on the task entry: the `level` (high/medium/low) and the `signals` the Triage Gate noted when it routed this run as trivial.
 2. **Assign agent type:** Apply the Agent Assignment Rules table (Phase 2) — same lookup, same precedence rules. No manual override.
-3. **Write a self-contained brief (LB2):** Follow the Agent Briefing Format exactly. Use `description_inline` directly to compose the Context, Scope, and Acceptance Criteria sections. The agent has no conversation history — the prompt must be fully self-contained.
+3. **Write a self-contained brief (mandatory):** Follow the Agent Briefing Format exactly. Use `description_inline` directly to compose the Context, Scope, and Acceptance Criteria sections. The agent has no conversation history — the prompt must be fully self-contained.
 
    In plain terms: decide whether to include the project's saved notes in the agent's brief — on the trivial path this is simpler than the full pipeline because there is no prior attempt to check.
 
@@ -73,7 +73,7 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
         — safe with no `plan_file`, because `phase-dispatch.md` Step 3 resolves `description_inline`
         directly (no `description_ref`/`plan_file` dependency). Continue forward only — verify,
         then the security-review stage if scheduled, then deslop, review, and document on the
-        already-produced diff. Do NOT backfill Phase 1a or Phase 2.5. LB1/LB2 hold
+        already-produced diff. Do NOT backfill Phase 1a or Phase 2.5. The state-file and self-contained-brief invariants hold
         (Non-negotiable #9). See the promotion transition shape below.
 
    Each `type: promotion` entry sets `action_taken` to one of the values defined in `state-schema.md`: `promoted` (classification promoted to pipeline), `checked-no-promotion` (diff evaluated, trivial assumption stood), or `empty-diff-no-promotion` (no diff to evaluate — promotion skipped).

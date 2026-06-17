@@ -450,7 +450,7 @@ By design, `/ops` creates a working branch before any agents modify code when yo
 `.ops-state/` in your project root. Each run gets its own file named after the run ID (e.g., `.ops-state/caching-layer-2026-04-09-board.json`). The state file, the plan document under `docs/plan/`, and handoff files under `.agents/handoffs/` together hold everything needed for a full session recovery.
 
 **An agent is looping and the task never completes.**
-The team manager retries a failing task up to the Verify→Fix loop cap: 3 attempts in interactive/supervised mode, 5 in autonomous. The rungs are: base brief → debugger diagnosis → model escalation (sonnet → opus, or → fable if approved), then in autonomous mode rungs 4–5 re-dispatch on the already-escalated model with debugger findings carried forward. The `opus → fable` escalation is gated — autonomous runs default to staying on `opus` unless you approve `fable` within ~1 minute. If you see the same task cycling, type `stop` to halt dispatching, then inspect what the last agent returned. You can then `skip` the task, adjust the plan, and resume.
+The team manager retries a failing task up to the Verify→Fix loop cap: 3 attempts in interactive/supervised mode, 5 in autonomous. The loops are: base brief → debugger diagnosis → model escalation (sonnet → opus, or → fable if approved), then in autonomous mode loops 4–5 re-dispatch on the already-escalated model with debugger findings carried forward. The `opus → fable` escalation is gated — autonomous runs default to staying on `opus` unless you approve `fable` within ~1 minute. If you see the same task cycling, type `stop` to halt dispatching, then inspect what the last agent returned. You can then `skip` the task, adjust the plan, and resume.
 
 **`/ops` is running when I just wanted a quick command.**
 `/ops` is intended for multi-stage, multi-agent workflows. For single commands ("run the tests", "format this file"), invoke the agent or skill directly without wrapping in `/ops`.
@@ -473,9 +473,9 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 
 | File | Content | Loaded when |
 | :--- | :--- | :--- |
-| `phase-intake.md` | Phase 1 intake, trivial dispatch (**LB1**), save subcommand, brainstorm gate, plan persistence, Phase 1a/1.5/2 task board | Triage routes to `pipeline`, `trivial`, or `save` |
+| `phase-intake.md` | Phase 1 intake, trivial dispatch (state file creation — mandatory), save subcommand, brainstorm gate, plan persistence, Phase 1a/1.5/2 task board | Triage routes to `pipeline`, `trivial`, or `save` |
 | `phase-preflights.md` | Phase 2.5b/2.5c advisory preflights — code-intel and corpus-search — with the shared preflight blocks (budget-governor guard, yield-record, refusal-handling, dispatch-log entry) | Phase 2.5 entry |
-| `phase-dispatch.md` | Phase 2.5 validation, Phase 3 dispatch loop (**LB2**, memory injection, agent dispatch); **Cursor:** § state file sync (Write → verify → TodoWrite) | Task board ready; through dispatch |
+| `phase-dispatch.md` | Phase 2.5 validation, Phase 3 dispatch loop (self-contained brief enforced before each spawn, memory injection, agent dispatch); **Cursor:** § state file sync (Write → verify → TodoWrite) | Task board ready; through dispatch |
 | `phase-completion.md` | Phase 4 completion ceremony, status dashboard, cleanup | All tasks done; `status` route |
 
 The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase pointer index. See the **Companion index** table in `SKILL.md` for MUST vs See on branch-only companions.

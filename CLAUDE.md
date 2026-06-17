@@ -40,8 +40,8 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
 | `tooling/README.md` | `tooling/transform-cursor-{ops,deploy,ralph-loop}.{ps1,sh}`, `.github/workflows/transform-drift.yml` (CI drift gate when tracked) |
 | `agents/README.md` | `agents/_shared/**`, `agents/*.md` (agent definitions + shared snippets); self-contained agent reference: catalog, per-agent usage, workflow/handoffs/parallelization, full permissions reference |
-| `skills/ops/phase-intake.md` | `skills/ops/SKILL.md` (Triage Gate → pipeline/trivial/save; Phase 1–2, LB1), `tooling/transform-cursor-ops.{ps1,sh}` |
-| `skills/ops/phase-dispatch.md` | `skills/ops/SKILL.md` (Phase 2.5 validation; Phase 3 dispatch loop, LB2, memory injection), `tooling/transform-cursor-ops.{ps1,sh}` |
+| `skills/ops/phase-intake.md` | `skills/ops/SKILL.md` (Triage Gate → pipeline/trivial/save; Phase 1–2, state file on disk invariant), `tooling/transform-cursor-ops.{ps1,sh}` |
+| `skills/ops/phase-dispatch.md` | `skills/ops/SKILL.md` (Phase 2.5 validation; Phase 3 dispatch loop, self-contained brief invariant, memory injection), `tooling/transform-cursor-ops.{ps1,sh}` |
 | `skills/ops/phase-preflights.md` | `skills/ops/SKILL.md` (Phase 2.5b/2.5c pointers), `tooling/transform-cursor-ops.{ps1,sh}` |
 | `skills/ops/phase-completion.md` | `skills/ops/SKILL.md` (Phase 4, status dashboard), `tooling/transform-cursor-ops.{ps1,sh}` |
 | `docs/plan/token-efficiency-recommendations.md` | Phase A/B recommendations; links to `docs/plan/token-efficiency-phase-{a,b}-execute-plan.md` |

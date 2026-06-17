@@ -148,9 +148,9 @@ ANCHOR: | `status` | Read the state file. For any `in_progress` tasks, dispatch 
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: 1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Bash(command="mkdir -p .ops-state")`. Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back.
+ANCHOR: 1. **Create state file (mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Bash(command="mkdir -p .ops-state")`. Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back.
 @@CONTENT
-1. **Create state file (LB1 — mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Shell(command="mkdir -p .ops-state")`. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with `Read`. Also call `TodoWrite(merge=false)` with the single task item.
+1. **Create state file (mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Shell(command="mkdir -p .ops-state")`. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with `Read`. Also call `TodoWrite(merge=false)` with the single task item.
 @@END
 
 @@PATCH
@@ -583,7 +583,7 @@ When an agent fails, the team-manager retries with increasing context before esc
 1st attempt: assigned agent with original brief
 2nd attempt: same agent, with error context and narrowed scope
 3rd attempt: dispatch debugger/debugger-build for diagnosis, then re-brief with findings
-Autonomous only — rungs 4–5: re-dispatch with debugger findings carried forward
+Autonomous only — loops 4–5: re-dispatch with debugger findings carried forward
 Cap: escalate to user at the Verify → Fix loop cap (3 interactive/supervised, 5 autonomous)
 ```
 

@@ -127,7 +127,7 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 6. **Cost is opt-in** — skip cost computation unless `--cost` flag set or user asked. Do not compute by default.
 7. **Timing section mandatory** — always include Timing in every dashboard display (mid-run and completion).
 8. **Dashboard gating** — runs with ≤ 2 non-internal tasks: render full dashboard at completion only; stage transitions use one-liner `✓ [stage] complete (Xs)`. Always render full dashboard on `/ops status`.
-9. **Trivial route still enforces LB1 and LB2** — even on the trivial path, a state file is created and verified on disk (LB1) and the agent brief is fully self-contained (LB2). The triage gate never bypasses these invariants. A run promoted from the trivial route to the full pipeline keeps its existing run-id and state file; LB1 (a verified state file on disk) and LB2 (a fully self-contained agent brief) continue to hold across the promotion exactly as on any other pipeline run.
+9. **Trivial route still enforces the state-file and self-contained-brief invariants** — even on the trivial path, a state file is created and verified on disk and the agent brief is fully self-contained. The triage gate never bypasses these invariants. A run promoted from the trivial route to the full pipeline keeps its existing run-id and state file; the verified state file on disk and the fully self-contained agent brief continue to hold across the promotion exactly as on any other pipeline run.
 10. **Nested skill returns are mid-loop events.** A nested-skill return is a **mid-loop checkpoint**, never a terminal event — never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. Run this ritual around every nested-skill invocation (e.g., `/deslop`, `/clickup`):
 
     **Write-before** (immediately before invoking the nested skill):
@@ -204,9 +204,9 @@ downstream stage. Do not re-run Phase 1a or Phase 2.5 — the promotion runs for
 promote. Log every promotion (and every low-confidence-trivial run that was checked but
 not promoted) in the `adaptations` array with `type: promotion`.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/phase-intake.md` for Phase 1 intake (starting-point table, trivial dispatch including **LB1 — mandatory**, save subcommand, brainstorm gate, plan persistence, Phase 1a, Phase 1.5, Phase 2 task board creation, and Agent Assignment Rules). If the file is missing, stop — cannot proceed without intake procedures.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/phase-intake.md` for Phase 1 intake (starting-point table, trivial dispatch including state file creation (mandatory), save subcommand, brainstorm gate, plan persistence, Phase 1a, Phase 1.5, Phase 2 task board creation, and Agent Assignment Rules). If the file is missing, stop — cannot proceed without intake procedures.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/phase-preflights.md` for the Phase 2.5b/2.5c advisory preflights (checks run before dispatch). If `phase-preflights.md` is missing, skip the advisory preflights — they are advisory and never block a dispatch. You MUST Read `~/.cursor/skills/ops/phase-dispatch.md` for Phase 2.5 preflight validation and the Phase 3 dispatch loop (including **LB2 — mandatory** `description_ref` resolution, memory injection, and Agent Dispatch Procedure). If `phase-dispatch.md` is missing, stop.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/phase-preflights.md` for the Phase 2.5b/2.5c advisory preflights (checks run before dispatch). If `phase-preflights.md` is missing, skip the advisory preflights — they are advisory and never block a dispatch. You MUST Read `~/.cursor/skills/ops/phase-dispatch.md` for Phase 2.5 preflight validation and the Phase 3 dispatch loop (including self-contained brief (mandatory) `description_ref` resolution, memory injection, and Agent Dispatch Procedure). If `phase-dispatch.md` is missing, stop.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/phase-completion.md` for Phase 4 completion steps/process and Status Dashboard rendering. If the file is missing, proceed using Non-negotiables #3, #4, #7, and #8 for minimum completion behavior.
 
@@ -214,10 +214,10 @@ not promoted) in the `adaptations` array with `type: promotion`.
 
 | Phase | Companion | Purpose |
 | :--- | :--- | :--- |
-| 1 / 1a / 1.5 / 2 | `phase-intake.md` | Plan, branch, task board (LB1 at board creation) |
+| 1 / 1a / 1.5 / 2 | `phase-intake.md` | Plan, branch, task board (state file verified on disk at board creation) |
 | 2.5b / 2.5c | `phase-preflights.md` | Advisory preflight (code-intel, corpus-search) |
 | 2.5 | `phase-dispatch.md` | Preflight validation (environment check) |
-| 3 | `phase-dispatch.md` | Dispatch loop (LB2 before each spawn) |
+| 3 | `phase-dispatch.md` | Dispatch loop (self-contained brief enforced before each spawn) |
 | 4 | `phase-completion.md` | Deliverables, timing, cleanup, completion menu |
 
 ### Companion index (existing + phase)
@@ -389,7 +389,7 @@ executor → verifier → [FAIL] → executor (fix) → verifier (re-verify) →
 
 1. After the verifier reports failures, create a **fix task** in the state file and TodoWrite assigned to the executor. Include the verifier's specific findings (not just "it failed").
 2. After the executor applies fixes, re-dispatch the verifier against the same acceptance criteria.
-3. **Mode-aware loop cap before escalation.** Interactive and supervised modes: maximum **3 loops** before escalating to the user. Autonomous mode: up to **5 loops** before escalating to the user. At the cap, escalate — the task may have a design problem, not an implementation problem. Rungs are informed and escalating: rung 2 adds a debugger or debugger-build re-diagnosis so retries carry new diagnostic context (not blind re-runs); rung 3 escalates the model one tier (see Model Escalation for tiers, the `opus → fable` confirmation gate, the at-ceiling short-circuit, and the security-reviewer opus ceiling). In autonomous mode, rungs 4 and 5 re-run on the already-escalated model (debugger findings from rung 2 carried forward) — the model tier does not climb further and the fable gate does not re-fire. Autonomous extended loops never escalate to fable silently; they run on the post-gate model (opus when the gate defaulted NO).
+3. **Mode-aware loop cap before escalation.** Interactive and supervised modes: maximum **3 loops** before escalating to the user. Autonomous mode: up to **5 loops** before escalating to the user. At the cap, escalate — the task may have a design problem, not an implementation problem. Loops are informed and escalating: the 2nd loop adds a debugger or debugger-build re-diagnosis so retries carry new diagnostic context (not blind re-runs); the 3rd loop escalates the model one tier (see Model Escalation for tiers, the `opus → fable` confirmation gate, the at-ceiling short-circuit, and the security-reviewer opus ceiling). In autonomous mode, loops 4 and 5 re-run on the already-escalated model (debugger findings from the 2nd loop carried forward) — the model tier does not climb further and the fable gate does not re-fire. Autonomous extended loops never escalate to fable silently; they run on the post-gate model (opus when the gate defaulted NO).
 4. Each loop iteration writes a new handoff file (with `-iterN` suffix) so context accumulates on disk.
 
 The same pattern applies to code review:
@@ -493,7 +493,7 @@ When an agent fails, the team-manager retries with increasing context before esc
 1st attempt: assigned agent with original brief
 2nd attempt: same agent, with error context and narrowed scope
 3rd attempt: dispatch debugger/debugger-build for diagnosis, then re-brief with findings
-Autonomous only — rungs 4–5: re-dispatch with debugger findings carried forward
+Autonomous only — loops 4–5: re-dispatch with debugger findings carried forward
 Cap: escalate to user at the Verify → Fix loop cap (3 interactive/supervised, 5 autonomous)
 ```
 
