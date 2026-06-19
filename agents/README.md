@@ -337,6 +337,7 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - **Brief format:** JSON-fenced block for orchestrators (required fields: `query_type`, `symbol`); labeled-prose (`Query:`, `Symbol:`, `Scope:`, `Depth:`) for humans; malformed input refused immediately with the usage card
 - **Output format:** JSON response for orchestrator dispatches (summary + path); full inline rendered report for standalone human queries
 - Read-only on source code — writes only to `.code-intel/**`, `docs/code-intel/**`, and `_tmp_*`
+- **Adaptive (v2):** open extension discovery (unknown types still get file nodes, never silently dropped), `git ls-files`/`.gitignore`-aware ignores + vendored/generated heuristics, incremental re-index on HEAD change, capability-detected tree-sitter (deferred), and a corpus-search query-time companion; 7,500-file cap
 
 **Corpus Search:**
 
