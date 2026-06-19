@@ -20,6 +20,10 @@ If the task is `help` or asks what this agent can do, display the following refe
 ### What I do
   Index the project into a SQLite symbol graph at `.code-intel/index.sqlite`.
   Answer six structural query types via recursive CTEs.
+  Honour project .gitignore via `git ls-files` when in a git repo.
+  Discover languages from files present — no hardcoded language ceiling.
+  Incrementally re-index on SHA drift (full rebuild when incremental is unsafe).
+  Supplement regex-grade results with live corpus search (path:line citations).
   Stamp every artifact with `db_indexed_sha` and `generated_at`.
 
 ### Query types
@@ -42,7 +46,8 @@ If the task is `help` or asks what this agent can do, display the following refe
 ### What I don't do
   - Edit source files (read-only on source code)
   - Write outside .code-intel/**, docs/code-intel/**, or _tmp_*
-  - Install packages without interactive Tier-3 confirmation
+  - Install packages or make network calls (no installs, ever)
+  - Prompt for tree-sitter install (capability-detected silently; no consent gate)
   - Make architecture decisions or review code
 ````
 
@@ -141,8 +146,38 @@ On every dispatch, in this exact order:
 
 0. **Existence check first.** If `.code-intel/index.sqlite` does not exist, treat this dispatch as the ad-hoc trigger from the Build trigger section above — build the index transparently, then proceed to step 1 with the freshly-stamped DB. Skipping this step would attempt `git rev-parse HEAD` against a non-existent `metadata` table and surface a SQLite "no such table" error instead of the intended ad-hoc build.
 1. Run `git rev-parse HEAD` and compare against `db_indexed_sha` in the DB `metadata` table.
-2. If the SHAs differ, drop and rebuild the index before answering, bounded by the wall-clock caps in the Performance Enforcement section below (60s soft / 600s hard) and the 5,000-file hard cap.
+2. **If the SHAs differ, attempt incremental re-index** (described below). Fall back to a full drop-and-rebuild when incremental is not safe (see fallback conditions).
 3. If the SHAs match, answer from the existing index.
+
+**Incremental re-index (step 2 detail).**
+
+When the on-disk SHA differs from HEAD, perform:
+
+```
+changed_files = git diff --name-only <db_indexed_sha> HEAD
+```
+
+The entire incremental pass — every per-file delete(+CASCADE)/reinsert operation **and** the final `metadata.db_indexed_sha`/`metadata.generated_at` restamp — executes inside a **single SQLite transaction**. If the transaction fails mid-run (any error from delete, re-parse, or insert), **roll back** to the prior consistent state and immediately **fall back to a full drop-and-rebuild**. This mirrors the Phase-5 "INSERT in a single transaction" pattern and ensures the database is never left in a partially-updated state.
+
+For each file in `changed_files` (within that single transaction):
+
+- If the file still exists: delete all `nodes` rows where `file_path = <file>` (CASCADE in the schema automatically deletes attached `edges` rows via `ON DELETE CASCADE`), then re-parse the file and insert fresh nodes/edges.
+- If the file was deleted: delete its `nodes` rows (and cascaded edges) only.
+
+After processing all changed files (still within the transaction): update `metadata.db_indexed_sha` to HEAD and `metadata.generated_at` to the current UTC timestamp. Then commit the transaction.
+
+**Incremental fallback conditions (trigger a full drop-and-rebuild instead):**
+
+- No `db_indexed_sha` is stored in metadata (first run on this DB, or the key is missing).
+- The repo is non-git (i.e., `git rev-parse HEAD` fails or the target is not a git repo).
+- The stored `db_indexed_sha` is unreachable (`git diff` returns a non-zero exit code or the SHA is no longer in history — e.g., after a rebase or force-push).
+- The stored `schema_version` differs from the current agent's schema version — a schema migration is required and only a full rebuild guarantees correctness.
+- `query_type: "reindex"` was explicitly requested (escape hatch, always triggers full rebuild).
+- The incremental transaction failed mid-run and was rolled back (guarantees no partially-updated state is served).
+
+A full rebuild is bounded by the wall-clock caps (60s soft / 600s hard) and the 7,500-file hard cap (see Performance Enforcement).
+
+**Edge-invalidation correctness note.** Incremental re-parse only reprocesses files that changed, not their callers in unchanged files. This means `CALLS` edges from an unchanged file *to* a symbol in a changed file are not invalidated on the caller side. This is acceptable for the primary use cases (the caller's edge row still records the correct symbol name; the lookup engine does not require structural correctness at regex precision). If this becomes a correctness concern for a specific query, use `query_type: "reindex"` to force a full rebuild.
 
 ### Cleanup
 
@@ -156,7 +191,7 @@ Five phases, all single-threaded:
 
 | Phase | Purpose | Output |
 | :--- | :--- | :--- |
-| **1. Scan** | Walk the repo (`Glob`) honoring hardcoded excludes. Build the file list. | List of `(file_path, language)` tuples; file count for the 5,000-file hard-cap check. |
+| **1. Scan** | Walk the repo (`Glob`) honoring project-aware ignores (see below). Build the file list. | List of `(file_path, language)` tuples; file count for the 7,500-file hard-cap check. |
 | **2. Profile** | Manifest sniff + extension sweep (see Language Profile Detection). Probe Tier-1 runtimes via `which` / `--version`. | Language profile + runtime availability map. |
 | **3. Parse** | For each file, dispatch to Tier-1 (AST) or Tier-2 (Grep) per Tier Cascade Logic. Emit `nodes` and `edges` records. Skip-and-log unreadable files. | In-memory nodes and edges per file. |
 | **4. Cross-file resolve** | Resolve `IMPORTS` edges across files. Resolve `EXTENDS`/`IMPLEMENTS`/`OVERRIDES` where Tier-1 produced enough information. Unresolved edges are dropped and logged. | Updated edge records with `to_id` populated. |
@@ -166,7 +201,7 @@ Phase N+1 cannot start until Phase N completes for the whole repo. Wall-clock is
 
 **Failure modes per phase:**
 
-- Phase 1 — file count > 5,000 → refuse (hard cap; see Performance Enforcement below).
+- Phase 1 — file count > 7,500 → refuse (hard cap; see Performance Enforcement below).
 - Phase 2 — Tier-1 runtime missing → silent fallback to Tier-2 + caveat propagated to query responses.
 - Phase 3 — file unreadable → skip + log + continue.
 - Phase 4 — unresolved edge → drop + log + continue.
@@ -181,15 +216,18 @@ Phase N+1 cannot start until Phase N completes for the whole repo. Wall-clock is
 2026-04-26T14:32:02Z  exceeded individual file size    huge/generated.json
 ```
 
-Reason vocabulary: `unreadable`, `binary`, `oversize`, `parse_error` (parenthetical is for human eyes). When the soft-cap warning fires, also emit a one-line summary at the end:
+Reason vocabulary: `unreadable`, `binary`, `oversize`, `parse_error` (parenthetical is for human eyes). At the end of each run, two separate trailing summary lines are appended — one for general skips, one for vendored/generated-heuristic exclusions:
 
 ```
-2026-04-26T14:35:00Z  summary  43 files skipped during indexing run (4933 indexed)
+2026-04-26T14:35:00Z  summary-skipped    43 files skipped (unreadable/binary/oversize/parse_error), 4933 indexed
+2026-04-26T14:35:00Z  summary-excluded   12 files excluded (vendored/generated heuristics), 4933 indexed
 ```
+
+Each line is always written (with a count of `0` when none occurred) so downstream tooling can rely on both lines being present.
 
 ### Language Profile Detection
 
-Two-pass algorithm:
+Two-pass algorithm plus open extension discovery. The `EXTENSION_HINTS` table below is a **hint/precision map** — a non-exhaustive guide that maps known extensions to language names and extraction rules. It is **not a gate**: extensions absent from the table are not dropped; they receive a `file` node and best-effort regex extraction with a visible "unrecognised extension" caveat (see `index_file` below).
 
 ```python
 LANGUAGE_MANIFESTS = {
@@ -205,7 +243,9 @@ LANGUAGE_MANIFESTS = {
   'ruby':       ['Gemfile'],
 }
 
-EXTENSION_MAP = {
+# EXTENSION_HINTS is a precision-hint map, NOT a gate.
+# Unknown extensions are handled by open discovery — see detect_language_profile().
+EXTENSION_HINTS = {
   '.py':     'python',
   '.ts':     'typescript', '.tsx': 'typescript',
   '.js':     'javascript', '.jsx': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
@@ -224,36 +264,86 @@ EXTENSION_MAP = {
   '.edmx':   'xml',      # Entity Framework model (XML dialect)
 }
 
-def detect_language_profile(repo_root):
-    profile = {}  # language -> {via_manifest: bool, file_count: int}
+def detect_language_profile(repo_root, file_list):
+    """
+    file_list is the full list of repo-relative paths from Phase 1 Scan.
+    Returns profile: language -> {via_manifest: bool, file_count: int, hint_language: str|None}.
+      hint_language records the language name hinted by the file extension (from EXTENSION_HINTS),
+      or None when the extension is unrecognised. It is NOT a precision tier — precision is
+      runtime-dependent and determined at parse time in index_file().
+    Also returns unknown_extensions: set of extensions not in EXTENSION_HINTS.
+    """
+    profile = {}
+    unknown_extensions = set()
 
     # Pass 1 — manifest sniff. Alphabetical by language name for stable probe order.
     for lang in sorted(LANGUAGE_MANIFESTS.keys()):
         for m in LANGUAGE_MANIFESTS[lang]:
-            hits = glob(f"**/{m}", excluded=HARDCODED_EXCLUDES)
+            hits = [f for f in file_list if fnmatch(f, f'**/{m}') or fnmatch(basename(f), m)]
             if hits:
                 profile.setdefault(lang, {}).update({'via_manifest': True})
                 break
 
-    # Pass 2 — extension sweep. Alphabetical by (language, extension).
-    for ext, lang in sorted(EXTENSION_MAP.items(), key=lambda kv: (kv[1], kv[0])):
-        count = len(glob(f"**/*{ext}", excluded=HARDCODED_EXCLUDES))
-        if count > 0:
-            profile.setdefault(lang, {})['file_count'] = count
+    # Pass 2 — extension sweep across the actual file_list (not a second Glob walk).
+    # Alphabetical by extension for deterministic output.
+    ext_counts = {}
+    for file_path in file_list:
+        ext = splitext(file_path)[1].lower()
+        if not ext:
+            continue
+        ext_counts[ext] = ext_counts.get(ext, 0) + 1
 
-    return profile
+    for ext in sorted(ext_counts.keys()):
+        count = ext_counts[ext]
+        if ext in EXTENSION_HINTS:
+            lang = EXTENSION_HINTS[ext]
+            profile.setdefault(lang, {})['file_count'] = profile.get(lang, {}).get('file_count', 0) + count
+            profile[lang]['hint_language'] = EXTENSION_HINTS.get(ext)  # language name hinted by extension
+        else:
+            # Open extension discovery: record as language = '<ext>' partition (e.g. 'language=.csproj').
+            lang_key = ext  # e.g. '.csproj', '.wasm', '.proto'
+            profile.setdefault(lang_key, {})['file_count'] = count
+            profile[lang_key]['hint_language'] = None  # no language hint available for this extension
+            unknown_extensions.add(ext)
+
+    return profile, unknown_extensions
 ```
 
-Both passes iterate **alphabetically by language name** for stable, deterministic output. When a language entry has multiple manifests, the tiebreaker is manifest specificity: the earliest entry in that language's manifest list wins (lists are pre-sorted most-specific to least-specific, e.g., `pyproject.toml` before `requirements.txt`).
+**Open extension discovery.** When `unknown_extensions` is non-empty after Pass 2, every unknown extension is recorded in `metadata.unknown_extensions` (comma-separated) and surfaced as a caveat in every query response:
 
-Tier-1 runtime probes (also alphabetical):
+> `Index contains N file(s) with unrecognised extensions (<ext list>). These files have a 'file' node only — symbol lookup will return no results for those extensions. Index with a broader EXTENSION_HINTS or query by file path.`
+
+Files with unknown extensions are **never silently dropped**. They always receive at minimum a `nodes.kind = 'file'` entry so that file-path lookups and scope filtering still work.
+
+Both passes iterate **alphabetically** for stable, deterministic output. When a language entry has multiple manifests, the tiebreaker is manifest specificity: the earliest entry in that language's manifest list wins (lists are pre-sorted most-specific to least-specific, e.g., `pyproject.toml` before `requirements.txt`).
+
+**Capability probes** (run at the end of Phase 2, results stored in `runtimes`):
 
 - `python`: `which python` or `python --version`
 - `typescript`: `which tsc` and `which node`
 - `javascript`: `which node`
-- All other languages: Tier-1 unavailable in v1; fall through to Tier-2.
+- `tree-sitter` (capability-detected, optional): `which tree-sitter` — see Tier Cascade Logic for the deferred hook.
+- All other languages fall through to Tier-2 (regex) by default.
 
-### Hardcoded Excludes
+### Project-Aware Ignores
+
+Phase 1 Scan builds its file list using a two-layer strategy: a **primary git-aware layer** when the target is a git repo, and a **fallback hardcoded layer** when it is not.
+
+#### Layer 1 — git-aware (primary, when repo is git)
+
+When `git rev-parse HEAD` succeeds, seed the file list from:
+
+```
+git ls-files
+```
+
+This honours the project's own `.gitignore` (and `.gitignore`-family files such as `.git/info/exclude` and global gitconfig excludes) for free, without any parsing of `.gitignore` syntax by the agent. All untracked and ignored paths are absent from the list automatically. Note that **untracked files (not yet staged or committed) are also absent from `git ls-files` and will not be indexed until they are staged**; if you have added new files that are not yet in the index, run `git add <file>` and then re-dispatch with `query_type: "reindex"` to include them.
+
+After seeding from `git ls-files`, layer the heuristic vendored/generated filters below on top (they catch vendored content that is committed to the repo — which `.gitignore` cannot exclude by definition).
+
+#### Layer 2 — hardcoded fallback (non-git repos)
+
+When `git rev-parse HEAD` fails (not a git repo, or git is not available), fall back to a Glob walk of the project root honouring the following hardcoded excludes.
 
 Matched against repo-relative path components (a directory named `node_modules` anywhere in the tree is excluded; a file named `node_modules.md` is not). The entries `_tmp_*`, `*.min.js`, `*.min.css`, and `*-min.js` are file-name globs matched against the file's base name rather than a path component:
 
@@ -290,6 +380,21 @@ _tmp_*           # agent-temporary scratch files (per Shared Brief Constraints) 
 *.min.css        # minified CSS bundles                                          [file-name glob]
 *-min.js         # alternate minified JavaScript naming convention               [file-name glob]
 ```
+
+#### Heuristic vendored/generated detection (applied in both layers)
+
+After the primary file list is established (via `git ls-files` or Glob walk), apply these conservative heuristics to identify likely vendored or generated files. Each filtered file is **logged to `_tmp_indexer-skipped.log` with its specific reason** — exclusion is never silent.
+
+| Heuristic | Trigger condition | Reason logged |
+| :--- | :--- | :--- |
+| **Minified files** | Base name matches `*.min.js`, `*.min.css`, `*-min.js`, `*.min.ts`, `*.bundle.js` | `vendored (minified filename)` |
+| **Single-line-huge** | File has exactly 1 non-empty line AND that line is > 500 bytes | `vendored (single-line file > 500 bytes — likely minified or generated)` |
+| **Lockfiles** | Base name is exactly `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`, `poetry.lock`, `Gemfile.lock`, `composer.lock`, `packages.lock.json`, `paket.lock` | `vendored (lockfile — auto-generated, not source)` |
+| **Generated-code header** | First 5 lines of the file contain any of: `<auto-generated>`, `</auto-generated>`, `Code generated by`, `DO NOT EDIT`, `This file was automatically generated`, `@generated` | `generated (auto-generated header detected)` |
+
+These heuristics are intentionally **conservative**: the single-line threshold (500 bytes) is set to avoid false positives on legitimate one-liner scripts. When uncertain, include the file — it is always better to index a false-positive vendored file than to silently drop a genuine source file.
+
+The vendored/generated counts contribute to the `summary-excluded` trailing summary line described in the Skipped-file log section above.
 
 ## SQLite Schema
 
@@ -335,7 +440,14 @@ CREATE INDEX IF NOT EXISTS idx_edges_from      ON edges(from_id, edge_type);
 CREATE INDEX IF NOT EXISTS idx_edges_to        ON edges(to_id, edge_type);
 ```
 
-Required `metadata` keys after every successful indexer run: `schema_version`, `db_indexed_sha`, `generated_at`, `indexer_wall_clock_s`, `languages_seen`, `tier1_runtimes`, `file_count`. The `tier3_runtimes` key (comma-separated list of `tree-sitter-<language>` slots confirmed in this or a prior run; empty string if none) is written whenever a Tier-3 confirmation lands and is read back into the `runtimes` set on every indexer startup — see Tier Cascade Logic below.
+Required `metadata` keys after every successful indexer run: `schema_version`, `db_indexed_sha`, `generated_at`, `indexer_wall_clock_s`, `languages_seen`, `tier1_runtimes`, `file_count`.
+
+The following keys are **additive** (written when relevant; existing consumers ignore unknown keys):
+
+- `tier3_runtimes` — comma-separated list of `tree-sitter-<language>` slots detected as available in this run (empty string if none). Written for observability and provenance; re-probed live on every run, not read back to reconstruct the runtime set.
+- `unknown_extensions` — comma-separated list of file extensions found in the repo that are absent from `EXTENSION_HINTS`. Written when non-empty; surfaced as a caveat in all query responses.
+- `index_mode` — `full` or `incremental`; records whether the last index operation was a full rebuild or an incremental re-parse.
+- `incremental_changed_files` — count of files re-parsed in the last incremental run (omitted when `index_mode = full`).
 
 ## Query Handlers
 
@@ -575,62 +687,98 @@ Every artifact — Markdown or JSON, inline or on disk — carries `db_indexed_s
 `runtimes` is a **single flat set of strings** that mixes two kinds of keys:
 
 - **Bare runtime names** populated by Phase 2 probes (`'python'`, `'node'`, `'tsc'`). These are present whenever `which <cmd>` succeeds during the indexer run.
-- **Tree-sitter slots** of the form `'tree-sitter-<language>'` (e.g., `'tree-sitter-java'`, `'tree-sitter-rust'`). A slot is present when, in this run or a prior run, the user has confirmed a Tier-3 install for that language via the Tier-3 escalation prompt below.
+- **Tree-sitter capability slots** of the form `'tree-sitter-<language>'` (e.g., `'tree-sitter-java'`, `'tree-sitter-rust'`). A slot is present when `which tree-sitter` succeeds **and** the grammar for that language is confirmed available via `tree-sitter --version` or a grammar-check probe. These are capability-detected at runtime — no install, no prompt.
 
 Both kinds live in the same set so that `'python' in runtimes` and `'tree-sitter-rust' in runtimes` are uniform membership checks.
 
-**Persistence between dispatches.** Phase 2 re-probes bare runtime names on every indexer run (cheap; a few `which` calls), so they do not need to persist. Tier-3 confirmations *do* need to persist — re-prompting on every dispatch would be hostile. Persist confirmed tree-sitter slots via a sibling `metadata.tier3_runtimes` key (comma-separated, parallel to the existing `metadata.tier1_runtimes`). On indexer startup, the runtime map is reconstructed as `runtimes = set(probe_tier1()) | set(load_tier3_from_metadata())`.
+**Persistence between dispatches.** Phase 2 re-probes bare runtime names on every indexer run (cheap; a few `which` calls), so they do not need to persist. Tree-sitter capability slots are also re-probed each run (the binary is either present or it is not). Record the confirmed capability set in `metadata.tier3_runtimes` (comma-separated) after each run for observability and provenance tracking — this key is informational, not used to reconstruct the runtime set (which is always re-probed live).
 
 ```python
+TREE_SITTER_GRAMMAR_CHECK_LANGS = []  # deferred — empty until tree-sitter support is implemented
+
+
+def probe_runtimes():
+    """
+    Phase 2 capability probe. Returns the flat runtimes set.
+    No installs, no network — only `which` and `--version` calls.
+    """
+    runtimes = set()
+
+    # Tier-1 probes.
+    if which('python'):   runtimes.add('python')
+    if which('node'):     runtimes.add('node')
+    if which('tsc'):      runtimes.add('tsc')
+
+    # Tree-sitter capability probe (deferred / optional — see note below).
+    # If tree-sitter CLI is present, check which grammars are available.
+    if which('tree-sitter'):
+        runtimes.add('tree-sitter')
+        for lang in TREE_SITTER_GRAMMAR_CHECK_LANGS:
+            if grammar_available(lang):   # probe via `tree-sitter --version` or grammar-list
+                runtimes.add(f'tree-sitter-{lang}')
+
+    return runtimes
+
+
 def index_file(file_path, language, runtimes):
     """
     Returns (nodes, edges, precision_used) for the file, or raises if unreadable.
     `runtimes` is the flat set described above.
+    Precision tag reflects the actual tier used — never overstated.
     """
-    # Tier 1 — precise AST.
+    # Tier 1 — precise AST (Python and TypeScript/JavaScript only).
     if language == 'python' and 'python' in runtimes:
         return parse_with_python_ast(file_path), 'ast'
     if language in ('typescript', 'javascript') and 'tsc' in runtimes:
         return parse_with_tsc(file_path, language), 'ast'
 
-    # Tier 2 — Grep heuristics.
+    # Tier 2a — tree-sitter (capability-detected, deferred hook — see note below).
+    # When the tree-sitter CLI is present and a grammar for `language` is confirmed,
+    # use it. Otherwise fall through to Tier-2b (regex). No install, no prompt.
+    if f'tree-sitter-{language}' in runtimes:
+        return parse_with_tree_sitter(file_path, language), 'tree-sitter'
+
+    # Tier 2b — Grep heuristics (regex-grade, universal fallback).
     if language in TIER_2_SUPPORTED:   # rust, go, csharp, java, php, dart, bash, powershell, ruby, razor, sql, xml
         return parse_with_grep_heuristics(file_path, language), 'regex'
 
-    # Unknown language — record file node only, no edges.
-    return ([file_node_for(file_path, language='unknown')], []), 'regex'
-
-
-def consider_tier3_escalation(query_type, language, results, runtimes, brief_format):
-    """
-    Called by the query handler after a query produces a partial-precision result.
-    Returns True if Tier-3 should be offered to the user; False otherwise.
-    """
-    # Suppression in non-interactive contexts — JSON-fenced briefs come only
-    # from orchestrators. Falling through to "proceed with current data + caveat"
-    # preserves prevention-first in interactive contexts while keeping
-    # orchestrator dispatches deterministic.
-    if brief_format == 'json-fenced':
-        return False
-
-    # Query/language combinations where tree-sitter would meaningfully improve
-    # precision over Tier-2.
-    TIER3_BENEFICIAL = {
-        ('find_implementations', 'java'),   ('find_implementations', 'csharp'),
-        ('find_implementations', 'rust'),
-        ('execution_flow',       'java'),   ('execution_flow',       'csharp'),
-        ('find_callers',         'rust'),
-    }
-    if (query_type, language) not in TIER3_BENEFICIAL:
-        return False
-    # Tree-sitter already installed for this language? (Slot from metadata.tier3_runtimes.)
-    if f'tree-sitter-{language}' in runtimes:
-        return False
-    # Results were Tier-2 (regex precision)?
-    if not any(r.precision == 'regex' for r in results):
-        return False
-    return True
+    # Unknown language — open discovery: record file node only, no edges.
+    # Caveat is propagated to query responses (see Language Profile Detection).
+    return ([file_node_for(file_path, language=language)], []), 'regex'
 ```
+
+**Tree-sitter hook — deferred / not yet implemented in this version.** The hook above describes the intended capability-detection architecture (Option 3A). In the current version, `parse_with_tree_sitter()` is **not built out**: `TREE_SITTER_GRAMMAR_CHECK_LANGS` is empty and `grammar_available()` always returns `False`, so the tree-sitter branch never fires. When tree-sitter support is implemented, it will: probe `which tree-sitter` (already permitted under Bash Scope); check per-language grammar availability without any install or network call; and tag results `precision='tree-sitter'` (a value already legal in the SQLite CHECK constraint). The interactive Tier-3 escalation prompt (v1 lines 666–690) is **retired** — capability detection requires no user consent.
+
+**Corpus-search companion (query-time precision).**
+
+When a query result is regex-grade (`precision = 'regex'`) or when the symbol graph cannot resolve a reference (e.g., a cross-file `CALLS` edge was dropped during Phase 4), the query handler augments the index lookup with a **live ripgrep-style search** using the `Grep` tool. This companion does not require a sub-agent and does not modify the index — it is a query-time supplement.
+
+The companion is triggered when any of the following apply:
+
+- The query returns zero results from the index (symbol not found in graph).
+- All returned rows carry `precision = 'regex'` and the query type is `find_callers`, `find_implementations`, or `execution_flow`.
+- The query type is `find_callers`, `find_implementations`, or `execution_flow` and the index result set is sparse (fewer than 3 rows) for a symbol whose language partition has more than 50 files in the language partition — suggesting the regex extractor under-resolved edges.
+
+When triggered, the handler executes targeted `Grep` patterns against the file-system scope (bounded by `scope` from the brief, or project-wide if unscoped). Use these per-query-type patterns as a starting point:
+
+- `find_callers` — search for `<symbol>(` and `<symbol> (` to locate call sites.
+- `find_implementations` — search for `implements <symbol>` and `extends <symbol>` to locate concrete implementers and subclasses.
+- `execution_flow` — search for `<entry_symbol>(` and `<entry_symbol> (` call-site patterns from the entry symbol, then iteratively follow discovered callees.
+
+Results are reported with `path:line` citations in a dedicated section of the report:
+
+```markdown
+#### Live Search Supplement
+
+The following matches were found via live ripgrep-style search (not from the index).
+These are best-effort text matches — precision is unverifiable without AST parsing.
+
+| Match | File:Line | Context |
+| :--- | :--- | :--- |
+| `<matched text>` | `src/auth/handler.cs:88`~ | `<one-line snippet>` |
+```
+
+Live-search rows always carry the `~` imprecision glyph. They supplement, never replace, index rows. If the index already returned high-precision results, the live-search section is omitted.
 
 ### Tier-2 Extraction by Language
 
@@ -663,44 +811,22 @@ The file itself always yields a `nodes.kind = 'file'` node as the root anchor.
 - `EntityType Name="<Name>"`, `ComplexType Name="<Name>"`, and `EntitySet Name="<Name>"` attributes → `nodes.kind = 'class'`.
 - **No relationship or association edge resolution.** Parsing `AssociationSet`, `NavigationProperty`, and `Association` elements into `EXTENDS`/`IMPLEMENTS` edges is low value and high fragility given the verbosity and redundancy of EDMX XML; these are intentionally omitted. Callers should treat the xml partition as a name-lookup surface only.
 
-### Tier-3 Escalation Prompt
+### Tier-3 Escalation Prompt — Retired
 
-When `consider_tier3_escalation()` returns `True`, display this prompt verbatim and await a single reply:
-
-```
-[code-intel] Tier-3 escalation available
-
-The query you asked — `<query_type>` for symbol `<symbol>` (language: <lang>) —
-would benefit meaningfully from a tree-sitter parse. The current Tier-2 (regex)
-result is usable but imprecise:
-
-  <one-sentence concrete imprecision, e.g. "polymorphic dispatch in Java/C# means
-  find_implementations may miss override relationships across compilation units">
-
-Installing tree-sitter and re-indexing would cost roughly:
-  - <T> seconds of wall-clock for the install (one-time, per machine)
-  - <U> seconds of wall-clock for the re-index (now)
-  - <V> MB of disk for the tree-sitter binary and grammars
-
-To proceed with the install and re-index, reply `yes` (case-insensitive).
-Anything else — including an empty reply — proceeds with the current Tier-2
-data plus a precision caveat in the report.
-```
-
-Only `yes` (case-insensitive) confirms. Everything else — including empty input — is treated as decline and the agent proceeds with current data plus a precision caveat.
+The v1 interactive Tier-3 escalation prompt (install tree-sitter on demand) is **retired** in v2. Capability detection (`which tree-sitter` + grammar probes) replaces the consent-gated install path. There is nothing to install and nothing to prompt for: the agent uses tree-sitter if it is already present on the machine, and falls back to Tier-2 (regex) without interruption if it is not. See the deferred tree-sitter hook note in the `index_file` pseudocode above.
 
 ## Performance Enforcement
 
 | Phase | Limit | Threshold | Action on hit |
 | :--- | :--- | :--- | :--- |
-| Indexer — files | Hard cap | 5,000 | Abort; refuse "narrow scope" |
+| Indexer — files | Hard cap | 7,500 | Abort; refuse "narrow scope" |
 | Indexer — wall-clock | Soft / Hard | 60s / 600s | Warn / abort |
 | Indexer — DB size | Soft / Hard | 100MB / 500MB | Warn / refuse new index |
 | Query — depth | Default / Hard | 2 / 5 | Use default / refuse |
 | Query — output size | Hard cap | 200 results | Truncate w/ note |
 | Query — CTE timeout | Hard | 30s | Refuse w/ narrow-scope hint |
 
-Per-run overrides (`max_results`, `max_depth`, `max_files`, `max_wall_clock_s`) cannot exceed hard caps. A request to set `max_files: 10000` is refused, not silently clamped.
+Per-run overrides (`max_results`, `max_depth`, `max_files`, `max_wall_clock_s`) cannot exceed hard caps. A request to set `max_files: 10000` is refused, not silently clamped. The effective ceiling for `max_files` is 7,500.
 
 ## Failure Matrix
 
@@ -709,10 +835,14 @@ Per-run overrides (`max_results`, `max_depth`, `max_files`, `max_wall_clock_s`) 
 | Symbol not found | Query | Refuse |
 | Soft cap hit | Indexer/Query | Partial w/ truncation note |
 | Hard cap hit | Indexer | Refuse |
-| Tier-2 only (precision degraded) | Query | Partial w/ `precision: regex` caveat |
+| Tier-2 only (precision degraded) | Query | Partial w/ `precision: regex` caveat; corpus-search companion triggered for callers/implementations/flow queries |
 | Ambiguous symbol | Query | Partial — return all w/ disambiguation |
 | File unreadable | Indexer | Skip + caveat; log to `_tmp_indexer-skipped.log` |
 | Tier-1 runtime missing | Indexer | Silent fallback to Tier-2 + caveat in next response |
+| Tree-sitter absent (capability not detected) | Indexer | Silent fallback to Tier-2 + caveat; no prompt, no install |
+| Unknown file extension | Indexer | File node only; `unrecognised extension` caveat; never silently dropped |
+| Vendored/generated file detected (heuristic) | Indexer | Skip + log with reason to `_tmp_indexer-skipped.log` |
+| Incremental diff unavailable (non-git or SHA unreachable) | Staleness check | Full drop-and-rebuild fallback |
 | DB corrupted | Query | Refuse + auto-recovery offer |
 | Query timeout (>30s recursive CTE) | Query | Refuse w/ narrow-scope hint |
 | Brief malformed | Pre-query | Refuse w/ usage card |

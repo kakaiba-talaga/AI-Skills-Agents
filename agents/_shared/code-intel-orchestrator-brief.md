@@ -32,7 +32,7 @@ The JSON brief is the **sole and authoritative orchestrator-path signal**. A JSO
     "output_mode":      { "type": "string", "enum": ["inline", "disk", "both"] },
     "max_results":      { "type": "integer", "minimum": 1, "maximum": 200 },
     "max_depth":        { "type": "integer", "minimum": 1, "maximum": 5 },
-    "max_files":        { "type": "integer", "minimum": 1, "maximum": 5000 },
+    "max_files":        { "type": "integer", "minimum": 1, "maximum": 7500 },
     "max_wall_clock_s": { "type": "integer", "minimum": 1, "maximum": 600 }
   }
 }
@@ -50,4 +50,4 @@ if violations:
 # proceed
 ```
 
-Unknown fields, missing required fields, and type mismatches are all refused — not silently clamped. A request to set `max_files: 10000` is refused at validation time (the schema's `maximum: 5000` is enforced strictly).
+Unknown fields, missing required fields, and type mismatches are all refused — not silently clamped. A request to set `max_files: 10000` is refused at validation time (the schema's `maximum: 7500` is enforced strictly).
