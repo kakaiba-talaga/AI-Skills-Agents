@@ -206,18 +206,22 @@ LANGUAGE_MANIFESTS = {
 }
 
 EXTENSION_MAP = {
-  '.py':   'python',
-  '.ts':   'typescript', '.tsx': 'typescript',
-  '.js':   'javascript', '.jsx': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
-  '.rs':   'rust',
-  '.go':   'go',
-  '.cs':   'csharp',
-  '.java': 'java', '.kt': 'java',
-  '.php':  'php',
-  '.dart': 'dart',
-  '.rb':   'ruby',
-  '.sh':   'bash', '.bash': 'bash',
-  '.ps1':  'powershell', '.psm1': 'powershell',
+  '.py':     'python',
+  '.ts':     'typescript', '.tsx': 'typescript',
+  '.js':     'javascript', '.jsx': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
+  '.rs':     'rust',
+  '.go':     'go',
+  '.cs':     'csharp',
+  '.cshtml': 'razor',    # ASP.NET MVC Razor views
+  '.razor':  'razor',    # Blazor components (same extractor)
+  '.java':   'java', '.kt': 'java',
+  '.php':    'php',
+  '.dart':   'dart',
+  '.rb':     'ruby',
+  '.sh':     'bash', '.bash': 'bash',
+  '.ps1':    'powershell', '.psm1': 'powershell',
+  '.sql':    'sql',      # SQL scripts, stored procedures, migrations
+  '.edmx':   'xml',      # Entity Framework model (XML dialect)
 }
 
 def detect_language_profile(repo_root):
@@ -251,7 +255,7 @@ Tier-1 runtime probes (also alphabetical):
 
 ### Hardcoded Excludes
 
-Matched against repo-relative path components (a directory named `node_modules` anywhere in the tree is excluded; a file named `node_modules.md` is not):
+Matched against repo-relative path components (a directory named `node_modules` anywhere in the tree is excluded; a file named `node_modules.md` is not). The entries `_tmp_*`, `*.min.js`, `*.min.css`, and `*-min.js` are file-name globs matched against the file's base name rather than a path component:
 
 ```
 node_modules/
@@ -268,9 +272,10 @@ env/
 dist/
 build/
 out/
-target/        # Rust, Java
-obj/           # .NET intermediate
-bin/           # .NET output
+target/          # Rust, Java
+obj/             # .NET intermediate
+bin/             # .NET output
+packages/        # NuGet restore tree (not source)
 .gradle/
 .idea/
 .vscode/
@@ -278,9 +283,12 @@ bin/           # .NET output
 .nuxt/
 .cache/
 coverage/
-.code-intel/   # the agent's own state
-.ops-state/    # team manager state
-_tmp_*         # agent-temporary scratch files (per Shared Brief Constraints)
+.code-intel/     # the agent's own state
+.ops-state/      # team manager state
+_tmp_*           # agent-temporary scratch files (per Shared Brief Constraints) [file-name glob]
+*.min.js         # minified JavaScript bundles                                   [file-name glob]
+*.min.css        # minified CSS bundles                                          [file-name glob]
+*-min.js         # alternate minified JavaScript naming convention               [file-name glob]
 ```
 
 ## SQLite Schema
@@ -586,7 +594,7 @@ def index_file(file_path, language, runtimes):
         return parse_with_tsc(file_path, language), 'ast'
 
     # Tier 2 — Grep heuristics.
-    if language in TIER_2_SUPPORTED:   # rust, go, csharp, java, php, dart, bash, powershell, ruby
+    if language in TIER_2_SUPPORTED:   # rust, go, csharp, java, php, dart, bash, powershell, ruby, razor, sql, xml
         return parse_with_grep_heuristics(file_path, language), 'regex'
 
     # Unknown language — record file node only, no edges.
@@ -623,6 +631,37 @@ def consider_tier3_escalation(query_type, language, results, runtimes, brief_for
         return False
     return True
 ```
+
+### Tier-2 Extraction by Language
+
+All rules in this section are `precision = regex` (Tier-2) and inherit the Tier-2 precision caveat (results marked with `~`). Case-insensitive matching is required for all patterns.
+
+#### sql
+
+`parse_with_grep_heuristics` for `language = 'sql'` emits:
+
+- `CREATE PROC[EDURE] <name>` and `CREATE FUNCTION <name>` → `nodes.kind = 'function'`; capture the full `CREATE ...` line as `signature`.
+- `CREATE TABLE <name>` and `CREATE VIEW <name>` → `nodes.kind = 'class'`; capture the `CREATE ...` line as `signature`.
+- `EXEC[UTE] <proc_name>` call sites and `<schema>.<proc>(` call patterns → `edges.edge_type = 'CALLS'` from the enclosing procedure/function node (or the file node if no enclosing scope is detectable) to the referenced procedure name.
+
+The file itself always yields a `nodes.kind = 'file'` node as the root anchor.
+
+#### razor
+
+`parse_with_grep_heuristics` for `language = 'razor'` emits:
+
+- The view file → a `nodes.kind = 'file'` node as the root anchor.
+- `@model <Type>` and `@inherits <Type>` directives → `edges.edge_type = 'IMPORTS'` from the file node to the referenced type name.
+- `Html.Partial(...)`, `Html.RenderPartial(...)`, `await Html.PartialAsync(...)`, and `@await Component.InvokeAsync(...)` calls → `edges.edge_type = 'IMPORTS'` from the file node to the referenced partial/component name (first string argument).
+- Members declared inside `@functions` or `@code` blocks → `nodes.kind = 'method'`.
+
+#### xml (.edmx and generic .xml)
+
+`parse_with_grep_heuristics` for `language = 'xml'` is intentionally conservative:
+
+- The file itself → `nodes.kind = 'file'` node.
+- `EntityType Name="<Name>"`, `ComplexType Name="<Name>"`, and `EntitySet Name="<Name>"` attributes → `nodes.kind = 'class'`.
+- **No relationship or association edge resolution.** Parsing `AssociationSet`, `NavigationProperty`, and `Association` elements into `EXTENDS`/`IMPLEMENTS` edges is low value and high fragility given the verbosity and redundancy of EDMX XML; these are intentionally omitted. Callers should treat the xml partition as a name-lookup surface only.
 
 ### Tier-3 Escalation Prompt
 
