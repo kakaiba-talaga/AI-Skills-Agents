@@ -31,7 +31,7 @@
   "output_mode": "disk",
   "max_results": 200,
   "max_depth": 5,
-  "max_files": 5000,
+  "max_files": 7500,
   "max_wall_clock_s": 600
 }
 ```
