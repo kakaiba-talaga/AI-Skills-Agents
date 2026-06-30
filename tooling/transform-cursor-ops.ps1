@@ -432,7 +432,7 @@ Before displaying the task board, confirm the state file exists and is valid:
 
 1. Read `.ops-state/<run-id>-board.json` — verify the file contains valid JSON with a non-empty `tasks` array.
 2. If the file is missing or empty, **stop and re-create it**. Do not proceed to dispatch without a valid state file on disk.
-3. Check whether `.ops-state/` is in `.gitignore`. If not, add it.
+3. Confirm `.ops-state/` is ignored: run `git check-ignore -q .ops-state/`. If it exits `0`, the path is already ignored (possibly via a catch-all such as `**/.*`) — do **not** modify `.gitignore`. Only if it exits non-zero (genuinely unignored) append `.ops-state/` to `.gitignore`. Never decide by string-matching `.gitignore` lines — a literal scan cannot see catch-all coverage.
 
 **Agent Assignment Rules**""",
     """**4. Write state file and create TodoWrite display:**
@@ -474,7 +474,7 @@ Before displaying the task board, confirm the state file exists and is valid:
 
 1. `Read(path=".ops-state/<run-id>-board.json")` — verify the file contains valid JSON with a non-empty `tasks` array.
 2. If the file is missing or empty, **stop and re-create it** from the in-memory task data. Do not proceed to dispatch without a valid state file on disk.
-3. Check whether `.ops-state/` is in `.gitignore`. If not, add it (append `.ops-state/` to `.gitignore`).
+3. Confirm `.ops-state/` is ignored: run `git check-ignore -q .ops-state/`. If it exits `0`, the path is already ignored (possibly via a catch-all such as `**/.*`) — do **not** modify `.gitignore`. Only if it exits non-zero (genuinely unignored) append `.ops-state/` to `.gitignore`. Never decide by string-matching `.gitignore` lines — a literal scan cannot see catch-all coverage.
 
 **Display the task board after creation.** After the state file is verified and TodoWrite is populated, render a Status Dashboard""",
 )

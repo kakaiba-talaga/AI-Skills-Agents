@@ -226,7 +226,7 @@ Before displaying the task board, confirm the state file exists and is valid:
 
 1. Read `.ops-state/<run-id>-board.json` — verify the file contains valid JSON with a non-empty `tasks` array.
 2. If the file is missing or empty, **stop and re-create it**. Do not proceed to dispatch without a valid state file on disk.
-3. Check whether `.ops-state/` is in `.gitignore`. If not, add it.
+3. Confirm `.ops-state/` is ignored: run `git check-ignore -q .ops-state/`. If it exits `0`, the path is already ignored (possibly via a catch-all such as `**/.*`) — do **not** modify `.gitignore`. Only if it exits non-zero (genuinely unignored) append `.ops-state/` to `.gitignore`. Never decide by string-matching `.gitignore` lines — a literal scan cannot see catch-all coverage.
 4. **Cursor only:** After steps 1–3 pass, call `TodoWrite(merge=false)` with all tasks (display layer). Follow `phase-dispatch.md` § **Cursor: state file sync** — the board file must already contain the full task list before `TodoWrite`.
 
 **Agent Assignment Rules** — auto-detect from task content when `--agents` is not specified:

@@ -9,7 +9,7 @@ When the active harness is **Cursor**, ops uses a JSON board file plus `TodoWrit
 ## Directory Conventions
 
 - `.ops-state/` holds one board file per run (supports concurrent/sequential runs without collision)
-- `.ops-state/` should be in `.gitignore` (ephemeral (short-lived; this run only) runtime state, not project content)
+- `.ops-state/` should be in `.gitignore` (ephemeral (short-lived; this run only) runtime state, not project content) — "should be ignored" means covered by an ignore rule as verified by `git check-ignore -q .ops-state/`, not string-match against `.gitignore` lines
 - Cleaned up on successful completion (same lifecycle as ralph-loop's `.ralph-state/`)
 
 ## State File Structure

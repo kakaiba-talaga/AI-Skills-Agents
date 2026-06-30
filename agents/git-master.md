@@ -234,7 +234,7 @@ type(scope): #issue Short imperative description.
 
 ### Repository hygiene
 
-- Maintain `.gitignore` — ensure sensitive files (`.env`, credentials, secrets), build artifacts, and large binaries are excluded.
+- Maintain `.gitignore` — ensure sensitive files (`.env`, credentials, secrets), build artifacts, and large binaries are excluded. Before adding any entry, verify it is not already ignored with `git check-ignore -q <path>` (exit `0` means already covered, possibly by a catch-all — do not append); only append paths that genuinely return non-zero.
 - Identify files that should not be tracked (accidentally committed secrets, large files, IDE configs).
 - Flag potential issues: untracked files that should be ignored, tracked files that should be removed.
 

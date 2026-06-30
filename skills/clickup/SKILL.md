@@ -13,7 +13,7 @@ Parse the arguments as follows:
 - If `--add-token` is present, add a new API token interactively.
 - If `--add-workspace` is present, add a new workspace interactively. If the user does not know the custom ID prefix, auto-detect it.
 - If `--detect-prefix` is present, auto-detect and update the custom ID prefix for the default workspace (or the one specified by `--workspace`).
-- If `--init-project` is present, set up a project-specific ClickUp config (`.clickup/config.json`) that binds the current project to a workspace. List available workspaces, ask which to associate, optionally override the prefix, write the file, and offer to add `.clickup/` to `.gitignore`.
+- If `--init-project` is present, set up a project-specific ClickUp config (`.clickup/config.json`) that binds the current project to a workspace. List available workspaces, ask which to associate, optionally override the prefix, write the file, and offer to add `.clickup/` to `.gitignore` — but only if `git check-ignore -q .clickup/` exits non-zero (genuinely unignored); if it exits `0`, the path is already ignored (possibly via a catch-all) and no offer or append should be made — but do inform the user that `.clickup/` is already covered by `.gitignore` so the interactive flow does not go silent.
 - If `--list-tokens` is present, list all stored tokens (names and IDs only, never values).
 - If `--list-workspaces` is present, list all configured workspaces.
 - If `--set-default-token <name>` is present, set the default token.
