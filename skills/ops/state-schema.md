@@ -289,7 +289,7 @@ cleaned up** at Phase 4 — it is the corpus future runs learn from.
 
 **Per-run rollup record shape.** The ledger does not store raw per-event prose. At completion,
 the team manager appends **one rollup record per run**, keyed by project. Each record names
-six fields:
+eight fields:
 
 - `run_id` — the completing run's `run_id`.
 - `project` — the project slug the run executed against. A record learned in one project never
@@ -297,6 +297,16 @@ six fields:
 - `adaptation_counts` — the per-`type` adaptation counts already computed for the Phase 4
   summary: `reflection`, `promotion`, `replan`, `preflight-yield`, `health-action`,
   `prior-applied`, `budget-escalation`, and `other` (count of strategy-adaptation kinds beyond the named types — parallel-dispatch switch, sequential fallback, worktree enablement, reassignment, branch-creation skip).
+- `reflection_action_counts` — a count map from each reflection `action_taken` value to the
+  number of `type: reflection` adaptation entries that carried it this run. Keys are the contract
+  enum verbatim: `logged`, `proposed-addition`, `proposed-resequence`, `escalated`, `replanned`,
+  `replan-escalated`. (`logged` maps to the "no concern" bucket and `escalated` maps to the
+  "scope-reduction-escalated" bucket at read time — the persisted keys are not renamed.) **Invariant:** the six values sum to `adaptation_counts.reflection`.
+- `triage_confidence_dist` — a nested object holding (a) the level distribution across all tasks
+  whose `triage_confidence` is non-null (`high` / `medium` / `low` counts — one increment per
+  task, not per entry), and (b) a nested `promotion` sub-block with the three `type: promotion`
+  `action_taken` outcome counts (`promoted`, `checked-no-promotion`, `empty-diff-no-promotion`).
+  **Invariant:** the three `promotion` sub-block values sum to `adaptation_counts.promotion`.
 - `file_conflict_pairs` — the file-pairs that forced a parallel-to-sequential adaptation this
   run (the pairs a future run consults when pre-sequencing a known-conflicting dispatch).
 - `plan_validation_tier` — the plan-validation tier this run ran at.
@@ -326,6 +336,24 @@ when it applies learned priors to future runs.
     "budget-escalation": 0,
     "other": 0
   },
+  "reflection_action_counts": {
+    "logged": 3,
+    "proposed-addition": 1,
+    "proposed-resequence": 0,
+    "escalated": 0,
+    "replanned": 0,
+    "replan-escalated": 0
+  },
+  "triage_confidence_dist": {
+    "high": 0,
+    "medium": 1,
+    "low": 1,
+    "promotion": {
+      "promoted": 1,
+      "checked-no-promotion": 0,
+      "empty-diff-no-promotion": 0
+    }
+  },
   "file_conflict_pairs": [
     ["skills/ops/SKILL.md", "skills/ops/phase-completion.md"]
   ],
@@ -337,6 +365,13 @@ when it applies learned priors to future runs.
 **Backward compatibility:** The ledger is a new file. A project with no ledger yet has nothing
 to read; the first run that produces an actionable adaptation creates it. Absence of the file is
 treated as an empty corpus. No migration is required.
+
+`reflection_action_counts` and `triage_confidence_dist` are additive fields. Older rollup
+records (including already-accrued runs) omit them and remain valid. Absence of
+`reflection_action_counts` is treated as an empty map (all reflection action breakdowns unknown
+for that run). Absence of `triage_confidence_dist` is treated as an all-zero level distribution
+with an all-zero promotion block (no triage signal recorded for that run). No migration or
+backfill is required.
 
 ## Task Description Fields
 
