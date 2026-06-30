@@ -151,5 +151,7 @@
     },
     "effortLevel": "xhigh",
     "autoUpdatesChannel": "latest",
-    "skipDangerousModePermissionPrompt": true
+    "skipDangerousModePermissionPrompt": true,
+    "verbose": false,
+    "tui": "fullscreen"
 }
