@@ -155,6 +155,8 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 
       Substitute `task-N`, `\<agent-type\>`, and `\<subject\>` with the actual values from the next pending task's `id`, `agent_type`, and `subject` fields. The `pending_nested_skill` record persists across the user-interaction boundary so `/ops resume` can reconstruct the dispatch state and continue from the correct point.
 
+11. **Status–spawn atomicity** — a task transitions to `in_progress` **only** in the same assistant message that also contains its `Agent()` spawn call. Never write `in_progress` — to the state file *or* to a rendered dashboard or prose — in a message that does not also spawn the agent. This governs the *transition* to running, not steady-state redisplay: re-rendering an already-dispatched running task in a later `/ops status` or dashboard turn reports existing reality and is fine. For a parallel batch, the single state-file write plus all the batch's `Agent()` calls ride one message — each task's `in_progress` write and its spawn stay co-located. This is the dispatch-side counterpart to #4: #4 forbids reporting completion without a real deliverable on disk; #11 forbids reporting a task as running without a real spawn behind it. A phantom `in_progress` (status written, no agent spawned) is what breaks `resume` and `status`, which then treat it as a live-but-orphaned dispatch. (Mechanically: emit the state-file write and the `Agent()` call(s) as parallel tool uses within one assistant message.)
+
 ---
 
 ## Workflow

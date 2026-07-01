@@ -130,6 +130,8 @@ Between these events, operate on the cached snapshot. Do not re-read on routine 
 4. Spawn the agent via the **Agent** tool using the task's `agent_type` from the state file. Follow the dispatch procedure below.
 5. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
 
+**Status–spawn atomicity (Non-negotiable #11).** Item 1 (the `in_progress` state-file write) and items 4–5 (the `Agent()` spawn[s]) MUST be emitted in the **same assistant message** — never split across turns. Do not write `in_progress`, and do not report a task as running in a dashboard or in prose, in any message that does not also contain its spawn. For a parallel batch, the single Write plus all the batch's `Agent()` calls ride one message. A status written without a spawn beside it is a phantom `in_progress` that `resume` and `status` will later treat as a live-but-orphaned dispatch. Re-displaying an already-running task in a later turn is not a new transition — that is fine. (Mechanically: emit the state-file Write and the Agent tool call(s) as parallel tool uses within one assistant message.)
+
 **Agent Dispatch Procedure** (applies to ALL agent dispatches throughout the workflow, not just Phase 3):
 
 The Agent tool's `subagent_type` parameter accepts any agent type that has a definition file at `~/.claude/agents/` (Claude Code) or `~/.cursor/agents/` (Cursor). All agents in this taxonomy are registered `subagent_type` values in both environments. For each dispatch:
