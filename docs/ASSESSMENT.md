@@ -52,62 +52,45 @@
 | ClickUp | `skills/clickup/` | 2 | ~276 | ClickUp REST API integration |
 | Code Review | `skills/code-review/` | 2 | ~207 | Diff-based code review orchestration |
 | Commit Message | `skills/commit-message/` | 2 | ~75 | Conventional Commits message generation |
-| Cross-memory | `skills/cross-memory/` | 19 | 381 | Harness-portable memory layer with nine subcommands (init, save, recall, list, forget, search, audit, doctor, reflect) and an opus-class agent for synthesis, audit, and distill |
+| Cross-memory | `skills/cross-memory/` | 30 | 381 | Harness-portable memory layer with nine subcommands (init, save, recall, list, forget, search, audit, doctor, reflect) and an opus-class agent for synthesis, audit, and distill |
 | Deploy | `skills/deploy/` | 9 | ~412 (Claude), ~408 (Cursor) | Remote deployment orchestration via ssh-executor |
 | Deslop | `skills/deslop/` | 2 | ~669 | AI slop cleanup (dead code, redundant comments, over-abstraction) |
 | Doc Sync | `skills/doc-sync/` | 2 | ~83 | Documentation audit and sync against codebase |
 | Kickoff | `skills/kickoff/` | 7 | 451 | Scaffolds project planning infrastructure, interviews users, dispatches agents to produce structured plans, and populates plan files ready for `/next` execution |
 | Linter | `skills/linter/` | 2 | ~141 | Source file linting with auto-fix and incremental cache |
 | Ops | `skills/ops/` | 25 | 567 (Claude), 611 (Cursor) — phase flow extracted into companions | Multi-agent task orchestration, dispatch, and tracking (Phase 2.5b/2.5c advisory preflights in `phase-preflights.md`; budget governor `--budget=<N>`; durable adaptation ledger with `--no-adaptation-memory` opt-out; health-action recovery) |
-| Ralph Loop | `skills/ralph-loop/` | 16 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
+| Ralph Loop | `skills/ralph-loop/` | 17 (incl. SKILL.cursor.md, 5 YAML templates) | ~334 (Claude), ~338 (Cursor) | Iterative execute-verify-reflect loop with state persistence |
 | Timing Calibrator | `skills/timing-calibrator/` | 2 | ~214 | Captures timing patterns from agent runs and calibrates estimates |
 | Using AI Skills Agents | `skills/using-ai-skills-agents/` | 1 | ~83 | Usage/onboarding guide for this repo's agents and skills (single-file, instructional) |
 
 ### Documentation (`docs/`)
 
+4 tracked files, all at `docs/` root. `docs/` is broadly gitignored — its subdirectories (`docs/plan/`, `docs/architecture/`, `docs/assessments/`, `docs/agent-audits/`, `docs/code-intel/`, `docs/corpus-search/`) hold gitignored scratch and historical material that is not inventoried here.
+
 | File | Purpose |
 | :--- | :--- |
 | `docs/ASSESSMENT.md` | This file — periodic repo health snapshots |
-| `docs/portability-guide.md` | Format differences and tool gaps between Claude Code and Cursor |
-| `docs/ops-dispatch-log.md` | Append-only audit trail of `/ops` dispatch decisions (opt-in via `--dispatch-log`; 18 lines — seed header only until populated) |
-
-### Documentation (`docs/agent-audits/`)
-
-| File | Purpose |
-| :--- | :--- |
-| `docs/agent-audits/tier-a-opus-4-7-audit.md` | Tier A Opus 4.7 explicitness audit — 5 core agents reviewed, 4 BLOCKERs + 27 MAJORs + 19 MINORs found; BLOCKERs resolved via brief-contract spec |
-
-### Documentation (`docs/code-intel/`)
-
-| File | Purpose |
-| :--- | :--- |
-| `docs/code-intel/integration-test.md` | 418-line walkthrough spec for ralph-loop → /ops → code-intel end-to-end integration test |
-| `docs/code-intel/failure-mode-walkthrough.md` | 85-line R10 walkthrough covering 13 failure-mode scenarios |
-| `docs/code-intel/design-trace.md` | 76-line R1–R11 + Q1–Q10 design trace table (21 rows, all DONE) |
-
-### Documentation (`docs/corpus-search/`)
-
-| File | Purpose |
-| :--- | :--- |
-| `docs/corpus-search/integration-test.md` | 210-line walkthrough spec for standalone dispatch, `/ops` Phase 2.5c integration, dual preflight with code-intel, Phase 4 cleanup, and refusal handling |
+| `docs/code-intel-integration-test.md` | Manual verification procedures for the code-intel agent — standalone dispatch, `/ops` Phase 2.5b integration, first-time index build, Phase 4 cleanup, and refusal handling |
+| `docs/corpus-search-integration-test.md` | Manual verification procedures for the corpus-search agent — standalone dispatch, `/ops` Phase 2.5c integration, dual preflight with code-intel, Phase 4 cleanup, and refusal handling |
+| `docs/portability-guide.md` | Format differences and tool gaps between Claude Code and Cursor — the spec the deploy script's transform logic implements |
 
 ### Hooks (`hooks/`)
 
 | File | Purpose |
 | :--- | :--- |
-| post-compaction-context.sh | Restores project context after Claude Code compaction events |
 | notify.sh | Cross-platform notification script (Windows toast, macOS osascript, Linux notify-send) |
+| post-compaction-context.sh | Restores project context after Claude Code compaction events |
+| security-pattern-warn.sh | PostToolUse advisory hook — scans freshly edited files for high-signal dangerous patterns (`eval(`, `child_process.exec(`, `shell=True`, `pickle.loads(`, unsafe `yaml.load(`, `verify=False`, hardcoded passwords/API keys, AWS access keys) and emits a one-line reminder per match, deduped per file+rule per session; never blocks — exits 0 on every code path |
 
 ### Cursor Rules (`.cursor/rules/`)
 
-| File | Purpose |
-| :--- | :--- |
-| documentation-sync.mdc | Mirror of `CLAUDE.md` § Documentation Sync for Cursor, loaded as a cursor rule |
+16 tracked `.mdc` files: `documentation-sync.mdc` (mirror of `CLAUDE.md` § Documentation Sync) and `source-of-truth-and-deployment.mdc` (project-local mirror of `CLAUDE.md` § Source of Truth & Deployment), plus 14 per-section mirrors of `CLAUDE-root.md` (one rule per section, excluding the Maintenance Note).
 
 ### Tooling (`tooling/`)
 
 | File | Purpose |
 | :--- | :--- |
+| README.md | Tooling directory overview — deploy scripts and Cursor transform scripts, with regeneration instructions |
 | deploy-manifest.json | Maps repo source directories to tool-specific global directories. 3 targets (claude-code, claude-code-wsl, cursor), 4 categories (agents, skills, hooks, settings). |
 | deploy.ps1 | PowerShell deploy script (primary). `SKILL.cursor.md` detection, agent tool-restriction hardening, `--prune` mode, hooks/settings deployment. |
 | deploy.sh | Bash deploy script (cross-platform, requires `jq`). Same features as deploy.ps1. |
@@ -117,42 +100,6 @@
 | transform-cursor-ralph-loop.sh | Bash version of the ralph-loop Cursor transform. |
 | transform-cursor-deploy.ps1 | PowerShell transform: generates `skills/deploy/SKILL.cursor.md` from `SKILL.md`. |
 | transform-cursor-deploy.sh | Bash version of the deploy Cursor transform. |
-
-### Planning Documents (`docs/plan/` — 33 files: 7 tracked at root + 26 archived at `docs/plan/archive/`, all gitignored except the 7 tracked plans)
-
-The seven tracked plans (`code-intel-agent-{requirements,scoping,design,plan,critique,critique-final}.md` and `ops-decoupling-plan.md`) remain at `docs/plan/` root as first-class historical references. The remaining 26 plans were moved to `docs/plan/archive/` as part of the 2026-05-14 cleanup pass — they map to shipped work in the repo and are kept locally for chronology, not for active consumption.
-
-| File | Purpose |
-| :--- | :--- |
-| agent-health-monitoring-gaps-plan.md | Plan to close agent health monitoring gaps in dispatch and recovery |
-| agent-roster-expansion-architecture.md | Architecture doc for agent roster expansion (architect and security-reviewer additions) |
-| agent-splitting-plan.md | Plan to split large agents into smaller definitions |
-| brief-contract-spec-add.md | Implementation additions spec for the brief-contract rollout |
-| brief-contract-spec-plan.md | Plan for the ops agent-dispatch brief contract specification |
-| code-intel-agent-critique-final.md | Final critic findings for code-intel agent (BLOCKER + 6 MAJORs) |
-| code-intel-agent-critique.md | Initial critic pass on the code-intel agent design |
-| code-intel-agent-design.md | Design document for code-intel agent architecture |
-| code-intel-agent-plan.md | Implementation plan for code-intel agent |
-| code-intel-agent-requirements.md | Requirements document for code-intel agent |
-| code-intel-agent-scoping.md | Scoping document for code-intel agent |
-| cursor-portability-gaps.md | Plan for Cursor-native adaptations of ops and deploy (completed) |
-| deploy-prune-mode-plan.md | Plan for deploy `--prune` mode implementation |
-| deploy-skill-interface-contract.md | Interface spec for `/deploy` ↔ `ssh-executor` briefs |
-| deploy-skill-plan.md | Implementation plan for deploy skill |
-| kickoff-skill-plan.md | Plan for the kickoff skill |
-| next-steps-roadmap.md | Roadmap for restructure, portability, and deployment automation |
-| ops-claude-code-features-plan.md | Plan for Claude Code–specific ops features (--brainstorm, nested-skill handoff) |
-| ops-decoupling-plan.md | Plan for extracting ops companion files into standalone agents/skills (**tracked in git**) |
-| ops-handoff-cleanup-plan.md | Handoff file lifecycle and cleanup for ops |
-| ops-nested-skill-handoff-plan.md | Plan for nested-skill handoff gap closure |
-| ops-skill-optimization-plan.md | Context reduction plan for ops SKILL.md |
-| ops-skill-optimization-r2-assessment.md | Round-2 assessment and extraction plan for ops SKILL.md and SKILL.cursor.md |
-| ops-skill-optimization-r3-deep-dive.md | Round-3 deep-dive assessment for ops companion consolidation |
-| ralph-loop-audit-assessment.md | Post-migration audit of ralph-loop skill |
-| ralph-loop-optimization-r2-deep-dive.md | Round-2 deep-dive for ralph-loop optimization sprints |
-| ralph-loop-skill-optimization-plan.md | Modularization plan for ralph-loop |
-| ssh-agent-plan.md | Plan for ssh-executor and ops/deploy integration |
-| unify-ops-state-management-plan.md | Plan to unify ops state management across Claude Code and Cursor |
 
 ---
 
