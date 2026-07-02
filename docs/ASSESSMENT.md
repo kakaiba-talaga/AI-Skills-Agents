@@ -741,7 +741,7 @@ Skills invoked within pipeline stages:
 
 ## File Counts
 
-Methodology: on-disk working-tree files per category (matching the `docs/plan` gitignored-inclusive precedent). Categories and skill rows are listed alphabetically. The untracked `AI-Skills-Agents.zip` build artifact is excluded.
+Methodology: tracked (committed) files per category, via `git ls-files` — a committed inventory counts only what is in the repo. Gitignored/untracked content is excluded (`docs/plan/**` scratch, `docs/architecture/`, `docs/assessments/`, on-disk-only `docs/` files, `AI-Skills-Agents.zip`, `.cursorignore`/`.cursorindexingignore`). Categories and skill rows are alphabetical.
 
 | Category | Files | Total |
 |----------|-------|-------|
@@ -750,27 +750,23 @@ Methodology: on-disk working-tree files per category (matching the `docs/plan` g
 | Skills (clickup) | 2 | 2 |
 | Skills (code-review) | 2 | 2 |
 | Skills (commit-message) | 2 | 2 |
-| Skills (cross-memory) | 30 (SKILL.md + README.md + subcommand/adapter/reference companions + reflect test-fixtures) | 30 |
-| Skills (deploy) | 9 (incl. SKILL.cursor.md) | 9 |
+| Skills (cross-memory) | 30 | 30 |
+| Skills (deploy) | 9 | 9 |
 | Skills (deslop) | 2 | 2 |
 | Skills (doc-sync) | 2 | 2 |
-| Skills (kickoff) | 7 (incl. project-template/ scaffold with /next command) | 7 |
+| Skills (kickoff) | 7 | 7 |
 | Skills (linter) | 2 | 2 |
-| Skills (ops) | 25 (incl. SKILL.cursor.md, SKILL.cursor.additions.md, brief-contract.md, dispatch-log.md, verification-gate.md, phase-preflights.md) | 25 |
-| Skills (ralph-loop) | 17 (incl. SKILL.cursor.md, 5 templates + templates README) | 17 |
+| Skills (ops) | 25 | 25 |
+| Skills (ralph-loop) | 17 | 17 |
 | Skills (timing-calibrator) | 2 | 2 |
-| Skills (using-ai-skills-agents) | 1 (single-file instructional skill) | 1 |
-| Documentation (docs/ root) | 7 (ASSESSMENT.md, authoring-skills.md, code-intel-integration-test.md, corpus-search-integration-test.md, portability-guide.md, security-guidance-applicability-assessment.md, superpowers-assessment.md) | 7 |
-| Documentation (docs/architecture/) | 1 (subagent-memory-injection-add.md) | 1 |
-| Documentation (docs/assessments/) | 2 | 2 |
-| Documentation (docs/corpus-search/) | 2 | 2 |
-| Planning (`docs/plan/`, gitignored scratch) | 48 (0 tracked + 48 gitignored) | 48 |
-| Cursor Rules (`.cursor/rules/`) | 16 (CLAUDE-root section mirrors + documentation-sync.mdc + source-of-truth-and-deployment.mdc) | 16 |
+| Skills (using-ai-skills-agents) | 1 | 1 |
+| Documentation (docs/, tracked) | 4 (ASSESSMENT.md, code-intel-integration-test.md, corpus-search-integration-test.md, portability-guide.md) | 4 |
+| Cursor Rules (`.cursor/rules/`) | 16 | 16 |
 | Tooling | 10 (README.md + deploy-manifest.json + 2 deploy scripts + 6 transform scripts) | 10 |
 | Hooks | 3 (notify.sh, post-compaction-context.sh, security-pattern-warn.sh) | 3 |
-| Config | 5 (.cursorignore, .cursorindexingignore, .gitattributes, .gitignore, .markdownlint.json) | 5 |
+| Config | 3 (.gitattributes, .gitignore, .markdownlint.json) | 3 |
 | Root | 4 (CLAUDE-root.md, CLAUDE.md, README.md, settings.json) | 4 |
-| **Total** | | **234** |
+| **Total** | | **176** |
 
 ---
 
