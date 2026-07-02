@@ -7,11 +7,16 @@
 | Work type | Dispatch to | Team manager may NOT do directly |
 | :--- | :--- | :--- |
 | Git operations (branch, commit, merge, rebase, PR, tag) | `git-master` | `git checkout -b`, `git commit`, `git merge`, `git rebase`, `git push` |
-| File creation or modification | `executor` or `documentor` | `Edit`, `Write` on project files |
+| File creation or modification — planned implementation work (has a plan, task, or acceptance criteria to build against) | `executor` or `documentor` | `Edit`, `Write` on project files |
 | Code review | `code-reviewer` or `security-reviewer` | Reading code to form review judgments |
 | Testing or verification | `verifier` | Running test suites, checking acceptance criteria |
 | Deployment | `/deploy` skill or `ssh-executor` | `ssh`, `scp`, deploy scripts |
 | Documentation | `documentor` | Writing or updating README, docs, guides |
+| Infrastructure-as-Code, cloud CLI, or Kubernetes operations (Terraform/Pulumi/CloudFormation/CDK/Ansible, aws/gcloud/az, kubectl/helm) | `infra` | `terraform apply`/`destroy`, `kubectl apply`/`delete`/`patch`, `helm install`/`upgrade`/`uninstall`, mutating `aws`/`gcloud`/`az` commands |
+| Database operations (schema migrations, queries, backup/restore) | `db` | Mutating `psql`/`mysql`/`mongosh` commands, running or rolling back migrations, restoring backups |
+| In-domain residual work matching no row above, confined to a single minor edit (see `agents/generalist.md` minor/small-edit boundary) | `generalist` | `Edit`, `Write` on project files, always — the team manager dispatches `generalist` for the minor edit itself; work beyond the minor/small-edit boundary (multi-file changes, new abstractions, interface changes) routes to `executor` instead |
+
+Rows are evaluated in order; the most specific matching row wins, and the `generalist` row applies only when no other row above matches.
 
 ## What the Team Manager MAY Do Directly
 
@@ -22,7 +27,8 @@
 - **Run `mkdir -p`** for `.ops-state/` and handoff directories
 - **Run `rm`** for cleanup of `_tmp_*`, `.ops-state/`, and handoff files at completion
 - **Invoke skills** via the Skill tool (`/deploy`, `/deslop`, `/code-review`, etc.)
-- **Run general commands** only when the task falls outside all agent and skill definitions — log it as an adaptation: "Direct command: [reason no agent/skill covers this]"
+- **Dispatch `generalist`** for in-domain residual work — the task touches this project's code, config, or tests but matches no row in the Delegate-First Table above — and fits within `generalist`'s minor/small-edit boundary (single file, no new abstraction, no control-flow change, no interface change, no required test change; see `agents/generalist.md`). This is the default residual path; check it before reaching for a direct command.
+- **Run general commands directly, or fall back to the harness `general-purpose` agent,** only when the task is genuinely out-of-domain — nothing to do with this project's code, config, or tests — or exceeds `generalist`'s minor/small-edit boundary while still matching no row in the Delegate-First Table. Log it as an adaptation: "Direct command: [reason no agent/skill covers this]"
 
 ## Self-Check
 
@@ -40,6 +46,8 @@ The delegate-first table above governs **work types** (code, git, review, deploy
 | Tool output would clutter main context (large logs, test dumps, long file reads) | Subagent or background `Bash` | Keeps main context clean for orchestration |
 | 2+ independent research threads | Dispatch subagents in **parallel** in a single message | Sequential serialization wastes time when threads don't depend on each other |
 | Task matches a specialist agent's lane (executor, debugger, verifier, etc.) | That specialist via normal dispatch | Lane match overrides the research heuristic |
+| Task is in-domain but matches no specialist lane, and is a single minor edit (see `agents/generalist.md` minor/small-edit boundary) | Dispatch `generalist` | Disciplined catch-all — replaces reflexive fallback to the harness `general-purpose`/`claude` agents |
+| Task is genuinely out-of-domain (nothing to do with this project's code, config, or tests), or exceeds `generalist`'s minor/small-edit boundary with no specialist match | Direct command, or harness `general-purpose` as last resort | The only case where falling back to the unrestricted harness generic agent is appropriate |
 | Cannot write a tight, self-contained brief yet | Don't dispatch — clarify the question first | Vague briefs produce vague work |
 
 **Bias correction:** The delegate-first principle pressures dispatch for work types — do not extend that pressure to reading tasks the team manager is explicitly permitted to do directly (see "What the Team Manager MAY Do Directly" above). Pick by the table, not by default ceremony. Conversely, do not avoid dispatching out of habit when research genuinely spans many rounds or would pollute the main context.
@@ -47,3 +55,10 @@ The delegate-first table above governs **work types** (code, git, review, deploy
 **Deliberation check before spawning a research subagent:** Do I know where to look? (If yes → direct.) Can I state the question in one tight brief? (If no → clarify first.) Would the output fit in main context? (If yes and scope is narrow → direct.) Any independent thread I could parallelize? (If yes → dispatch multiple subagents concurrently.)
 
 **Audit trail (opt-in):** When the user invokes `/ops` with `--dispatch-log`, decisions made via this framework are captured in `docs/ops-dispatch-log.md` — one entry per dispatch or deliberate direct-tool choice. The flag is off by default; when it is not set, skip the log append entirely. See [`dispatch-log.md`](./dispatch-log.md) for the format, kinds table, and append procedure. The log is the input for the periodic framework-adherence audit.
+
+## Model Escalation for `infra`/`db`
+
+`infra` and `db` each carry a proactive-opus escalation policy in their own agent definitions (see each agent's Model Escalation Policy section) that is stricter than the fleet-wide "escalate after the 3rd failed attempt" ladder — but the trigger differs by agent, matching each agent's own contract exactly:
+
+- **`infra`**: dispatch with `model: opus` from the first attempt for a mutating or destructive operation (`terraform apply`/`destroy`, `kubectl delete`/`patch`, `helm upgrade`/`uninstall`, or an equivalent create/apply/destroy on any provider), a multi-resource change, or any change targeting a production surface. Read/plan/describe/validate work — including against production — stays on the fleet default (`sonnet`), unless the plan itself reveals a high-blast-radius change.
+- **`db`**: dispatch with `model: opus` from the first attempt for any operation against a production database, regardless of whether it is a read or a write, and for destructive or schema-changing operations generally (`DROP`/`ALTER`/`TRUNCATE`, forward/rollback migrations, bulk `DELETE`/`UPDATE`). Read/plan/query work against a non-production database stays on the fleet default (`sonnet`).
