@@ -1,7 +1,7 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-06-11 (agentic vectors + preflights extraction)
-**Previous assessment:** 2026-06-01 (research agent), 2026-05-24 (corpus-search v1 ship), 2026-05-19 (ops save subcommand), 2026-05-14 (cross-memory v1.1 + v1.2 + skill optimization), 2026-05-09 (cross-memory v1 ship), 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
+**Date:** 2026-07-02 (team agents: generalist, infra, db)
+**Previous assessment:** 2026-06-11 (agentic vectors + preflights extraction), 2026-06-01 (research agent), 2026-05-24 (corpus-search v1 ship), 2026-05-19 (ops save subcommand), 2026-05-14 (cross-memory v1.1 + v1.2 + skill optimization), 2026-05-09 (cross-memory v1 ship), 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
 
@@ -11,7 +11,7 @@
 
 ### Agents (`agents/`)
 
-23 agent definitions + 1 README.
+26 agent definitions + 1 README.
 
 | File | Model | Role |
 | :--- | :--- | :--- |
@@ -23,11 +23,14 @@
 | corpus-search.md | opus | Terminal-native multi-hop corpus search for free-text evidence, file location, claim verification, and reference tracing — every finding cites path:line |
 | critic.md | opus | Quality gate on plans and scoping documents |
 | cross-memory.md | opus | Synthesizes curated context blocks from the cross-memory store and audits the store for staleness, duplicates, contradictions, and redaction misses |
+| db.md | sonnet | Database operations — schema migrations, queries, backup/restore; backup-before-mutate discipline with a permission-layer-gated write path |
 | debugger.md | opus | Hypothesis-driven runtime bug investigation |
 | debugger-build.md | opus | Build/compilation error diagnosis (import, type, dependency, config) |
 | documentor.md | sonnet | Documentation writer, delegates accuracy checks to `/doc-sync` |
 | executor.md | sonnet | Implements code changes from validated plans |
+| generalist.md | sonnet | Disciplined in-domain catch-all for cross-lane residual work no specialist owns; minor/small edits only, defers everything else via a specialist gate |
 | git-master.md | sonnet | Git operations, branching, commits, PRs, releases, pause/resume |
+| infra.md | sonnet | Provider-agnostic IaC / cloud / Kubernetes operations; validate→plan→gated-apply→verify with a permission-layer destructive-op gate |
 | interviewer.md | opus | Socratic requirements interview before planning |
 | planner.md | opus | Breaks specs into structured implementation plans |
 | preflight.md | sonnet | Environment readiness checks before agent work begins |
@@ -181,6 +184,32 @@ Two routing rows were added to `skills/ops/phase-intake.md` to wire the research
 | Surface | Before | After |
 |---|---|---|
 | Agent definitions | 22 | 23 |
+
+---
+
+## Changes Since Last Assessment (2026-07-02 — team agents: generalist, infra, db)
+
+### Three new agents
+
+Three project-owned agents were added so the team stops falling back to the harness-provided generic agents (`general-purpose`/`claude`), reserving those for genuinely out-of-domain work:
+
+- **`agents/generalist.md`** (model: sonnet) — a disciplined in-domain catch-all for cross-lane residual work no specialist owns. Bounded by a defer-to-specialist gate (web work routes to `research`, structural/textual search to `code-intel`/`corpus-search`, IaC to `infra`, databases to `db`, and so on) and a six-predicate minor/small-edit boundary; anything larger defers to `executor`. No web tools.
+- **`agents/infra.md`** (model: sonnet) — provider-agnostic Infrastructure-as-Code, cloud CLI, and Kubernetes operations (Terraform/Pulumi/CloudFormation/CDK/Ansible, aws/gcloud/az, kubectl/helm). Deliberately not split per cloud. Operating spine: validate → plan/diff → human-gated apply → verify convergence. Its destructive-op gate is permission-layer-enforced (mutating CLIs are not auto-allowed, so they prompt, and autonomous mode pauses on the prompt); the agent's STOP-before-mutate is a backstop. Composes with `ssh-executor` (domain vs transport).
+- **`agents/db.md`** (model: sonnet) — database operations: migrations, queries, backup/restore. Backup-before-mutate discipline with the same permission-layer-enforced write gate. Composes with `ssh-executor` for tunneled/bastioned access.
+
+Both `infra` and `db` carry a **custom proactive-opus escalation policy** — they default to `sonnet` but escalate to `opus` proactively for mutating/destructive/high-blast-radius operations, a second fleet-wide escalation exception alongside the `security-reviewer` opus ceiling.
+
+### `/ops` wiring
+
+The three agents were wired into `/ops` in companion files only — no `skills/ops/SKILL.md` edit, so no Cursor transform was required: `skills/ops/tool-restrictions.md` (residual in-domain work now routes to `generalist` rather than being absorbed directly by the team manager; delegate-first rows for `infra`/`db`; the proactive-opus escalation note) and `skills/ops/phase-intake.md` (Agent Assignment Rules rows + lane-boundary rows). Deployment needs no manifest edit — `tooling/deploy-manifest.json` picks up new agent files by its `**/*.md` glob.
+
+### Net effect
+
+| Surface | Before (2026-06-11) | After (2026-07-02) |
+|---|---|---|
+| Agent definitions | 23 | 26 |
+| Fleet-wide model-escalation exceptions | 1 (`security-reviewer` opus ceiling) | 2 (+ `infra`/`db` proactive-opus) |
+| In-domain catch-all | harness `general-purpose` | project-owned `generalist` |
 
 ---
 
@@ -638,11 +667,11 @@ The Tier A Opus 4.7 audit (`docs/agent-audits/tier-a-opus-4-7-audit.md`) produce
 ### Strengths
 
 - **Unified skill structure:** All 13 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
-- **Consistent structure** across all 23 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
+- **Consistent structure** across all 26 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
 - **Clean separation of concerns:** The ops decoupling moved operational logic (preflight, rollback, work verification, change analysis, timing calibration) out of skill companion files and into standalone agents/skills where it belongs. This reduces ops context pressure and makes each capability independently dispatchable.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
 - **Shared constraints repeated verbatim** in all agents: no compound Bash commands, no `cd` prefix, relative paths only. No variations.
-- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, corpus-search, research, cross-memory); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer). No mismatches between frontmatter and README.
+- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, corpus-search, research, cross-memory); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer, generalist, infra, db — `infra` and `db` additionally carry a custom proactive-opus escalation policy for mutating/destructive operations). No mismatches between frontmatter and README.
 - **Valid cross-references** between agents and skills — no broken path references. Former ops companion references removed.
 - **Deployment automation** expanded — deploy scripts support 4 categories (agents, skills, hooks, settings), 3 targets (claude-code, claude-code-wsl, cursor), dry-run, diff, per-target, per-category, and `--prune` mode. Cursor transform is fully automatic with dedicated transform scripts per skill.
 - **Portability documented** — format differences, tool gaps, and verified findings captured in `docs/portability-guide.md`.
@@ -690,7 +719,7 @@ Skills invoked within pipeline stages:
 
 | Category | Files | Total |
 |----------|-------|-------|
-| Agents | 23 definitions + 1 README | 24 |
+| Agents | 26 definitions + 1 README | 27 |
 | Skills (clickup) | 2 | 2 |
 | Skills (code-review) | 2 | 2 |
 | Skills (commit-message) | 2 | 2 |
@@ -713,7 +742,7 @@ Skills invoked within pipeline stages:
 | Planning (`docs/plan/` 7 tracked + `docs/plan/archive/` 26 gitignored) | 33 | 33 |
 | Config | 2 (.gitignore, .markdownlint.json) | 2 |
 | Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
-| **Total** | | **168** |
+| **Total** | | **171** |
 
 ---
 
