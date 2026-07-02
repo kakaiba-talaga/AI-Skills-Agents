@@ -30,6 +30,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [project-scoper](project-scoper.md) | opus | Analyzes requirements, identifies gaps and ambiguities, scopes projects with effort estimates, deliverables, dependencies, and produces formal scoping documents with timelines. Writes in clear, natural language. Also revises architecture and planning documents based on review or critic findings. |
 | [research](research.md) | opus | Performs external/web research, multi-source fact-checking, and synthesis into cited reports. Read-only on code; writes only to `docs/research/` report artifacts. Dispatched standalone or by `/ops` when a task requires evidence from the open web. |
 | [rollback](rollback.md) | sonnet | Rolls back agent-produced changes at the appropriate scope — single task, task chain, full run, or worktree. Stashes before reverting, checks for file overlap, and respects guardrails. |
+| [scout](scout.md) | sonnet | Read-only investigator for open, fuzzy questions about this repository — how something works, where something happens, whether a claim holds across the codebase. Sweeps adaptively with read-only tools, follows leads across rounds, and synthesizes a narrative answer inline with `path:line` citations. Writes nothing. Dispatched by `/ops` or standalone. |
 | [security-reviewer](security-reviewer.md) | opus | Dedicated security auditor that analyzes implemented code for vulnerabilities, producing severity-rated findings with remediation guidance. Verdicts: SECURE / SECURE WITH FINDINGS / INSECURE. Auto-fired when the task carries a security content signal or `change-analyzer` returns `security-review: run` on the post-executor diff. |
 | [ssh-executor](ssh-executor.md) | sonnet | Executes commands on remote servers via SSH. Handles remote command execution, file transfer (scp), remote verification, and service management. Uses SSH config for host resolution and key-based auth only. |
 | [verifier](verifier.md) | sonnet | Validates that implementation meets acceptance criteria, assesses test coverage, writes missing tests, and runs integration checks before code review. |
@@ -37,7 +38,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, research, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, db, documentor, executor, generalist, git-master, infra, preflight, rollback, ssh-executor, verifier, work-verifier. No agent defaults to **fable**; it is reachable only as a guarded last-resort escalation rung (`opus → fable`) behind an explicit confirmation gate — see the ops model-escalation behavior.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, research, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, db, documentor, executor, generalist, git-master, infra, preflight, rollback, scout, ssh-executor, verifier, work-verifier. No agent defaults to **fable**; it is reachable only as a guarded last-resort escalation rung (`opus → fable`) behind an explicit confirmation gate — see the ops model-escalation behavior.
 
 `infra` and `db` additionally carry a per-agent proactive-opus escalation policy — triggered by mutating, destructive, multi-resource, or production-targeting operations, before the fleet's standard 3rd-failed-attempt ladder — that is distinct from every other sonnet agent listed above. See each agent's own Model Escalation Policy section (`agents/infra.md`, `agents/db.md`) for the exact trigger.
 
@@ -222,6 +223,13 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Fix this typo in the log message — one file, one line"_
 - _"Update the one config value in `settings.yaml` that's out of date"_
 - _"This comment is stale and contradicts the code below it — fix the wording"_
+
+### Scout
+
+- _"How does the retry logic actually work across the executor and debugger — trace it end to end"_
+- _"Where in the repo does anything reference the old phase-dispatch split — is it still current?"_
+- _"Is it true that every agent shares the same Bash constraints? Check across the fleet and report back"_
+- _"Do a quick recon sweep of how sessions get resumed after a pause — I don't have a precise question yet"_
 
 ### Infra
 
@@ -427,6 +435,14 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Replaces reflexive use of the harness `general-purpose`/`claude` agents for genuinely in-domain work
 - A correct deferral is a successful outcome, not a failure to act
 
+**Scout:**
+
+- Read-only reconnaissance for open, fuzzy, repo-internal questions — how something works, where something happens, whether a claim holds across the repo
+- Defer-to-specialist gate checked before any sweeping starts: fixed/reproducible query → `corpus-search`; structural symbol-graph query → `code-intel`; web-dependent question → `research`; reproducible bug → `debugger`; any edit → `generalist`/`executor`
+- Sweeps adaptively across as many rounds as the question needs, then synthesizes a narrative answer inline — `path:line` citations, confirmed (direct `Read`) vs. inferred always labeled
+- Soft, self-governed budget — no hard numeric round cap; reports unexplored branches at a natural stopping point rather than fabricating certainty
+- Writes nothing — no `Write` tool, no write-side `Bash`; a clean deferral is a successful outcome, not a failure
+
 **Infra:**
 
 - Provider-agnostic agent for Infrastructure-as-Code (Terraform, Pulumi, CloudFormation, CDK, Ansible), cloud CLIs (`aws`, `gcloud`, `az`), and Kubernetes (`kubectl`, `helm`) — one agent, not split per cloud
@@ -529,6 +545,17 @@ No outbound handoffs. Corpus-search returns citable evidence (path:line snippets
 | Scope grew mid-edit past the minor/small-edit boundary | **executor**, with the specific boundary predicate that now applies |
 | Genuinely out-of-domain work | Back to the caller — harness `general-purpose` is appropriate only here |
 
+**Scout:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Sweep complete, findings returned | **Caller** (inline synthesis with citations; no downstream stage required) |
+| Sweep crystallizes into a precise, verifiable claim | **corpus-search** (recommended, not performed) |
+| Sweep surfaces a structural symbol-graph question | **code-intel** (recommended, not performed) |
+| Sweep surfaces a reproducible bug | **debugger** (recommended, not performed) |
+| Sweep surfaces something that needs to change | **generalist** (minor) / **executor** (larger) (recommended, not performed) |
+| Gate match before any sweeping began | The matching specialist, or back to the caller — a clean deferral is a success |
+
 **Infra:**
 
 | Outcome | Hands off to |
@@ -555,8 +582,8 @@ Agents cannot spawn subagents themselves (Claude Code limitation). The main sess
 
 | Agent | Threshold | Split dimension |
 | :--- | :--- | :--- |
-| Planner | 3+ subsystems | Parallel Explore agents for codebase research. |
-| Architect | 3+ subsystems | Parallel Explore agents for domain research. |
+| Planner | 3+ subsystems | Parallel scout agents for codebase research. |
+| Architect | 3+ subsystems | Parallel scout agents for domain research. |
 | Project Scoper | 3+ milestones | Gap analysis and estimation per milestone. |
 | Critic | 3+ milestones | Review per milestone, single-pass verdict. |
 | Executor | 5+ independent tasks | Task groups by module (no shared files). |
@@ -569,6 +596,7 @@ Agents cannot spawn subagents themselves (Claude Code limitation). The main sess
 | Debugger (Build) | 5+ errors | Error groups by type (import, type, config). |
 | Git Master | 3+ branches need same op | One operation per branch (never same branch). |
 | Generalist | 3+ independent single-file minor edits | One instance per edit (no shared files). |
+| Scout | 3+ independent investigation areas | Split by area (same pattern as architect/debugger); never split an interdependent trail. |
 | Infra | 2+ independent stacks/clusters/accounts | By provider + environment; never the same stack/state file. |
 | Db | 2+ independent database targets | By database/schema; never the same target. |
 

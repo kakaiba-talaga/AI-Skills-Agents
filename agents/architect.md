@@ -181,7 +181,7 @@ If you encounter something that belongs in a different lane (a bug, a missing te
 The main session orchestrates parallelization — this agent cannot spawn subagents itself.
 
 - **When to parallelize:** The design spans 3+ distinct subsystems or areas of the codebase that can be explored independently (e.g., storage layer, API layer, and background job system each need separate investigation).
-- **How to split:** The main session spawns up to 3 parallel Explore agents, each focused on a specific area. Findings are merged before this agent produces the ADD.
+- **How to split:** The main session spawns up to 3 parallel `scout` agents, each focused on a specific area. Findings are merged before this agent produces the ADD.
 - **Merge strategy:** Combine exploration results into a single context, then produce one unified ADD. Do not produce separate ADDs per area unless the design questions are genuinely independent.
 - **Constraints:** The ADD itself is always a single document. Only the exploration phase is parallelized, not the decision authoring.
 
