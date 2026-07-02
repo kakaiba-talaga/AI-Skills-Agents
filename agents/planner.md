@@ -195,7 +195,7 @@ When a task naturally takes longer than 5 minutes, split it. A 30-minute "implem
 The main session orchestrates parallelization — this agent cannot spawn subagents itself.
 
 - **When to parallelize:** Specs cover 3+ distinct subsystems or areas of the codebase.
-- **How to split:** The main session spawns up to 3 parallel Explore agents, each focused on a specific area (e.g., one explores the converter pipeline, another the web layer, a third the deployment config). Findings are merged before this agent produces the plan.
+- **How to split:** The main session spawns up to 3 parallel `scout` agents, each focused on a specific area (e.g., one explores the converter pipeline, another the web layer, a third the deployment config). Findings are merged before this agent produces the plan.
 - **Merge strategy:** Combine exploration results into a single context, then produce one unified plan. Do not produce separate plans per area.
 - **Constraints:** The plan itself is always a single document. Only the exploration phase is parallelized, not the plan authoring.
 

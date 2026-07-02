@@ -21,7 +21,7 @@ When the flag IS set: follow this spec for the full run, including all nested ph
 ## When to append an entry (only when `--dispatch-log` is set)
 
 - **Every agent dispatch** — Phase 3 Step 3, Trivial Dispatch Step 4, Brainstorm Gate dispatches, Phase 1a scoper/critic dispatches, Phase 2.5 preflight (checks run before dispatch) dispatches, and every other `Agent(...)` call the team manager issues. One entry per dispatch, before the agent runs. Parallel batches → one entry per agent in the batch.
-- **Framework-guided direct-tool choices** — when the team manager pauses at a research/reading decision, consults the Subagent Dispatch Decision Framework in `tool-restrictions.md`, and deliberately picks a direct tool (`Read` / `Grep` / `Glob`), append a `research-direct` entry. Do NOT log routine file reads where no framework decision was weighed (e.g., resolving `description_ref` is routine; weighing whether to spawn `Explore` for a broad code question is not).
+- **Framework-guided direct-tool choices** — when the team manager pauses at a research/reading decision, consults the Subagent Dispatch Decision Framework in `tool-restrictions.md`, and deliberately picks a direct tool (`Read` / `Grep` / `Glob`), append a `research-direct` entry. Do NOT log routine file reads where no framework decision was weighed (e.g., resolving `description_ref` is routine; weighing whether to spawn `scout` for a broad code question is not).
 
 ## Entry format
 
@@ -36,7 +36,7 @@ One bullet per decision, grouped under a `## <run-id>` heading. Run-id is the te
 | Kind | Use for | Framework row |
 | :--- | :--- | :--- |
 | `work-dispatch` | Specialist agent for work per delegate-first (executor, verifier, code-reviewer, documentor, git-master, ssh-executor, …) | `n/a` |
-| `research-dispatch` | Explore / general-purpose agent for reading or exploration | matching row from the framework |
+| `research-dispatch` | `scout` (in-domain) / harness `general-purpose` (out-of-domain) agent for reading or exploration | matching row from the framework |
 | `research-direct` | Deliberate direct `Read` / `Grep` / `Glob` after consulting the framework | matching row from the framework |
 | `parallel-batch` | Multiple agents dispatched in one message for independent threads | `2+ independent research threads` (plus the row of each individual dispatch if useful) |
 
@@ -47,7 +47,7 @@ One bullet per decision, grouped under a `## <run-id>` heading. Run-id is the te
 
 - `2026-04-25T09:12:03Z` — **work-dispatch**: executor "Implement auth middleware (src/auth/)". Framework row: `n/a`.
 - `2026-04-25T09:14:47Z` — **research-direct**: Read `docs/plan/auth-middleware-plan.md` with offset/limit. Framework row: `Known file + narrow question`. Resolving description_ref for task-1.
-- `2026-04-25T09:30:12Z` — **parallel-batch**: Explore ×3 (test patterns, config loading, session middleware). Framework row: `2+ independent research threads`.
+- `2026-04-25T09:30:12Z` — **parallel-batch**: scout ×3 (test patterns, config loading, session middleware). Framework row: `2+ independent research threads`.
 - `2026-04-25T09:42:55Z` — **work-dispatch**: verifier "Run test suite against auth changes". Framework row: `n/a`.
 ```
 

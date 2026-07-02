@@ -1,6 +1,6 @@
 # AI Skills and Agents — Assessment Report
 
-**Date:** 2026-07-02 (team agents: generalist, infra, db)
+**Date:** 2026-07-02 (team agents: generalist, infra, db; scout read-only investigator)
 **Previous assessment:** 2026-06-11 (agentic vectors + preflights extraction), 2026-06-01 (research agent), 2026-05-24 (corpus-search v1 ship), 2026-05-19 (ops save subcommand), 2026-05-14 (cross-memory v1.1 + v1.2 + skill optimization), 2026-05-09 (cross-memory v1 ship), 2026-05-04 (agent-contract hardening + brief contract), 2026-04-26 (code-intel agent), 2026-04-21 (ops decoupling and tooling expansion), 2026-04-17 (project audit), 2026-04-15 (agent dispatch fix), 2026-04-14 (state unification), 2026-04-14 (updated), 2026-04-14 (initial), 2026-04-07
 **Scope:** All agents, skills, hooks, and tooling in the repository
 **Overall Rating:** HEALTHY — no structural issues
@@ -11,7 +11,7 @@
 
 ### Agents (`agents/`)
 
-26 agent definitions + 1 README.
+27 agent definitions + 1 README.
 
 | File | Model | Role |
 | :--- | :--- | :--- |
@@ -37,6 +37,7 @@
 | project-scoper.md | opus | Requirements analysis, gap detection, effort estimates |
 | research.md | opus | External/web research, multi-source fact-checking, and synthesis into cited reports; read-only on code, writes only `docs/research/` report artifacts |
 | rollback.md | sonnet | Safely undoes agent-produced changes at configurable scope |
+| scout.md | sonnet | Read-only investigator for open, fuzzy repo questions; sweeps adaptively and synthesizes inline `path:line` findings |
 | security-reviewer.md | opus | Security audit with severity-rated vulnerability findings |
 | ssh-executor.md | sonnet | Remote command execution and file transfer via SSH |
 | verifier.md | sonnet | Validates implementation against acceptance criteria |
@@ -210,6 +211,29 @@ The three agents were wired into `/ops` in companion files only — no `skills/o
 | Agent definitions | 23 | 26 |
 | Fleet-wide model-escalation exceptions | 1 (`security-reviewer` opus ceiling) | 2 (+ `infra`/`db` proactive-opus) |
 | In-domain catch-all | harness `general-purpose` | project-owned `generalist` |
+
+---
+
+## Changes Since Last Assessment (2026-07-02 — scout read-only investigator)
+
+### New agent: `scout`
+
+`agents/scout.md` (model: sonnet) is a first-class reconnaissance agent for open, fuzzy, read-only investigation — how something works, where something happens, whether a claim holds across the repo. It sweeps adaptively with `Read`/`Glob`/`Grep`/read-only `Bash`, follows leads across as many rounds as the question needs, and reports back inline with `path:line` citations, distinguishing confirmed findings (direct `Read`) from inferred ones. It holds no `Write` tool and no write-side `Bash`, so the read-only guarantee is structural rather than a promise. A defer-to-specialist gate routes fixed/reproducible queries to `corpus-search`, structural symbol-graph queries to `code-intel`, web-dependent questions to `research`, reproducible bugs to `debugger`, and any needed edit to `generalist`/`executor` — `scout` performs only what remains: genuinely open, fuzzy, repo-internal, read-only investigation. It is a first-class agent with its own identity, not a stripped-down copy of `generalist`, which is only one of its five lane-boundary neighbors.
+
+### Fleet-wide `Explore` → `scout` consistency swap
+
+The `/ops` Subagent Dispatch Decision Framework's `Explore` row (unknown location, broad scope, 3+ rounds likely) now points at `scout`, reserving the harness `Explore`/`general-purpose` agents for genuinely out-of-domain work. The same swap was carried fleet-wide to every remaining in-domain "Explore agent" reference for consistency: the Planner and Architect parallelization rows in `agents/README.md`, the Scaling sections of `agents/architect.md` and `agents/planner.md`, the input-analysis note in `agents/interviewer.md`, and the three in-domain mentions in `skills/ops/dispatch-log.md` — while any explicitly out-of-domain reference kept the harness fallback.
+
+### `/ops` wiring
+
+`scout` was wired into `/ops` in companion files only — no `skills/ops/SKILL.md` edit, so no Cursor transform was required: `skills/ops/phase-intake.md` (an Agent Assignment Rules row placed above the `generalist` residual row, plus a lane-boundary row adjacent to `generalist`) and `skills/ops/tool-restrictions.md` (a Delegate-First Table row and the Subagent Dispatch Decision Framework `Explore` → `scout` swap). Deployment needs no manifest edit — `tooling/deploy-manifest.json` picks up the new agent file by its `**/*.md` glob.
+
+### Net effect
+
+| Surface | Before (2026-07-02, team agents) | After (2026-07-02, scout) |
+|---|---|---|
+| Agent definitions | 26 | 27 |
+| In-domain `Explore`-agent references (fleet-wide) | `Explore` | `scout` (harness `Explore`/`general-purpose` reserved for out-of-domain work) |
 
 ---
 
@@ -667,7 +691,7 @@ The Tier A Opus 4.7 audit (`docs/agent-audits/tier-a-opus-4-7-audit.md`) produce
 ### Strengths
 
 - **Unified skill structure:** All 13 skills are multi-file under `skills/`. No more `commands/` vs `skills/` distinction.
-- **Consistent structure** across all 26 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
+- **Consistent structure** across all 27 agents: frontmatter, role statement, help card, workflow, guidelines, failure modes, scaling, and handoff sections present in every file.
 - **Clean separation of concerns:** The ops decoupling moved operational logic (preflight, rollback, work verification, change analysis, timing calibration) out of skill companion files and into standalone agents/skills where it belongs. This reduces ops context pressure and makes each capability independently dispatchable.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
 - **Shared constraints repeated verbatim** in all agents: no compound Bash commands, no `cd` prefix, relative paths only. No variations.
@@ -719,7 +743,7 @@ Skills invoked within pipeline stages:
 
 | Category | Files | Total |
 |----------|-------|-------|
-| Agents | 26 definitions + 1 README | 27 |
+| Agents | 27 definitions + 1 README | 28 |
 | Skills (clickup) | 2 | 2 |
 | Skills (code-review) | 2 | 2 |
 | Skills (commit-message) | 2 | 2 |
@@ -742,7 +766,7 @@ Skills invoked within pipeline stages:
 | Planning (`docs/plan/` 7 tracked + `docs/plan/archive/` 26 gitignored) | 33 | 33 |
 | Config | 2 (.gitignore, .markdownlint.json) | 2 |
 | Root | 3 (README.md, CLAUDE.md, settings.json) | 3 |
-| **Total** | | **171** |
+| **Total** | | **172** |
 
 ---
 

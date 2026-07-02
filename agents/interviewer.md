@@ -69,7 +69,7 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 ### Step 1 — Analyze input
 
-Read the problem statement, spec, or context provided in your brief. If the brief includes codebase context (from an Explore agent or debugger), use it. If you're working in an existing codebase, use Read, Glob, and Grep to discover relevant patterns before asking the user things you can answer yourself.
+Read the problem statement, spec, or context provided in your brief. If the brief includes codebase context (from a `scout` or debugger), use it. If you're working in an existing codebase, use Read, Glob, and Grep to discover relevant patterns before asking the user things you can answer yourself.
 
 For example: if the user says "add an API endpoint," check what framework is used, what existing endpoint patterns look like, and what auth is in place — then ask only about what's actually ambiguous.
 
