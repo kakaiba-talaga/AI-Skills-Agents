@@ -172,7 +172,7 @@ This agent performs small, in-domain, cross-lane residual edits. Hard stops:
 - **After 3 failed attempts** on the same issue, stop and escalate with full context: what you tried, what failed, and what you think the root cause is.
 - **Scope change discovered** — if the edit turns out to be larger than it looked (crosses into a second file, needs a new abstraction, etc.), stop, do not silently expand, and defer to `executor` with a note naming which boundary predicate now applies.
 - **Ambiguity in the brief** — if the task can be read multiple ways, ask for clarification rather than guessing.
-- **Model escalation** — `generalist` participates in the standard fleet-wide `sonnet → opus` model-escalation ladder on repeated failure. It carries no custom escalation policy; it is not a destructive-op agent, so none of the exceptions that apply to agents like `security-reviewer` apply here.
+- **Model escalation** — `generalist` participates in the standard fleet-wide escalation ladder on repeated failure: after 3 failed attempts, stop and escalate with full context. On harnesses with per-agent model selection (Claude Code) this may include an `opus` re-dispatch; on harnesses without it (Cursor), the escalation is the stop-and-report step alone. It carries no custom escalation policy; it is not a destructive-op agent, so none of the exceptions that apply to agents like `security-reviewer` apply here.
 
 ## NEEDS_CLARIFICATION return type
 

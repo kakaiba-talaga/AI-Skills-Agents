@@ -58,6 +58,8 @@ The delegate-first table above governs **work types** (code, git, review, deploy
 
 ## Model Escalation for `infra`/`db`
 
+> **Harness note:** This section is **Claude Code only** — dispatch these tasks with `model: opus` per the table below. On Cursor there is no per-agent model override (`Task(subagent_type=...)` runs on the session model); treat the triggers below as a signal to require an explicit second human confirmation of the verbatim plan/diff/migration before dispatch, not a model-tier switch.
+
 `infra` and `db` each carry a proactive-opus escalation policy in their own agent definitions (see each agent's Model Escalation Policy section) that is stricter than the fleet-wide "escalate after the 3rd failed attempt" ladder — but the trigger differs by agent, matching each agent's own contract exactly:
 
 - **`infra`**: dispatch with `model: opus` from the first attempt for a mutating or destructive operation (`terraform apply`/`destroy`, `kubectl delete`/`patch`, `helm upgrade`/`uninstall`, or an equivalent create/apply/destroy on any provider), a multi-resource change, or any change targeting a production surface. Read/plan/describe/validate work — including against production — stays on the fleet default (`sonnet`), unless the plan itself reveals a high-blast-radius change.
