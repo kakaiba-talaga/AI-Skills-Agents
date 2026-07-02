@@ -67,18 +67,116 @@ Pipeline agents share brief-format boilerplate in [`_shared/brief-format-snippet
 
 Agents are invoked automatically by Claude Code when a task matches their description. You can also request them explicitly by name or by describing the task.
 
-### Interviewer
-
-- _"Use the interviewer to clarify this ambiguous spec before we plan"_
-- _"My requirements are vague — have the interviewer ask me questions to crystallize them"_
-- _"Resolve the open questions in this feature request before planning"_
-
 ### Architect
 
 - _"Use the architect to explore design options for the new caching layer"_
 - _"Have the architect evaluate trade-offs between a queue-based vs event-driven approach"_
 - _"Design the component boundaries for the notification system"_
 - _"Produce an ADD for the authentication migration"_
+
+### Change Analyzer
+
+- _"Classify my staged changes — do I need a full review?"_
+- _"Analyze the diff and tell me which pipeline stages to skip"_
+- _"Is this change trivial enough to skip verification?"_
+
+### Code Intel
+
+- _"Index the project so the executor can check impact before editing `process_payment`"_
+- _"Who calls `validate_token`? Give me the full caller chain."_
+- _"Run an impact analysis on `UserRepository.save` before we refactor it"_
+- _"Trace the execution flow from `handle_request` down three levels"_
+- _"Find all concrete implementations of the `StorageBackend` interface"_
+
+### Code Reviewer
+
+- _"Have the code reviewer check this module for security issues"_
+- _"Review the data pipeline for performance bottlenecks"_
+- _"Do a release readiness review on the staged changes"_
+- _"Review `src/parser.py` for correctness"_
+
+### Corpus Search
+
+- _"Search the repo for evidence that Phase 2.5c is advisory — grep for 'advisory' in skills/ops"_
+- _"Locate where the verification-gate ritual is documented"_
+- _"Verify that README.md contains the phrase 'reusable AI agents'"_
+
+### Critic
+
+- _"Have the critic review this plan before we start"_
+- _"Review the scoping document for feasibility issues"_
+- _"Is this plan ready for implementation? Have the critic check"_
+
+### Cross-Memory
+
+- _"Dispatch cross-memory with intent: synthesize, query: 'Python testing preferences and security rules' before writing pytest fixtures for the auth module."_
+- _"/cross-memory audit → dispatches the cross-memory agent for a chat-only structured report on staleness, duplicates, contradictions, and redaction misses."_
+- _"When /ops needs background context for a planning agent, it dispatches cross-memory with intent: synthesize and current_project_slug from the run state."_
+
+### Db
+
+- _"Back up the staging database, then apply the pending migration"_
+- _"Write a forward and rollback migration to add an `email_verified` column to `users`"_
+- _"Run a read-only query counting orders with status `pending` older than 30 days"_
+- _"Restore the `orders` table from yesterday's backup after confirming the write gate"_
+
+### Debugger
+
+- _"Debug why the parser is returning empty results for large inputs"_
+- _"This test started failing after the last commit — have the debugger investigate"_
+- _"The verifier reported a failure on AC3. Debug it."_
+- _"There's a RuntimeError in the transform stage — find the root cause"_
+
+### Debugger (Build)
+
+- _"The build is broken — 12 import errors after the refactor. Have the debugger-build fix them."_
+- _"ModuleNotFoundError when running pytest — debug-build it"_
+- _"Fix the type errors in the converter package"_
+- _"Dependency errors after upgrading — have debugger-build resolve them"_
+
+### Documentor
+
+- _"Document the new feature and update project scoping"_
+- _"Write a developer guide for the processing pipeline"_
+- _"Update the project scoping doc — Milestone 3 is complete"_
+- _"Create API documentation for the new endpoints"_
+- _"Document the architectural decisions from this milestone"_
+
+### Executor
+
+- _"Start implementing the validated plan"_
+- _"Execute task 3.2 from the plan"_
+- _"Implement the next task in the plan"_
+- _"Continue implementing — pick up where we left off"_
+
+### Generalist
+
+- _"Fix this typo in the log message — one file, one line"_
+- _"Update the one config value in `settings.yaml` that's out of date"_
+- _"This comment is stale and contradicts the code below it — fix the wording"_
+
+### Git Master
+
+- _"Pause my current work, I need to switch to a hotfix"_
+- _"Resume where I left off"_
+- _"Create a PR for this branch"_
+- _"Split these changes into atomic commits"_
+- _"Create a feature branch for the new verification framework"_
+- _"Resolve the merge conflicts on this branch"_
+- _"Tag this as v0.3.0 and generate a changelog"_
+
+### Infra
+
+- _"Validate and plan the Terraform changes to the staging VPC module — show me the plan, don't apply anything"_
+- _"Diff the Helm chart against the live release in the `payments` namespace"_
+- _"Converge the Kubernetes manifests in `k8s/staging/` — validate, diff, then apply once I approve"_
+- _"Run `aws ec2 describe-instances` for the `prod` account and summarize idle instances"_
+
+### Interviewer
+
+- _"Use the interviewer to clarify this ambiguous spec before we plan"_
+- _"My requirements are vague — have the interviewer ask me questions to crystallize them"_
+- _"Resolve the open questions in this feature request before planning"_
 
 ### Planner
 
@@ -87,6 +185,12 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Break down Milestone 4 into stages and tasks"_
 - _"I have these requirements — plan how to implement them"_
 
+### Preflight
+
+- _"Run a preflight check before I start working"_
+- _"Check if the environment is ready for agent work"_
+- _"Validate that dependencies are installed and the runtime works"_
+
 ### Project Scoper
 
 - _"Have the project scoper estimate this work"_
@@ -94,18 +198,31 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Analyze these requirements for gaps before we estimate"_
 - _"Produce a scoping document for the planner's output"_
 
-### Critic
+### Research
 
-- _"Have the critic review this plan before we start"_
-- _"Review the scoping document for feasibility issues"_
-- _"Is this plan ready for implementation? Have the critic check"_
+- _"Research current best practices for X from the web and synthesize a cited report"_
+- _"Fact-check this claim against external/online sources and tell me the confidence per source"_
+- _"Gather evidence from the open web on Y — read-only, cite every source with access date"_
 
-### Executor
+### Rollback
 
-- _"Start implementing the validated plan"_
-- _"Execute task 3.2 from the plan"_
-- _"Implement the next task in the plan"_
-- _"Continue implementing — pick up where we left off"_
+- _"Undo the last executor's changes — they didn't pass verification"_
+- _"Roll back everything from this run — the approach is wrong"_
+- _"Revert the changes to src/auth/ from the failed task"_
+
+### Scout
+
+- _"How does the retry logic actually work across the executor and debugger — trace it end to end"_
+- _"Where in the repo does anything reference the old phase-dispatch split — is it still current?"_
+- _"Is it true that every agent shares the same Bash constraints? Check across the fleet and report back"_
+- _"Do a quick recon sweep of how sessions get resumed after a pause — I don't have a precise question yet"_
+
+### Security Reviewer
+
+- _"Have the security reviewer audit the auth middleware changes"_
+- _"Run a security review on the API endpoint implementations"_
+- _"Check the payment processing code for vulnerabilities"_
+- _"Security audit the user input handling in the new form"_
 
 ### SSH Executor
 
@@ -122,128 +239,11 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Assess test coverage for the new detection module"_
 - _"Run integration checks on the changes"_
 
-### Security Reviewer
-
-- _"Have the security reviewer audit the auth middleware changes"_
-- _"Run a security review on the API endpoint implementations"_
-- _"Check the payment processing code for vulnerabilities"_
-- _"Security audit the user input handling in the new form"_
-
-### Code Reviewer
-
-- _"Have the code reviewer check this module for security issues"_
-- _"Review the data pipeline for performance bottlenecks"_
-- _"Do a release readiness review on the staged changes"_
-- _"Review `src/parser.py` for correctness"_
-
-### Code Intel
-
-- _"Index the project so the executor can check impact before editing `process_payment`"_
-- _"Who calls `validate_token`? Give me the full caller chain."_
-- _"Run an impact analysis on `UserRepository.save` before we refactor it"_
-- _"Trace the execution flow from `handle_request` down three levels"_
-- _"Find all concrete implementations of the `StorageBackend` interface"_
-
-### Corpus Search
-
-- _"Search the repo for evidence that Phase 2.5c is advisory — grep for 'advisory' in skills/ops"_
-- _"Locate where the verification-gate ritual is documented"_
-- _"Verify that README.md contains the phrase 'reusable AI agents'"_
-
-### Research
-
-- _"Research current best practices for X from the web and synthesize a cited report"_
-- _"Fact-check this claim against external/online sources and tell me the confidence per source"_
-- _"Gather evidence from the open web on Y — read-only, cite every source with access date"_
-
-### Cross-Memory
-
-- _"Dispatch cross-memory with intent: synthesize, query: 'Python testing preferences and security rules' before writing pytest fixtures for the auth module."_
-- _"/cross-memory audit → dispatches the cross-memory agent for a chat-only structured report on staleness, duplicates, contradictions, and redaction misses."_
-- _"When /ops needs background context for a planning agent, it dispatches cross-memory with intent: synthesize and current_project_slug from the run state."_
-
-### Documentor
-
-- _"Document the new feature and update project scoping"_
-- _"Write a developer guide for the processing pipeline"_
-- _"Update the project scoping doc — Milestone 3 is complete"_
-- _"Create API documentation for the new endpoints"_
-- _"Document the architectural decisions from this milestone"_
-
-### Debugger
-
-- _"Debug why the parser is returning empty results for large inputs"_
-- _"This test started failing after the last commit — have the debugger investigate"_
-- _"The verifier reported a failure on AC3. Debug it."_
-- _"There's a RuntimeError in the transform stage — find the root cause"_
-
-### Debugger (Build)
-
-- _"The build is broken — 12 import errors after the refactor. Have the debugger-build fix them."_
-- _"ModuleNotFoundError when running pytest — debug-build it"_
-- _"Fix the type errors in the converter package"_
-- _"Dependency errors after upgrading — have debugger-build resolve them"_
-
-### Git Master
-
-- _"Pause my current work, I need to switch to a hotfix"_
-- _"Resume where I left off"_
-- _"Create a PR for this branch"_
-- _"Split these changes into atomic commits"_
-- _"Create a feature branch for the new verification framework"_
-- _"Resolve the merge conflicts on this branch"_
-- _"Tag this as v0.3.0 and generate a changelog"_
-
-### Preflight
-
-- _"Run a preflight check before I start working"_
-- _"Check if the environment is ready for agent work"_
-- _"Validate that dependencies are installed and the runtime works"_
-
 ### Work Verifier
 
 - _"Check if the previous agent's work was actually completed"_
 - _"Verify the interrupted task — did the executor finish before the session died?"_
 - _"Assess the state of in-progress tasks before resuming"_
-
-### Rollback
-
-- _"Undo the last executor's changes — they didn't pass verification"_
-- _"Roll back everything from this run — the approach is wrong"_
-- _"Revert the changes to src/auth/ from the failed task"_
-
-### Change Analyzer
-
-- _"Classify my staged changes — do I need a full review?"_
-- _"Analyze the diff and tell me which pipeline stages to skip"_
-- _"Is this change trivial enough to skip verification?"_
-
-### Generalist
-
-- _"Fix this typo in the log message — one file, one line"_
-- _"Update the one config value in `settings.yaml` that's out of date"_
-- _"This comment is stale and contradicts the code below it — fix the wording"_
-
-### Scout
-
-- _"How does the retry logic actually work across the executor and debugger — trace it end to end"_
-- _"Where in the repo does anything reference the old phase-dispatch split — is it still current?"_
-- _"Is it true that every agent shares the same Bash constraints? Check across the fleet and report back"_
-- _"Do a quick recon sweep of how sessions get resumed after a pause — I don't have a precise question yet"_
-
-### Infra
-
-- _"Validate and plan the Terraform changes to the staging VPC module — show me the plan, don't apply anything"_
-- _"Diff the Helm chart against the live release in the `payments` namespace"_
-- _"Converge the Kubernetes manifests in `k8s/staging/` — validate, diff, then apply once I approve"_
-- _"Run `aws ec2 describe-instances` for the `prod` account and summarize idle instances"_
-
-### Db
-
-- _"Back up the staging database, then apply the pending migration"_
-- _"Write a forward and rollback migration to add an `email_verified` column to `users`"_
-- _"Run a read-only query counting orders with status `pending` older than 30 days"_
-- _"Restore the `orders` table from yesterday's backup after confirming the write gate"_
 
 ### Ops (skill)
 
@@ -337,30 +337,11 @@ The planner, project-scoper, and documentor all produce human-readable output. T
 
 These agents operate independently of the pipeline and can be invoked at any stage:
 
-**Debugger:**
+**Change Analyzer:**
 
-- Hypothesis-driven investigation of bugs, errors, and unexpected behavior
-- Root cause analysis with structured diagnosis (symptom collection → reproduction → hypothesis elimination → fix)
-- For build/compilation errors (import, type, dependency, config errors), see the **debugger-build** variant
-- 3-failure circuit breaker — escalates after 3 failed hypotheses instead of looping
-- Similar pattern scan — greps for the same bug pattern elsewhere in the codebase after fixing
-- Minimal, targeted fixes with regression verification and regression test creation
-- Explicit scope boundaries — does not refactor, redesign, or optimize; hands off to the appropriate agent
-
-**Git Master:**
-
-- Branch creation, naming, cleanup
-- Commit orchestration (supplements `/commit-message`, or generates messages standalone via built-in fallback)
-- PR lifecycle, merge, conflict resolution
-- Release tagging and changelogs
-- **Pause/resume** — checkpoint WIP via stash or WIP commit, restore later
-
-**Code Reviewer:**
-
-- Two-stage review (spec compliance then quality) with severity-rated findings
-- Supplements the `/code-review` slash command. For standalone diff reviews, see the **code-reviewer-diff** variant.
-- Targeted reviews for specific concerns (e.g., thread safety, performance, security)
-- Can be invoked outside the pipeline for ad-hoc reviews on any code
+- Diff classification by type: code, config, docs, tests
+- Per-stage skip/run recommendations for verify, deslop, review, security-review
+- NEVER-skip rules take precedence over skip conditions
 
 **Code Intel:**
 
@@ -372,6 +353,13 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Read-only on source code — writes only to `.code-intel/**`, `docs/code-intel/**`, and `_tmp_*`
 - **Adaptive (v2):** open extension discovery (unknown types still get file nodes, never silently dropped), `git ls-files`/`.gitignore`-aware ignores + vendored/generated heuristics, incremental re-index on HEAD change, capability-detected tree-sitter (deferred), and a corpus-search query-time companion; 7,500-file cap
 
+**Code Reviewer:**
+
+- Two-stage review (spec compliance then quality) with severity-rated findings
+- Supplements the `/code-review` slash command. For standalone diff reviews, see the **code-reviewer-diff** variant.
+- Targeted reviews for specific concerns (e.g., thread safety, performance, security)
+- Can be invoked outside the pipeline for ad-hoc reviews on any code
+
 **Corpus Search:**
 
 - Multi-hop textual evidence search via terminal-native tools (`rg`, `Glob`, `Read`) — no vector retrieval or embeddings
@@ -380,77 +368,6 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - **Brief format:** JSON-fenced block for orchestrators (required fields: `query_type`, `query`); labeled-prose (`Query:`, `Query-Type:`, `Scope:`, `Output:`, `Max-Hops:`, `Max-Results:`) for humans; malformed input refused immediately with the usage card
 - **Output format:** JSON response for orchestrator dispatches (summary + path); full inline rendered report for standalone human queries
 - Read-only on source code — writes only to `.corpus-search/**`, `docs/corpus-search/**`, and `_tmp_*`
-
-**Documentor:**
-
-- Write documentation for existing features that were never documented
-- Create guides, API references, or setup docs on demand
-- Update the project scoping document outside the pipeline (e.g., marking a milestone complete)
-- Document architectural decisions after a discussion
-- Delegates to `/doc-sync` for accuracy checks, or runs built-in audit fallback when the skill is unavailable
-
-**SSH Executor:**
-
-- Remote command execution via SSH (`ssh -o BatchMode=yes`)
-- File transfer via SCP (single files) or tar-over-ssh (directories, rsync unavailable on Windows)
-- Remote health checks, endpoint verification, log inspection
-- Service management (systemctl, docker) via SSH
-- ProxyJump/bastion host support via standard SSH config
-
-**Preflight:**
-
-- Environment readiness validation (runtime, dependencies, git, config, disk space)
-- Three-tier check system: critical (blocks), standard (auto-fix then block), warning (log only)
-- Standalone invocable — does not require an ops run
-
-**Work Verifier:**
-
-- 4-check verification protocol: file existence, git diff, handoff file, content validation
-- Per-deliverable verdicts: completed, partial, not-started, broken
-- Re-dispatch context generation for partially completed work
-
-**Rollback:**
-
-- Scope-level rollback: single task, task chain, full run, worktree
-- Always stashes before reverting — nothing is permanently lost
-- File overlap detection with successful tasks before auto-reverting
-
-**Change Analyzer:**
-
-- Diff classification by type: code, config, docs, tests
-- Per-stage skip/run recommendations for verify, deslop, review, security-review
-- NEVER-skip rules take precedence over skip conditions
-
-**Research:**
-
-- External/web research, multi-source fact-checking, and synthesis into cited reports
-- Read-only on code; writes only `docs/research/<slug>.md` report artifacts (untracked by default)
-- Structural anti-exfiltration trust boundary: only fetches URLs surfaced by a prior `WebSearch` or supplied in the brief; never writes secrets into a report
-
-**Generalist:**
-
-- Disciplined in-domain catch-all for cross-lane residual work no specialist owns — gates every dispatch against a defer-to-specialist table before touching a file
-- Minor/small-edit boundary: performs an edit only if it touches one file, adds no new abstraction, doesn't change control flow or a public interface, needs no test change, and fits a 1–5 minute effort ceiling
-- No web tools — any web-dependent task routes to `research`
-- Replaces reflexive use of the harness `general-purpose`/`claude` agents for genuinely in-domain work
-- A correct deferral is a successful outcome, not a failure to act
-
-**Scout:**
-
-- Read-only reconnaissance for open, fuzzy, repo-internal questions — how something works, where something happens, whether a claim holds across the repo
-- Defer-to-specialist gate checked before any sweeping starts: fixed/reproducible query → `corpus-search`; structural symbol-graph query → `code-intel`; web-dependent question → `research`; reproducible bug → `debugger`; any edit → `generalist`/`executor`
-- Sweeps adaptively across as many rounds as the question needs, then synthesizes a narrative answer inline — `path:line` citations, confirmed (direct `Read`) vs. inferred always labeled
-- Soft, self-governed budget — no hard numeric round cap; reports unexplored branches at a natural stopping point rather than fabricating certainty
-- Writes nothing — no `Write` tool, no write-side `Bash`; a clean deferral is a successful outcome, not a failure
-
-**Infra:**
-
-- Provider-agnostic agent for Infrastructure-as-Code (Terraform, Pulumi, CloudFormation, CDK, Ansible), cloud CLIs (`aws`, `gcloud`, `az`), and Kubernetes (`kubectl`, `helm`) — one agent, not split per cloud
-- Operating spine: validate → plan/diff → human-gated apply → verify convergence (no-drift)
-- Destructive-operation gate enforced primarily by the permission layer — mutating commands are not auto-allowed and always prompt; the agent's own STOP-before-mutate is the backstop, not the primary control
-- Never allow-lists a mutating command pattern, even for a fully autonomous run
-- Composes with `ssh-executor` — infra owns the cloud/cluster-API domain, ssh-executor owns host-level transport
-- Escalates to opus proactively (before the standard 3rd-attempt ladder) for mutating, multi-resource, or production-targeting operations
 
 **Db:**
 
@@ -461,9 +378,121 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Composes with `ssh-executor` for databases reachable only through a bastion or tunnel — db decides the command and clears its write gate, ssh-executor runs it on the host with network access
 - Escalates to opus proactively (before the standard 3rd-attempt ladder) for destructive, schema-changing, or production-database operations
 
+**Debugger:**
+
+- Hypothesis-driven investigation of bugs, errors, and unexpected behavior
+- Root cause analysis with structured diagnosis (symptom collection → reproduction → hypothesis elimination → fix)
+- For build/compilation errors (import, type, dependency, config errors), see the **debugger-build** variant
+- 3-failure circuit breaker — escalates after 3 failed hypotheses instead of looping
+- Similar pattern scan — greps for the same bug pattern elsewhere in the codebase after fixing
+- Minimal, targeted fixes with regression verification and regression test creation
+- Explicit scope boundaries — does not refactor, redesign, or optimize; hands off to the appropriate agent
+
+**Documentor:**
+
+- Write documentation for existing features that were never documented
+- Create guides, API references, or setup docs on demand
+- Update the project scoping document outside the pipeline (e.g., marking a milestone complete)
+- Document architectural decisions after a discussion
+- Delegates to `/doc-sync` for accuracy checks, or runs built-in audit fallback when the skill is unavailable
+
+**Generalist:**
+
+- Disciplined in-domain catch-all for cross-lane residual work no specialist owns — gates every dispatch against a defer-to-specialist table before touching a file
+- Minor/small-edit boundary: performs an edit only if it touches one file, adds no new abstraction, doesn't change control flow or a public interface, needs no test change, and fits a 1–5 minute effort ceiling
+- No web tools — any web-dependent task routes to `research`
+- Replaces reflexive use of the harness `general-purpose`/`claude` agents for genuinely in-domain work
+- A correct deferral is a successful outcome, not a failure to act
+
+**Git Master:**
+
+- Branch creation, naming, cleanup
+- Commit orchestration (supplements `/commit-message`, or generates messages standalone via built-in fallback)
+- PR lifecycle, merge, conflict resolution
+- Release tagging and changelogs
+- **Pause/resume** — checkpoint WIP via stash or WIP commit, restore later
+
+**Infra:**
+
+- Provider-agnostic agent for Infrastructure-as-Code (Terraform, Pulumi, CloudFormation, CDK, Ansible), cloud CLIs (`aws`, `gcloud`, `az`), and Kubernetes (`kubectl`, `helm`) — one agent, not split per cloud
+- Operating spine: validate → plan/diff → human-gated apply → verify convergence (no-drift)
+- Destructive-operation gate enforced primarily by the permission layer — mutating commands are not auto-allowed and always prompt; the agent's own STOP-before-mutate is the backstop, not the primary control
+- Never allow-lists a mutating command pattern, even for a fully autonomous run
+- Composes with `ssh-executor` — infra owns the cloud/cluster-API domain, ssh-executor owns host-level transport
+- Escalates to opus proactively (before the standard 3rd-attempt ladder) for mutating, multi-resource, or production-targeting operations
+
+**Preflight:**
+
+- Environment readiness validation (runtime, dependencies, git, config, disk space)
+- Three-tier check system: critical (blocks), standard (auto-fix then block), warning (log only)
+- Standalone invocable — does not require an ops run
+
+**Research:**
+
+- External/web research, multi-source fact-checking, and synthesis into cited reports
+- Read-only on code; writes only `docs/research/<slug>.md` report artifacts (untracked by default)
+- Structural anti-exfiltration trust boundary: only fetches URLs surfaced by a prior `WebSearch` or supplied in the brief; never writes secrets into a report
+
+**Rollback:**
+
+- Scope-level rollback: single task, task chain, full run, worktree
+- Always stashes before reverting — nothing is permanently lost
+- File overlap detection with successful tasks before auto-reverting
+
+**Scout:**
+
+- Read-only reconnaissance for open, fuzzy, repo-internal questions — how something works, where something happens, whether a claim holds across the repo
+- Defer-to-specialist gate checked before any sweeping starts: fixed/reproducible query → `corpus-search`; structural symbol-graph query → `code-intel`; web-dependent question → `research`; reproducible bug → `debugger`; any edit → `generalist`/`executor`
+- Sweeps adaptively across as many rounds as the question needs, then synthesizes a narrative answer inline — `path:line` citations, confirmed (direct `Read`) vs. inferred always labeled
+- Soft, self-governed budget — no hard numeric round cap; reports unexplored branches at a natural stopping point rather than fabricating certainty
+- Writes nothing — no `Write` tool, no write-side `Bash`; a clean deferral is a successful outcome, not a failure
+
+**SSH Executor:**
+
+- Remote command execution via SSH (`ssh -o BatchMode=yes`)
+- File transfer via SCP (single files) or tar-over-ssh (directories, rsync unavailable on Windows)
+- Remote health checks, endpoint verification, log inspection
+- Service management (systemctl, docker) via SSH
+- ProxyJump/bastion host support via standard SSH config
+
+**Work Verifier:**
+
+- 4-check verification protocol: file existence, git diff, handoff file, content validation
+- Per-deliverable verdicts: completed, partial, not-started, broken
+- Re-dispatch context generation for partially completed work
+
 ### Utility Agent Handoffs
 
 Utility agents can hand off to pipeline agents or other utility agents depending on their outcome. Unlike the linear pipeline, these handoffs are conditional — they depend on what the agent found.
+
+**Change Analyzer:**
+
+No outbound handoffs. Change-analyzer returns per-stage recommendations — the caller decides whether to run or skip each stage.
+
+**Code Intel:**
+
+No outbound handoffs. Code-intel returns citable query results (callers, impact, execution flow) to the caller — the executor, debugger, code-reviewer, or `/ops` orchestrator decides what to do with the data.
+
+**Code Reviewer** (when invoked outside the pipeline):
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| APPROVE / COMMENT | **git-master** (split and commit if needed), then **documentor** |
+| REQUEST CHANGES | **executor** (address findings), then **verifier** (re-verify), then back to code reviewer |
+
+**Corpus Search:**
+
+No outbound handoffs. Corpus-search returns citable evidence (path:line snippets, verdicts, reference chains) to the caller — the executor, debugger, documentor, or `/ops` orchestrator decides what to do with the data.
+
+**Db:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Migration or operation complete, needs schema/data validation | **verifier** |
+| Migration files changed | **code-reviewer** (review), **git-master** (commit) |
+| Database only reachable through a bastion or tunnel | **ssh-executor** — domain vs. transport: db formulates the command and clears its write gate locally, ssh-executor runs it on the host with network access |
+| Backup failed or the write gate was denied | Hard stop — report what was declined, don't retry the same command |
+| Schema-design ambiguity surfaces | **architect** or **planner** (data-model decision) |
 
 **Debugger:**
 
@@ -474,66 +503,12 @@ Utility agents can hand off to pipeline agents or other utility agents depending
 | Cannot reproduce | Back to **user** for additional context or reproduction steps |
 | Root cause in a dependency | No handoff — documents upstream issue and workaround |
 
-**Code Reviewer** (when invoked outside the pipeline):
-
-| Outcome | Hands off to |
-| :--- | :--- |
-| APPROVE / COMMENT | **git-master** (split and commit if needed), then **documentor** |
-| REQUEST CHANGES | **executor** (address findings), then **verifier** (re-verify), then back to code reviewer |
-
 **Documentor** (when invoked outside the pipeline):
 
 | Outcome | Hands off to |
 | :--- | :--- |
 | Documentation complete | `/doc-sync` (final consistency check), or built-in audit fallback |
 | Reveals implementation gap | **executor** (fix the gap) |
-
-**Git Master:**
-
-No outbound handoffs. Git-master is a pure utility — it is invoked by other agents (or the user) and returns control to the caller when done.
-
-**SSH Executor:**
-
-| Outcome | Hands off to |
-| :--- | :--- |
-| Deployment complete, needs verification | **verifier** (validate remote state) |
-| Remote config changed, needs review | **code-reviewer** (review config changes) |
-| Deployment complete, needs recording | **git-master** (tag deployment, update changelog) |
-| Connection or permission failure | Back to **user** with diagnostic details |
-
-**Preflight:**
-
-No outbound handoffs. Preflight returns a structured checklist — the caller (ops or user) decides whether to proceed, fix, or stop.
-
-**Work Verifier:**
-
-No outbound handoffs. Work-verifier returns per-deliverable verdicts — the caller uses them to decide: mark complete, re-dispatch with context, or rollback.
-
-**Rollback:**
-
-| Outcome | Hands off to |
-| :--- | :--- |
-| Rollback complete, clean state | Caller re-dispatches the failed task |
-| File overlap detected | Back to **user** for manual decision |
-
-**Change Analyzer:**
-
-No outbound handoffs. Change-analyzer returns per-stage recommendations — the caller decides whether to run or skip each stage.
-
-**Code Intel:**
-
-No outbound handoffs. Code-intel returns citable query results (callers, impact, execution flow) to the caller — the executor, debugger, code-reviewer, or `/ops` orchestrator decides what to do with the data.
-
-**Corpus Search:**
-
-No outbound handoffs. Corpus-search returns citable evidence (path:line snippets, verdicts, reference chains) to the caller — the executor, debugger, documentor, or `/ops` orchestrator decides what to do with the data.
-
-**Research:**
-
-| Outcome | Hands off to |
-| :--- | :--- |
-| Report complete | **user**, **planner**, or **documentor** consume the cited findings |
-| No reliable sources found | Back to **user** with an explicit "cannot answer reliably" notice — does not fabricate |
 
 **Generalist:**
 
@@ -544,6 +519,38 @@ No outbound handoffs. Corpus-search returns citable evidence (path:line snippets
 | Task matches a specialist's lane (gate match) | The matching specialist per the defer-to-specialist gate |
 | Scope grew mid-edit past the minor/small-edit boundary | **executor**, with the specific boundary predicate that now applies |
 | Genuinely out-of-domain work | Back to the caller — harness `general-purpose` is appropriate only here |
+
+**Git Master:**
+
+No outbound handoffs. Git-master is a pure utility — it is invoked by other agents (or the user) and returns control to the caller when done.
+
+**Infra:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Operation complete, needs acceptance-criteria validation | **verifier** (confirm convergence, no-drift state) |
+| Task needs host-level verification within a provisioned stack | **ssh-executor** — domain vs. transport: infra owns the cloud/cluster API, ssh-executor owns the SSH connection |
+| IaC source or manifests changed | **git-master** (commit), **code-reviewer** (non-trivial changes) |
+| Plan/diff shows an unexpected destroy or replace | STOP — surface the verbatim plan and ask before proceeding |
+| Human declines the gate | Report what was declined; wait for a revised plan, don't retry the same apply |
+
+**Preflight:**
+
+No outbound handoffs. Preflight returns a structured checklist — the caller (ops or user) decides whether to proceed, fix, or stop.
+
+**Research:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Report complete | **user**, **planner**, or **documentor** consume the cited findings |
+| No reliable sources found | Back to **user** with an explicit "cannot answer reliably" notice — does not fabricate |
+
+**Rollback:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Rollback complete, clean state | Caller re-dispatches the failed task |
+| File overlap detected | Back to **user** for manual decision |
 
 **Scout:**
 
@@ -556,25 +563,18 @@ No outbound handoffs. Corpus-search returns citable evidence (path:line snippets
 | Sweep surfaces something that needs to change | **generalist** (minor) / **executor** (larger) (recommended, not performed) |
 | Gate match before any sweeping began | The matching specialist, or back to the caller — a clean deferral is a success |
 
-**Infra:**
+**SSH Executor:**
 
 | Outcome | Hands off to |
 | :--- | :--- |
-| Operation complete, needs acceptance-criteria validation | **verifier** (confirm convergence, no-drift state) |
-| Task needs host-level verification within a provisioned stack | **ssh-executor** — domain vs. transport: infra owns the cloud/cluster API, ssh-executor owns the SSH connection |
-| IaC source or manifests changed | **git-master** (commit), **code-reviewer** (non-trivial changes) |
-| Plan/diff shows an unexpected destroy or replace | STOP — surface the verbatim plan and ask before proceeding |
-| Human declines the gate | Report what was declined; wait for a revised plan, don't retry the same apply |
+| Deployment complete, needs verification | **verifier** (validate remote state) |
+| Remote config changed, needs review | **code-reviewer** (review config changes) |
+| Deployment complete, needs recording | **git-master** (tag deployment, update changelog) |
+| Connection or permission failure | Back to **user** with diagnostic details |
 
-**Db:**
+**Work Verifier:**
 
-| Outcome | Hands off to |
-| :--- | :--- |
-| Migration or operation complete, needs schema/data validation | **verifier** |
-| Migration files changed | **code-reviewer** (review), **git-master** (commit) |
-| Database only reachable through a bastion or tunnel | **ssh-executor** — domain vs. transport: db formulates the command and clears its write gate locally, ssh-executor runs it on the host with network access |
-| Backup failed or the write gate was denied | Hard stop — report what was declined, don't retry the same command |
-| Schema-design ambiguity surfaces | **architect** or **planner** (data-model decision) |
+No outbound handoffs. Work-verifier returns per-deliverable verdicts — the caller uses them to decide: mark complete, re-dispatch with context, or rollback.
 
 ### Parallelization
 
@@ -582,23 +582,23 @@ Agents cannot spawn subagents themselves (Claude Code limitation). The main sess
 
 | Agent | Threshold | Split dimension |
 | :--- | :--- | :--- |
-| Planner | 3+ subsystems | Parallel scout agents for codebase research. |
 | Architect | 3+ subsystems | Parallel scout agents for domain research. |
-| Project Scoper | 3+ milestones | Gap analysis and estimation per milestone. |
-| Critic | 3+ milestones | Review per milestone, single-pass verdict. |
-| Executor | 5+ independent tasks | Task groups by module (no shared files). |
-| SSH Executor | 2+ SSH tasks to different hosts | By target host (never same host). |
-| Verifier | 10+ criteria or 3+ modules | Verification per module or criteria group. |
 | Code Reviewer | 5+ files | File groups of 3–5, single-pass spec compliance. |
-| Security Reviewer | 3+ modules | Parallel instances per module (same pattern as code-reviewer). |
-| Documentor | 3+ independent docs | One doc per instance, single-pass map update. |
+| Critic | 3+ milestones | Review per milestone, single-pass verdict. |
+| Db | 2+ independent database targets | By database/schema; never the same target. |
 | Debugger | 2+ independent bugs | One bug per instance (shared root cause → same instance). |
 | Debugger (Build) | 5+ errors | Error groups by type (import, type, config). |
-| Git Master | 3+ branches need same op | One operation per branch (never same branch). |
+| Documentor | 3+ independent docs | One doc per instance, single-pass map update. |
+| Executor | 5+ independent tasks | Task groups by module (no shared files). |
 | Generalist | 3+ independent single-file minor edits | One instance per edit (no shared files). |
-| Scout | 3+ independent investigation areas | Split by area (same pattern as architect/debugger); never split an interdependent trail. |
+| Git Master | 3+ branches need same op | One operation per branch (never same branch). |
 | Infra | 2+ independent stacks/clusters/accounts | By provider + environment; never the same stack/state file. |
-| Db | 2+ independent database targets | By database/schema; never the same target. |
+| Planner | 3+ subsystems | Parallel scout agents for codebase research. |
+| Project Scoper | 3+ milestones | Gap analysis and estimation per milestone. |
+| Scout | 3+ independent investigation areas | Split by area (same pattern as architect/debugger); never split an interdependent trail. |
+| Security Reviewer | 3+ modules | Parallel instances per module (same pattern as code-reviewer). |
+| SSH Executor | 2+ SSH tasks to different hosts | By target host (never same host). |
+| Verifier | 10+ criteria or 3+ modules | Verification per module or criteria group. |
 
 See each agent's **Scaling** section for full details on merge strategies and constraints.
 
