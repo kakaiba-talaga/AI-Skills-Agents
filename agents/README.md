@@ -16,11 +16,14 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [corpus-search](corpus-search.md) | opus | Terminal-native multi-hop corpus search for free-text evidence, file location, claim verification, and reference tracing — every finding cites path:line. Dispatched by `/ops` Phase 2.5c and standalone for investigative tasks. |
 | [critic](critic.md) | opus | Final quality gate. Reviews plans and scoping documents for flawed assumptions, gaps, ambiguities, and feasibility issues. Verdicts: ACCEPT / ACCEPT WITH RESERVATIONS / REVISE / REJECT. |
 | [cross-memory](cross-memory.md) | opus | Handles three intents: synthesize curated context blocks from the cross-memory store (User preferences / Project context / Harness rules / Notes); audit the store for staleness, duplicates, contradictions, and redaction misses; distill durable memories from project artifacts (git history, plan docs, handoffs, optional transcripts). Dispatched by `/ops`, `/kickoff`, and peer agents for `synthesize`; by `/cross-memory audit` for `audit`; by `/cross-memory reflect` for `distill`. |
+| [db](db.md) | sonnet | Performs database operations — schema migrations, queries, and backup/restore — enforcing backup-before-mutate and a permission-layer-enforced write gate on mutating commands. Composes with `ssh-executor` for databases reachable only through a bastion or tunnel. Escalates to opus proactively for destructive, schema-changing, or production operations rather than waiting for repeated failures. |
 | [debugger](debugger.md) | opus | Runtime bug investigation — hypothesis-driven root cause analysis, circuit breaker, similar pattern scan, regression verification. For build errors, see `debugger-build`. Available at any pipeline stage. |
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
 | [documentor](documentor.md) | sonnet | Writes new documentation for implemented features, creates guides, documents architectural decisions, and updates project scoping after milestones. Writes in clear, natural language tailored to the audience. Delegates to `/doc-sync` for accuracy checks, or runs its own audit when the skill is unavailable. |
 | [executor](executor.md) | sonnet | Implements code changes precisely as specified in validated plans. Works through tasks in order, verifies against acceptance criteria, and flags blockers. |
+| [generalist](generalist.md) | sonnet | Disciplined in-domain catch-all for cross-lane residual work that no existing specialist owns — defers to the correct specialist first, then to the executor for anything beyond a minor, single-file edit. Replaces reflexive use of the harness `general-purpose`/`claude` agents for in-domain work. No web tools; web-dependent work routes to `research`. |
 | [git-master](git-master.md) | sonnet | Utility agent for git operations — branching, commits, PRs, merges, conflict resolution, releases, repo hygiene, and work-in-progress pause/resume. Generates commit messages standalone when `/commit-message` is unavailable. Available at any pipeline stage. |
+| [infra](infra.md) | sonnet | Provider-agnostic infrastructure agent for Infrastructure-as-Code, cloud CLIs, and Kubernetes — validates, plans, and converges Terraform/Pulumi/CloudFormation/CDK/Ansible stacks, `aws`/`gcloud`/`az` resources, and `kubectl`/`helm` manifests. Applies or destroys only behind a human-approved verbatim plan, gated primarily by the permission layer. Composes with `ssh-executor` for host-level access within a provisioned stack; escalates to opus proactively for mutating or production-targeting operations. |
 | [interviewer](interviewer.md) | opus | Conducts structured Socratic interviews to crystallize ambiguous requirements. Identifies ambiguity dimensions, scores them 0.0–1.0, asks one targeted question at a time, and produces a requirements document. Dispatched before the planner when specs are vague. |
 | [planner](planner.md) | opus | Breaks specifications and requirements into structured implementation plans (Milestones > Stages > Tasks > Subtasks). Identifies dependencies, sequencing, and risks. Writes in clear, natural language. Does not estimate hours. |
 | [preflight](preflight.md) | sonnet | Validates project environment readiness — runtime, dependencies, git, config files, disk space. Returns a structured pass/fail/warn checklist. Runs before any agent dispatch. |
@@ -34,7 +37,9 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, research, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, documentor, executor, git-master, preflight, rollback, ssh-executor, verifier, work-verifier. No agent defaults to **fable**; it is reachable only as a guarded last-resort escalation rung (`opus → fable`) behind an explicit confirmation gate — see the ops model-escalation behavior.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, research, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, db, documentor, executor, generalist, git-master, infra, preflight, rollback, ssh-executor, verifier, work-verifier. No agent defaults to **fable**; it is reachable only as a guarded last-resort escalation rung (`opus → fable`) behind an explicit confirmation gate — see the ops model-escalation behavior.
+
+`infra` and `db` additionally carry a per-agent proactive-opus escalation policy — triggered by mutating, destructive, multi-resource, or production-targeting operations, before the fleet's standard 3rd-failed-attempt ladder — that is distinct from every other sonnet agent listed above. See each agent's own Model Escalation Policy section (`agents/infra.md`, `agents/db.md`) for the exact trigger.
 
 ### Overriding the default model
 
@@ -211,6 +216,26 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Classify my staged changes — do I need a full review?"_
 - _"Analyze the diff and tell me which pipeline stages to skip"_
 - _"Is this change trivial enough to skip verification?"_
+
+### Generalist
+
+- _"Fix this typo in the log message — one file, one line"_
+- _"Update the one config value in `settings.yaml` that's out of date"_
+- _"This comment is stale and contradicts the code below it — fix the wording"_
+
+### Infra
+
+- _"Validate and plan the Terraform changes to the staging VPC module — show me the plan, don't apply anything"_
+- _"Diff the Helm chart against the live release in the `payments` namespace"_
+- _"Converge the Kubernetes manifests in `k8s/staging/` — validate, diff, then apply once I approve"_
+- _"Run `aws ec2 describe-instances` for the `prod` account and summarize idle instances"_
+
+### Db
+
+- _"Back up the staging database, then apply the pending migration"_
+- _"Write a forward and rollback migration to add an `email_verified` column to `users`"_
+- _"Run a read-only query counting orders with status `pending` older than 30 days"_
+- _"Restore the `orders` table from yesterday's backup after confirming the write gate"_
 
 ### Ops (skill)
 
@@ -394,6 +419,32 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Read-only on code; writes only `docs/research/<slug>.md` report artifacts (untracked by default)
 - Structural anti-exfiltration trust boundary: only fetches URLs surfaced by a prior `WebSearch` or supplied in the brief; never writes secrets into a report
 
+**Generalist:**
+
+- Disciplined in-domain catch-all for cross-lane residual work no specialist owns — gates every dispatch against a defer-to-specialist table before touching a file
+- Minor/small-edit boundary: performs an edit only if it touches one file, adds no new abstraction, doesn't change control flow or a public interface, needs no test change, and fits a 1–5 minute effort ceiling
+- No web tools — any web-dependent task routes to `research`
+- Replaces reflexive use of the harness `general-purpose`/`claude` agents for genuinely in-domain work
+- A correct deferral is a successful outcome, not a failure to act
+
+**Infra:**
+
+- Provider-agnostic agent for Infrastructure-as-Code (Terraform, Pulumi, CloudFormation, CDK, Ansible), cloud CLIs (`aws`, `gcloud`, `az`), and Kubernetes (`kubectl`, `helm`) — one agent, not split per cloud
+- Operating spine: validate → plan/diff → human-gated apply → verify convergence (no-drift)
+- Destructive-operation gate enforced primarily by the permission layer — mutating commands are not auto-allowed and always prompt; the agent's own STOP-before-mutate is the backstop, not the primary control
+- Never allow-lists a mutating command pattern, even for a fully autonomous run
+- Composes with `ssh-executor` — infra owns the cloud/cluster-API domain, ssh-executor owns host-level transport
+- Escalates to opus proactively (before the standard 3rd-attempt ladder) for mutating, multi-resource, or production-targeting operations
+
+**Db:**
+
+- Performs schema migrations, queries, and backup/restore, always backing up before a mutating operation
+- Every migration ships as a forward/rollback pair, transaction-wrapped where the engine supports it
+- Write gate enforced primarily by the permission layer — mutating `psql`/`mysql`/`mongosh` commands and migrations are not auto-allowed and always prompt; the agent's own STOP-before-mutate is the backstop
+- Never allow-lists a mutating command pattern
+- Composes with `ssh-executor` for databases reachable only through a bastion or tunnel — db decides the command and clears its write gate, ssh-executor runs it on the host with network access
+- Escalates to opus proactively (before the standard 3rd-attempt ladder) for destructive, schema-changing, or production-database operations
+
 ### Utility Agent Handoffs
 
 Utility agents can hand off to pipeline agents or other utility agents depending on their outcome. Unlike the linear pipeline, these handoffs are conditional — they depend on what the agent found.
@@ -468,6 +519,36 @@ No outbound handoffs. Corpus-search returns citable evidence (path:line snippets
 | Report complete | **user**, **planner**, or **documentor** consume the cited findings |
 | No reliable sources found | Back to **user** with an explicit "cannot answer reliably" notice — does not fabricate |
 
+**Generalist:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Minor edit complete | No downstream stage required, unless the edit touched behavior worth a second look — then **verifier** |
+| Edit is part of a larger uncommitted change set | **git-master** (commit handling) |
+| Task matches a specialist's lane (gate match) | The matching specialist per the defer-to-specialist gate |
+| Scope grew mid-edit past the minor/small-edit boundary | **executor**, with the specific boundary predicate that now applies |
+| Genuinely out-of-domain work | Back to the caller — harness `general-purpose` is appropriate only here |
+
+**Infra:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Operation complete, needs acceptance-criteria validation | **verifier** (confirm convergence, no-drift state) |
+| Task needs host-level verification within a provisioned stack | **ssh-executor** — domain vs. transport: infra owns the cloud/cluster API, ssh-executor owns the SSH connection |
+| IaC source or manifests changed | **git-master** (commit), **code-reviewer** (non-trivial changes) |
+| Plan/diff shows an unexpected destroy or replace | STOP — surface the verbatim plan and ask before proceeding |
+| Human declines the gate | Report what was declined; wait for a revised plan, don't retry the same apply |
+
+**Db:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Migration or operation complete, needs schema/data validation | **verifier** |
+| Migration files changed | **code-reviewer** (review), **git-master** (commit) |
+| Database only reachable through a bastion or tunnel | **ssh-executor** — domain vs. transport: db formulates the command and clears its write gate locally, ssh-executor runs it on the host with network access |
+| Backup failed or the write gate was denied | Hard stop — report what was declined, don't retry the same command |
+| Schema-design ambiguity surfaces | **architect** or **planner** (data-model decision) |
+
 ### Parallelization
 
 Agents cannot spawn subagents themselves (Claude Code limitation). The main session orchestrates parallelization by spawning multiple instances of the same agent when workload thresholds are met. Each agent defines its own scaling guidance:
@@ -487,6 +568,9 @@ Agents cannot spawn subagents themselves (Claude Code limitation). The main sess
 | Debugger | 2+ independent bugs | One bug per instance (shared root cause → same instance). |
 | Debugger (Build) | 5+ errors | Error groups by type (import, type, config). |
 | Git Master | 3+ branches need same op | One operation per branch (never same branch). |
+| Generalist | 3+ independent single-file minor edits | One instance per edit (no shared files). |
+| Infra | 2+ independent stacks/clusters/accounts | By provider + environment; never the same stack/state file. |
+| Db | 2+ independent database targets | By database/schema; never the same target. |
 
 See each agent's **Scaling** section for full details on merge strategies and constraints.
 
@@ -693,6 +777,15 @@ To opt in per project, add to `.claude/settings.json`:
   }
 }
 ```
+
+### Destructive-operation gates (`infra` / `db`) — do not allow-list
+
+| Permission pattern | Used by | Why it stays gated |
+| :--- | :--- | :--- |
+| Mutating IaC/cloud/k8s commands (`terraform apply`/`destroy`, `pulumi up`/`destroy`, `cdk deploy`/`destroy`, `ansible-playbook` against live inventory, `kubectl apply`/`delete`/`patch`, `helm install`/`upgrade`/`uninstall`, mutating `aws`/`gcloud`/`az` calls) | infra | The prompt this triggers IS the destructive-operation gate (`agents/infra.md` § Destructive-operation gate) — approving it silently or allow-listing it removes the human-approved-verbatim-plan control the agent depends on |
+| Mutating database commands (`psql`/`mysql`/`mongosh` write queries, forward/rollback migrations, restores) | db | The prompt this triggers IS the write gate (`agents/db.md` § Write Gate) — allow-listing it removes the backup-before-mutate/human-approval control the agent depends on |
+
+**Never add either pattern to the opt-in JSON block above, a project's `.claude/settings.json`, or a "trusted project" allow-list** — not even for `--autonomous` `/ops` runs. Autonomous mode pauses at the prompt instead of bypassing it, by design. Read/describe/plan equivalents from the same CLIs (`terraform plan`, `kubectl get`/`describe`, `SELECT`/`EXPLAIN` queries) are not auto-allowed either — they also prompt — but are safe to approve since they don't mutate state.
 
 ### Recommended deny list
 

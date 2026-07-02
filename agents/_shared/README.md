@@ -6,7 +6,7 @@
 
 Deployable markdown companions shared across multiple agent contracts. Each snippet holds prose that would otherwise be duplicated in every agent `## Brief Format` subsection. Agents keep a **one-line `See` pointer** plus **agent-specific overrides** only (required-section lists, file-class allowlists, mode handling, and similar).
 
-Canonical brief grammar and file-class tables remain in `~/.claude/skills/ops/brief-contract.md`. Snippets capture cross-agent defaults that repeat in the 14 brief-contract agents; they do not replace the contract.
+Canonical brief grammar and file-class tables remain in `~/.claude/skills/ops/brief-contract.md`. Snippets capture cross-agent defaults that repeat in the 17 brief-contract agents; they do not replace the contract.
 
 ## Pointer contract
 
@@ -32,18 +32,21 @@ Bump the **module version** in this README when adding snippets or making breaki
 
 ## Agents that include `brief-format-snippet.md`
 
-These 14 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format-snippet.md` from `## Brief Format` (grep `brief-format-snippet` to audit):
+These 17 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format-snippet.md` from `## Brief Format` (grep `brief-format-snippet` to audit):
 
 | Agent | Agent-specific overrides (examples) |
 | :--- | :--- |
 | `code-reviewer.md` | Read-only file-class; no `## Acceptance Criteria` required |
 | `code-reviewer-diff.md` | Same as code-reviewer |
 | `cross-memory.md` | Subcommand-specific brief shapes elsewhere in contract |
+| `db.md` | File-class allowlist scoped to migration files + backup manifests; missing AC refuses |
 | `debugger.md` | Custom required/optional sections; missing `## Task` refuse |
 | `debugger-build.md` | Build-error lane; inherits shared defaults via pointer |
 | `documentor.md` | `docs` file-class; missing AC proceeds |
 | `executor.md` | TDD mode; file-class allowlist; strict missing AC |
+| `generalist.md` | Defer-to-specialist gate + minor/small-edit boundary evaluated before Brief Format applies; missing AC refuses; file-class allowlist excludes agent-contract/plan-doc/docs |
 | `git-master.md` | Git operations scope |
+| `infra.md` | Required provider/environment fields; missing AC refuses; file-class allowlist scoped to IaC/manifest patterns |
 | `project-scoper.md` | `plan-doc` file-class; mode ignored |
 | `research.md` | Web-research lane; trust-boundary / URL-source rules; no Edit tool; missing AC proceeds |
 | `security-reviewer.md` | Security-weighted Project Knowledge |
