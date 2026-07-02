@@ -20,7 +20,7 @@ Initially, these should work on Claude Code and Cursor. Other AI development too
 
 The project is organized into the following directories:
 
-- `/agents` — 23 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
+- `/agents` — 26 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
 - `/skills` — 13 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
 - `/hooks` — Event hooks (e.g., post-compaction context re-injection, PostToolUse security pattern warnings).
 - `/docs` — Assessment and portability guide.
@@ -120,11 +120,14 @@ Before deleting, the script prints the full orphan list and prompts: `Delete N o
 | corpus-search | Yes | Yes | Dispatched by `/ops` Phase 2.5c for free-text evidence search |
 | critic | Yes | Yes | |
 | cross-memory | Yes | Yes | |
+| db | Yes | Yes | Database operations (migrations, queries, backup/restore); dispatched by `/ops` or standalone |
 | debugger | Yes | Yes | |
 | debugger-build | Yes | Yes | |
 | documentor | Yes | Yes | |
 | executor | Yes | Yes | |
+| generalist | Yes | Yes | In-domain catch-all for cross-lane residual work no specialist owns; dispatched by `/ops` or standalone |
 | git-master | Yes | Yes | |
+| infra | Yes | Yes | Provider-agnostic IaC / cloud / Kubernetes operations; dispatched by `/ops` or standalone |
 | interviewer | Yes | Yes | |
 | planner | Yes | Yes | Auto-transformed by deploy script |
 | preflight | Yes | Yes | |
