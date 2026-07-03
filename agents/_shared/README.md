@@ -48,10 +48,10 @@ These 17 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format
 | `git-master.md` | Git operations scope |
 | `infra.md` | Required provider/environment fields; missing AC refuses; file-class allowlist scoped to IaC/manifest patterns |
 | `project-scoper.md` | `plan-doc` file-class; mode ignored |
-| `research.md` | Web-research lane; trust-boundary / URL-source rules; no Edit tool; missing AC proceeds |
 | `security-reviewer.md` | Security-weighted Project Knowledge |
 | `ssh-executor.md` | Deploy JSON brief + preamble PK |
 | `verifier.md` | AC source priority; TDD commit-order check |
+| `web-research.md` | Web-research lane; trust-boundary / URL-source rules; no Edit tool; missing AC proceeds |
 | `work-verifier.md` | Deliverable verdicts; missing AC proceeds |
 
 ## Agents that include JSON orchestrator brief companions

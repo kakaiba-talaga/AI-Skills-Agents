@@ -132,12 +132,12 @@ Before deleting, the script prints the full orphan list and prompts: `Delete N o
 | planner | Yes | Yes | Auto-transformed by deploy script |
 | preflight | Yes | Yes | |
 | project-scoper | Yes | Yes | |
-| research | Yes | Yes | External/web research, multi-source fact-checking, and synthesis into cited reports; dispatched standalone or by `/ops` |
 | rollback | Yes | Yes | |
 | scout | Yes | Yes | Read-only investigator for open/fuzzy repo questions; dispatched by `/ops` or standalone |
 | security-reviewer | Yes | Yes | |
 | ssh-executor | Yes | Yes | |
 | verifier | Yes | Yes | |
+| web-research | Yes | Yes | External/web research, multi-source fact-checking, and synthesis into cited reports; dispatched standalone or by `/ops` |
 | work-verifier | Yes | Yes | |
 | **Skills** | | | |
 | clickup | Yes | Yes | |

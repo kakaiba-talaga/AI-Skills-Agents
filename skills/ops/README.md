@@ -92,11 +92,11 @@ The team manager auto-detects which agent to assign based on task content:
 | planner | Breaking down work, designing |
 | preflight | Environment readiness checks (runtime, dependencies, git, disk space) |
 | project-scoper | Estimating effort, analyzing requirements |
-| research | External/web research, online fact-checking, synthesizing cited reports from outside sources |
 | rollback | Rolling back agent-produced changes after failures |
 | security-reviewer | Security audits, vulnerability scanning, OWASP checks, auth review |
 | ssh-executor | Deploying to remote servers, SSH commands, file transfer, remote verification |
 | verifier | Validating acceptance criteria, testing |
+| web-research | External/web research, online fact-checking, synthesizing cited reports from outside sources |
 | work-verifier | Verifying whether interrupted agent work was completed |
 
 ## Autonomy Modes

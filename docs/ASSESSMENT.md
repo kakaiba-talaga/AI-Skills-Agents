@@ -35,12 +35,12 @@
 | planner.md | opus | Breaks specs into structured implementation plans |
 | preflight.md | sonnet | Environment readiness checks before agent work begins |
 | project-scoper.md | opus | Requirements analysis, gap detection, effort estimates |
-| research.md | opus | External/web research, multi-source fact-checking, and synthesis into cited reports; read-only on code, writes only `docs/research/` report artifacts |
 | rollback.md | sonnet | Safely undoes agent-produced changes at configurable scope |
 | scout.md | sonnet | Read-only investigator for open, fuzzy repo questions; sweeps adaptively and synthesizes inline `path:line` findings |
 | security-reviewer.md | opus | Security audit with severity-rated vulnerability findings |
 | ssh-executor.md | sonnet | Remote command execution and file transfer via SSH |
 | verifier.md | sonnet | Validates implementation against acceptance criteria |
+| web-research.md | opus | External/web research, multi-source fact-checking, and synthesis into cited reports; read-only on code, writes only `docs/web-research/` report artifacts |
 | work-verifier.md | sonnet | Verifies whether prior agent work was completed, partial, or never started |
 
 ### Skills (`skills/`)
@@ -117,15 +117,15 @@ Five agentic-improvement vectors and a structural remediation shipped to `skills
 
 ## Changes Since Last Assessment (2026-06-01 — research agent)
 
-### New agent: `research`
+### New agent: `web-research`
 
-`agents/research.md` (model: opus) is an external/web research layer that answers questions by searching the open web, corroborating claims across multiple independent sources, and producing cited, structured reports. Every factual claim in a report traces to a source row with a URL, access date, confidence label, and optional note. It is read-only on code and existing documentation; all write output is new file creation under `docs/research/<slug>.md` (durable) or `.research/runs/<run-id>/` (ephemeral scratch, self-cleaned at end-of-dispatch).
+`agents/web-research.md` (model: opus) is an external/web research layer that answers questions by searching the open web, corroborating claims across multiple independent sources, and producing cited, structured reports. Every factual claim in a report traces to a source row with a URL, access date, confidence label, and optional note. It is read-only on code and existing documentation; all write output is new file creation under `docs/web-research/<slug>.md` (durable) or `.web-research/runs/<run-id>/` (ephemeral scratch, self-cleaned at end-of-dispatch).
 
 Confidence labels: `direct`, `corroborated`, `single-source`, `inferred`. Performance defaults: 15 source fetches, 5 follow-on hops, 120-second soft wall-clock. Brief-supplied URL sets are fixed at dispatch time and cannot be extended by fetched content (prevents indirect-injection pivots).
 
-### `/ops` routing rows for `research`
+### `/ops` routing rows for `web-research`
 
-Two routing rows were added to `skills/ops/phase-intake.md` to wire the research agent into the `/ops` dispatch table, covering standalone research tasks and web-evidence requests originating from planning or investigative dispatches.
+Two routing rows were added to `skills/ops/phase-intake.md` to wire the web-research agent into the `/ops` dispatch table, covering standalone research tasks and web-evidence requests originating from planning or investigative dispatches.
 
 ### Net effect
 
@@ -141,7 +141,7 @@ Two routing rows were added to `skills/ops/phase-intake.md` to wire the research
 
 Three project-owned agents were added so the team stops falling back to the harness-provided generic agents (`general-purpose`/`claude`), reserving those for genuinely out-of-domain work:
 
-- **`agents/generalist.md`** (model: sonnet) — a disciplined in-domain catch-all for cross-lane residual work no specialist owns. Bounded by a defer-to-specialist gate (web work routes to `research`, structural/textual search to `code-intel`/`corpus-search`, IaC to `infra`, databases to `db`, and so on) and a six-predicate minor/small-edit boundary; anything larger defers to `executor`. No web tools.
+- **`agents/generalist.md`** (model: sonnet) — a disciplined in-domain catch-all for cross-lane residual work no specialist owns. Bounded by a defer-to-specialist gate (web work routes to `web-research`, structural/textual search to `code-intel`/`corpus-search`, IaC to `infra`, databases to `db`, and so on) and a six-predicate minor/small-edit boundary; anything larger defers to `executor`. No web tools.
 - **`agents/infra.md`** (model: sonnet) — provider-agnostic Infrastructure-as-Code, cloud CLI, and Kubernetes operations (Terraform/Pulumi/CloudFormation/CDK/Ansible, aws/gcloud/az, kubectl/helm). Deliberately not split per cloud. Operating spine: validate → plan/diff → human-gated apply → verify convergence. Its destructive-op gate is permission-layer-enforced (mutating CLIs are not auto-allowed, so they prompt, and autonomous mode pauses on the prompt); the agent's STOP-before-mutate is a backstop. Composes with `ssh-executor` (domain vs transport).
 - **`agents/db.md`** (model: sonnet) — database operations: migrations, queries, backup/restore. Backup-before-mutate discipline with the same permission-layer-enforced write gate. Composes with `ssh-executor` for tunneled/bastioned access.
 
@@ -165,7 +165,7 @@ The three agents were wired into `/ops` in companion files only — no `skills/o
 
 ### New agent: `scout`
 
-`agents/scout.md` (model: sonnet) is a first-class reconnaissance agent for open, fuzzy, read-only investigation — how something works, where something happens, whether a claim holds across the repo. It sweeps adaptively with `Read`/`Glob`/`Grep`/read-only `Bash`, follows leads across as many rounds as the question needs, and reports back inline with `path:line` citations, distinguishing confirmed findings (direct `Read`) from inferred ones. It holds no `Write` tool and no write-side `Bash`, so the read-only guarantee is structural rather than a promise. A defer-to-specialist gate routes fixed/reproducible queries to `corpus-search`, structural symbol-graph queries to `code-intel`, web-dependent questions to `research`, reproducible bugs to `debugger`, and any needed edit to `generalist`/`executor` — `scout` performs only what remains: genuinely open, fuzzy, repo-internal, read-only investigation. It is a first-class agent with its own identity, not a stripped-down copy of `generalist`, which is only one of its five lane-boundary neighbors.
+`agents/scout.md` (model: sonnet) is a first-class reconnaissance agent for open, fuzzy, read-only investigation — how something works, where something happens, whether a claim holds across the repo. It sweeps adaptively with `Read`/`Glob`/`Grep`/read-only `Bash`, follows leads across as many rounds as the question needs, and reports back inline with `path:line` citations, distinguishing confirmed findings (direct `Read`) from inferred ones. It holds no `Write` tool and no write-side `Bash`, so the read-only guarantee is structural rather than a promise. A defer-to-specialist gate routes fixed/reproducible queries to `corpus-search`, structural symbol-graph queries to `code-intel`, web-dependent questions to `web-research`, reproducible bugs to `debugger`, and any needed edit to `generalist`/`executor` — `scout` performs only what remains: genuinely open, fuzzy, repo-internal, read-only investigation. It is a first-class agent with its own identity, not a stripped-down copy of `generalist`, which is only one of its five lane-boundary neighbors.
 
 ### Fleet-wide `Explore` → `scout` consistency swap
 
@@ -642,7 +642,7 @@ The Tier A Opus 4.7 audit (`docs/agent-audits/tier-a-opus-4-7-audit.md`) produce
 - **Clean separation of concerns:** The ops decoupling moved operational logic (preflight, rollback, work verification, change analysis, timing calibration) out of skill companion files and into standalone agents/skills where it belongs. This reduces ops context pressure and makes each capability independently dispatchable.
 - **Consistent pipeline diagrams** across all agent files — `[Interviewer]` and `[Deslop]` present in all full and abbreviated pipeline references.
 - **Shared constraints repeated verbatim** in all agents: no compound Bash commands, no `cd` prefix, relative paths only. No variations.
-- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, corpus-search, research, cross-memory); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer, generalist, infra, db — `infra` and `db` additionally carry a custom proactive-opus escalation policy for mutating/destructive operations). No mismatches between frontmatter and README.
+- **Logical model assignments** verified: opus for deep reasoning (planner, project-scoper, critic, debugger, debugger-build, interviewer, architect, security-reviewer, code-intel, corpus-search, web-research, cross-memory); sonnet for execution (executor, ssh-executor, verifier, code-reviewer, code-reviewer-diff, documentor, git-master, preflight, work-verifier, rollback, change-analyzer, generalist, infra, db — `infra` and `db` additionally carry a custom proactive-opus escalation policy for mutating/destructive operations). No mismatches between frontmatter and README.
 - **Valid cross-references** between agents and skills — no broken path references. Former ops companion references removed.
 - **Deployment automation** expanded — deploy scripts support 4 categories (agents, skills, hooks, settings), 3 targets (claude-code, claude-code-wsl, cursor), dry-run, diff, per-target, per-category, and `--prune` mode. Cursor transform is fully automatic with dedicated transform scripts per skill.
 - **Portability documented** — format differences, tool gaps, and verified findings captured in `docs/portability-guide.md`.

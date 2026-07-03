@@ -21,24 +21,24 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
 | [documentor](documentor.md) | sonnet | Writes new documentation for implemented features, creates guides, documents architectural decisions, and updates project scoping after milestones. Writes in clear, natural language tailored to the audience. Delegates to `/doc-sync` for accuracy checks, or runs its own audit when the skill is unavailable. |
 | [executor](executor.md) | sonnet | Implements code changes precisely as specified in validated plans. Works through tasks in order, verifies against acceptance criteria, and flags blockers. |
-| [generalist](generalist.md) | sonnet | Disciplined in-domain catch-all for cross-lane residual work that no existing specialist owns — defers to the correct specialist first, then to the executor for anything beyond a minor, single-file edit. Replaces reflexive use of the harness `general-purpose`/`claude` agents for in-domain work. No web tools; web-dependent work routes to `research`. |
+| [generalist](generalist.md) | sonnet | Disciplined in-domain catch-all for cross-lane residual work that no existing specialist owns — defers to the correct specialist first, then to the executor for anything beyond a minor, single-file edit. Replaces reflexive use of the harness `general-purpose`/`claude` agents for in-domain work. No web tools; web-dependent work routes to `web-research`. |
 | [git-master](git-master.md) | sonnet | Utility agent for git operations — branching, commits, PRs, merges, conflict resolution, releases, repo hygiene, and work-in-progress pause/resume. Generates commit messages standalone when `/commit-message` is unavailable. Available at any pipeline stage. |
 | [infra](infra.md) | sonnet | Provider-agnostic infrastructure agent for Infrastructure-as-Code, cloud CLIs, and Kubernetes — validates, plans, and converges Terraform/Pulumi/CloudFormation/CDK/Ansible stacks, `aws`/`gcloud`/`az` resources, and `kubectl`/`helm` manifests. Applies or destroys only behind a human-approved verbatim plan, gated primarily by the permission layer. Composes with `ssh-executor` for host-level access within a provisioned stack; escalates to opus proactively for mutating or production-targeting operations. |
 | [interviewer](interviewer.md) | opus | Conducts structured Socratic interviews to crystallize ambiguous requirements. Identifies ambiguity dimensions, scores them 0.0–1.0, asks one targeted question at a time, and produces a requirements document. Dispatched before the planner when specs are vague. |
 | [planner](planner.md) | opus | Breaks specifications and requirements into structured implementation plans (Milestones > Stages > Tasks > Subtasks). Identifies dependencies, sequencing, and risks. Writes in clear, natural language. Does not estimate hours. |
 | [preflight](preflight.md) | sonnet | Validates project environment readiness — runtime, dependencies, git, config files, disk space. Returns a structured pass/fail/warn checklist. Runs before any agent dispatch. |
 | [project-scoper](project-scoper.md) | opus | Analyzes requirements, identifies gaps and ambiguities, scopes projects with effort estimates, deliverables, dependencies, and produces formal scoping documents with timelines. Writes in clear, natural language. Also revises architecture and planning documents based on review or critic findings. |
-| [research](research.md) | opus | Performs external/web research, multi-source fact-checking, and synthesis into cited reports. Read-only on code; writes only to `docs/research/` report artifacts. Dispatched standalone or by `/ops` when a task requires evidence from the open web. |
 | [rollback](rollback.md) | sonnet | Rolls back agent-produced changes at the appropriate scope — single task, task chain, full run, or worktree. Stashes before reverting, checks for file overlap, and respects guardrails. |
 | [scout](scout.md) | sonnet | Read-only investigator for open, fuzzy questions about this repository — how something works, where something happens, whether a claim holds across the codebase. Sweeps adaptively with read-only tools, follows leads across rounds, and synthesizes a narrative answer inline with `path:line` citations. Writes nothing. Dispatched by `/ops` or standalone. |
 | [security-reviewer](security-reviewer.md) | opus | Dedicated security auditor that analyzes implemented code for vulnerabilities, producing severity-rated findings with remediation guidance. Verdicts: SECURE / SECURE WITH FINDINGS / INSECURE. Auto-fired when the task carries a security content signal or `change-analyzer` returns `security-review: run` on the post-executor diff. |
 | [ssh-executor](ssh-executor.md) | sonnet | Executes commands on remote servers via SSH. Handles remote command execution, file transfer (scp), remote verification, and service management. Uses SSH config for host resolution and key-based auth only. |
 | [verifier](verifier.md) | sonnet | Validates that implementation meets acceptance criteria, assesses test coverage, writes missing tests, and runs integration checks before code review. |
+| [web-research](web-research.md) | opus | Performs external/web research, multi-source fact-checking, and synthesis into cited reports. Read-only on code; writes only to `docs/web-research/` report artifacts. Dispatched standalone or by `/ops` when a task requires evidence from the open web. |
 | [work-verifier](work-verifier.md) | sonnet | Verifies whether interrupted or prior agent work was actually completed by checking file existence, git diff, handoff files, and content quality. Returns per-deliverable verdicts for resume decisions. |
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, research, security-reviewer. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, db, documentor, executor, generalist, git-master, infra, preflight, rollback, scout, ssh-executor, verifier, work-verifier. No agent defaults to **fable**; it is reachable only as a guarded last-resort escalation rung (`opus → fable`) behind an explicit confirmation gate — see the ops model-escalation behavior.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, security-reviewer, web-research. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, db, documentor, executor, generalist, git-master, infra, preflight, rollback, scout, ssh-executor, verifier, work-verifier. No agent defaults to **fable**; it is reachable only as a guarded last-resort escalation rung (`opus → fable`) behind an explicit confirmation gate — see the ops model-escalation behavior.
 
 `infra` and `db` additionally carry a per-agent proactive-opus escalation policy — triggered by mutating, destructive, multi-resource, or production-targeting operations, before the fleet's standard 3rd-failed-attempt ladder — that is distinct from every other sonnet agent listed above. See each agent's own Model Escalation Policy section (`agents/infra.md`, `agents/db.md`) for the exact trigger.
 
@@ -198,12 +198,6 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Analyze these requirements for gaps before we estimate"_
 - _"Produce a scoping document for the planner's output"_
 
-### Research
-
-- _"Research current best practices for X from the web and synthesize a cited report"_
-- _"Fact-check this claim against external/online sources and tell me the confidence per source"_
-- _"Gather evidence from the open web on Y — read-only, cite every source with access date"_
-
 ### Rollback
 
 - _"Undo the last executor's changes — they didn't pass verification"_
@@ -238,6 +232,12 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"Check if all acceptance criteria for Milestone 3 are met"_
 - _"Assess test coverage for the new detection module"_
 - _"Run integration checks on the changes"_
+
+### Web Research
+
+- _"Research current best practices for X from the web and synthesize a cited report"_
+- _"Fact-check this claim against external/online sources and tell me the confidence per source"_
+- _"Gather evidence from the open web on Y — read-only, cite every source with access date"_
 
 ### Work Verifier
 
@@ -400,7 +400,7 @@ These agents operate independently of the pipeline and can be invoked at any sta
 
 - Disciplined in-domain catch-all for cross-lane residual work no specialist owns — gates every dispatch against a defer-to-specialist table before touching a file
 - Minor/small-edit boundary: performs an edit only if it touches one file, adds no new abstraction, doesn't change control flow or a public interface, needs no test change, and fits a 1–5 minute effort ceiling
-- No web tools — any web-dependent task routes to `research`
+- No web tools — any web-dependent task routes to `web-research`
 - Replaces reflexive use of the harness `general-purpose`/`claude` agents for genuinely in-domain work
 - A correct deferral is a successful outcome, not a failure to act
 
@@ -427,12 +427,6 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Three-tier check system: critical (blocks), standard (auto-fix then block), warning (log only)
 - Standalone invocable — does not require an ops run
 
-**Research:**
-
-- External/web research, multi-source fact-checking, and synthesis into cited reports
-- Read-only on code; writes only `docs/research/<slug>.md` report artifacts (untracked by default)
-- Structural anti-exfiltration trust boundary: only fetches URLs surfaced by a prior `WebSearch` or supplied in the brief; never writes secrets into a report
-
 **Rollback:**
 
 - Scope-level rollback: single task, task chain, full run, worktree
@@ -442,7 +436,7 @@ These agents operate independently of the pipeline and can be invoked at any sta
 **Scout:**
 
 - Read-only reconnaissance for open, fuzzy, repo-internal questions — how something works, where something happens, whether a claim holds across the repo
-- Defer-to-specialist gate checked before any sweeping starts: fixed/reproducible query → `corpus-search`; structural symbol-graph query → `code-intel`; web-dependent question → `research`; reproducible bug → `debugger`; any edit → `generalist`/`executor`
+- Defer-to-specialist gate checked before any sweeping starts: fixed/reproducible query → `corpus-search`; structural symbol-graph query → `code-intel`; web-dependent question → `web-research`; reproducible bug → `debugger`; any edit → `generalist`/`executor`
 - Sweeps adaptively across as many rounds as the question needs, then synthesizes a narrative answer inline — `path:line` citations, confirmed (direct `Read`) vs. inferred always labeled
 - Soft, self-governed budget — no hard numeric round cap; reports unexplored branches at a natural stopping point rather than fabricating certainty
 - Writes nothing — no `Write` tool, no write-side `Bash`; a clean deferral is a successful outcome, not a failure
@@ -454,6 +448,12 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Remote health checks, endpoint verification, log inspection
 - Service management (systemctl, docker) via SSH
 - ProxyJump/bastion host support via standard SSH config
+
+**Web Research:**
+
+- External/web research, multi-source fact-checking, and synthesis into cited reports
+- Read-only on code; writes only `docs/web-research/<slug>.md` report artifacts (untracked by default)
+- Structural anti-exfiltration trust boundary: only fetches URLs surfaced by a prior `WebSearch` or supplied in the brief; never writes secrets into a report
 
 **Work Verifier:**
 
@@ -538,13 +538,6 @@ No outbound handoffs. Git-master is a pure utility — it is invoked by other ag
 
 No outbound handoffs. Preflight returns a structured checklist — the caller (ops or user) decides whether to proceed, fix, or stop.
 
-**Research:**
-
-| Outcome | Hands off to |
-| :--- | :--- |
-| Report complete | **user**, **planner**, or **documentor** consume the cited findings |
-| No reliable sources found | Back to **user** with an explicit "cannot answer reliably" notice — does not fabricate |
-
 **Rollback:**
 
 | Outcome | Hands off to |
@@ -571,6 +564,13 @@ No outbound handoffs. Preflight returns a structured checklist — the caller (o
 | Remote config changed, needs review | **code-reviewer** (review config changes) |
 | Deployment complete, needs recording | **git-master** (tag deployment, update changelog) |
 | Connection or permission failure | Back to **user** with diagnostic details |
+
+**Web Research:**
+
+| Outcome | Hands off to |
+| :--- | :--- |
+| Report complete | **user**, **planner**, or **documentor** consume the cited findings |
+| No reliable sources found | Back to **user** with an explicit "cannot answer reliably" notice — does not fabricate |
 
 **Work Verifier:**
 
@@ -618,8 +618,8 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Glob` | all agents | Find files by pattern |
 | `Grep` | all agents | Search file contents |
 | `Agent` | ops | Spawn sub-agents |
-| `WebSearch` | planner, project-scoper, research | Search the web for context |
-| `WebFetch` | planner, project-scoper, research | Fetch web page content |
+| `WebSearch` | planner, project-scoper, web-research | Search the web for context |
+| `WebFetch` | planner, project-scoper, web-research | Fetch web page content |
 | `NotebookEdit` | executor | Edit Jupyter notebooks |
 | `TodoWrite` | any agent | Legacy todo list |
 | `Skill` | ops | Invoke skills (`/ralph-loop`, `/doc-sync`, `/code-review`, etc.) |
