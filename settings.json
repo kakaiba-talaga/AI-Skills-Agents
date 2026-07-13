@@ -151,7 +151,8 @@
     },
     "effortLevel": "xhigh",
     "autoUpdatesChannel": "latest",
+    "tui": "fullscreen",
     "skipDangerousModePermissionPrompt": true,
     "verbose": false,
-    "tui": "fullscreen"
+    "remoteControlAtStartup": true
 }
