@@ -172,3 +172,12 @@ Listed here are the global directories for the AI development tools or agentic h
 
 - `//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/agents/`
 - `//wsl.localhost/Ubuntu-24.04/home/ubuntu/.claude/skills/`
+
+## Access & Working Agreement
+
+This is a private, single-maintainer repository. Two operating norms keep that trust model intact:
+
+- **Least-privilege collaborator access** — grant the minimum role needed for the task at hand (read/triage over admin), and prefer time-boxed or reviewed grants over standing elevated access.
+- **MFA on the source-of-truth account** — the GitHub account holding this repository must have multi-factor authentication enabled; it is the account of record for every deployed agent and skill copy (see `CLAUDE.md` § *Source of Truth & Deployment*).
+
+Internal operating hygiene for a private repo, not a public governance policy.
