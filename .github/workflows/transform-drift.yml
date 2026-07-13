@@ -16,6 +16,9 @@ on:
       - 'tooling/transform-cursor-*.sh'
       - 'tooling/transform-cursor-*.ps1'
 
+permissions:
+  contents: read
+
 jobs:
   drift-check:
     runs-on: ubuntu-latest

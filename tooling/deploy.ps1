@@ -617,6 +617,40 @@ function Deploy-Section {
     return $stats
 }
 
+# --- Provenance ---
+
+function Get-SourceCommitSha {
+    try {
+        $sha = git -C $RepoRoot rev-parse HEAD 2>$null
+        if ($LASTEXITCODE -eq 0 -and $sha) {
+            return $sha.Trim()
+        }
+    } catch {
+        # Non-fatal: git unavailable, not a repo, or detached/odd state.
+    }
+    return "unknown"
+}
+
+function Write-ProvenanceRecord {
+    param(
+        [string]$TargetName,
+        [string]$Sha
+    )
+    try {
+        $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        $line = "$timestamp target=$TargetName sha=$Sha"
+        Write-Host "  [provenance] $line" -ForegroundColor DarkCyan
+        $logDir = Join-Path $RepoRoot ".deploy-state"
+        if (-not (Test-Path $logDir)) {
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        }
+        Add-Content -LiteralPath (Join-Path $logDir "provenance.log") -Value $line
+    } catch {
+        # Non-fatal: provenance logging must never break a deploy.
+        Write-Host "  [provenance] Warning: failed to record provenance (non-fatal)" -ForegroundColor DarkGray
+    }
+}
+
 # --- Main ---
 
 # -PruneOnly implies -Prune
@@ -667,6 +701,7 @@ if (-not $PruneOnly -and -not $DryRun -and -not $Diff -and -not $Force) {
 }
 
 $totalStats = @{ Copied = 0; Skipped = 0; Updated = 0; Pruned = 0; WouldPrune = 0 }
+$SourceSha = Get-SourceCommitSha
 
 foreach ($t in $targets) {
     $displayName = switch ($t) {
@@ -708,6 +743,11 @@ foreach ($t in $targets) {
             $totalStats.Pruned     += $pruneStats.Pruned
             $totalStats.WouldPrune += $pruneStats.WouldPrune
         }
+    }
+
+    # Provenance record means "deploy attempted against this target" (not "files changed").
+    if (-not $PruneOnly -and -not $DryRun -and -not $Diff) {
+        Write-ProvenanceRecord -TargetName $t -Sha $SourceSha
     }
 }
 

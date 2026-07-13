@@ -1,0 +1,51 @@
+name: Lint
+
+# WARN-FIRST: every lint step below is non-blocking (`continue-on-error: true`).
+# Findings are reported in the step logs but do not fail the workflow. Flipping
+# these to blocking (removing `continue-on-error`) is a deliberate follow-up
+# once the tree is lint-clean -- do not flip silently.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run markdownlint
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          npx --yes markdownlint-cli --config .markdownlint.json "**/*.md"
+
+      - name: Run shellcheck
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          shellcheck tooling/*.sh hooks/*.sh
+
+      - name: Run PSScriptAnalyzer
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+          $results = Invoke-ScriptAnalyzer -Path tooling -Include *.ps1
+          if ($results) {
+            $results | Format-Table -AutoSize
+            throw "PSScriptAnalyzer found $($results.Count) issue(s)"
+          } else {
+            Write-Host "PSScriptAnalyzer: no issues found"
+          }

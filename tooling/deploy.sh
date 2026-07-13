@@ -621,6 +621,32 @@ deploy_section() {
     done <<< "$files"
 }
 
+# --- Provenance ---
+
+get_source_commit_sha() {
+    local sha
+    if sha=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null); then
+        echo "$sha"
+    else
+        echo "unknown"
+    fi
+}
+
+write_provenance_record() {
+    local target_name="$1"
+    local sha="$2"
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null) || timestamp="unknown-time"
+    local line="$timestamp target=$target_name sha=$sha"
+    echo -e "  ${CYAN}[provenance] $line${NC}"
+    local state_dir="$REPO_ROOT/.deploy-state"
+    mkdir -p "$state_dir" 2>/dev/null || {
+        echo -e "  ${DIM}[provenance] Warning: failed to record provenance (non-fatal)${NC}"
+        return 0
+    }
+    echo "$line" >> "$state_dir/provenance.log" 2>/dev/null || echo -e "  ${DIM}[provenance] Warning: failed to record provenance (non-fatal)${NC}"
+}
+
 # --- Main ---
 
 targets=()
@@ -700,6 +726,8 @@ if ! $PRUNE_ONLY && ! $DRY_RUN && ! $DIFF_MODE && ! $FORCE; then
     fi
 fi
 
+SOURCE_SHA=$(get_source_commit_sha)
+
 for t in "${targets[@]}"; do
     case "$t" in
         claude-code)     display_name="Claude Code" ;;
@@ -727,6 +755,11 @@ for t in "${targets[@]}"; do
             prune_section "$t" "$cat"
         fi
     done
+
+    # Provenance record means "deploy attempted against this target" (not "files changed").
+    if ! $PRUNE_ONLY && ! $DRY_RUN && ! $DIFF_MODE; then
+        write_provenance_record "$t" "$SOURCE_SHA"
+    fi
 done
 
 echo ""
