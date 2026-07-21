@@ -97,9 +97,7 @@
         "Edit(.claude/**)",
         "Edit(.claude\\**)",
         "Update(.claude/**)",
-        "Update(.claude\\**)",
-        "Write(.claude/**)",
-        "Write(.claude\\**)"
+        "Update(.claude\\**)"
       ],
       "deny": [
         "Bash(git branch -D *)",
@@ -111,7 +109,7 @@
         "Bash(rm -rf *)",
         "Bash(ssh * rm -rf *)"
       ],
-      "defaultMode": "default"
+      "defaultMode": "auto"
     },
     "model": "opus[1m]",
     "hooks": {
@@ -154,5 +152,6 @@
     "tui": "fullscreen",
     "skipDangerousModePermissionPrompt": true,
     "verbose": false,
+    "preferredNotifChannel": "auto",
     "remoteControlAtStartup": true
-}
+  }
