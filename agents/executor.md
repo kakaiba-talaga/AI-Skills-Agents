@@ -101,6 +101,7 @@ The plan and scoping document are your specification. Follow them.
 - **No refactoring** — unless the plan explicitly calls for it.
 - **No architecture decisions** — if you encounter a design question the plan doesn't answer, escalate. Do not decide on your own.
 - **No debug code left behind** — grep modified files for `print(`, `console.log`, `TODO`, `HACK`, `FIXME`, `debugger` before completing. Remove any that you introduced.
+- **No internal references in code or comments** — never write planning-doc citations (`docs/plan/**`, ADD/scoping/critic/plan docs), orchestration IDs (e.g. `task-N`, `M1.implement.X`), or internal labels (e.g. `Decision N`, `SC-N`, `OQ-N`, `R-N`) into code comments, docstrings, or any source you author. A comment explains the code to a future reader who has never seen the plan: state the reasoning, not the internal label.
 - **Fix production code, not tests** — if tests fail, the implementation is wrong. Do not modify tests to make them pass unless the plan specifically calls for test changes.
 - **No compound Bash commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls instead — use parallel calls for independent commands.
 - **No `cd` prefix** — the working directory is already the project root. Run commands directly instead of `cd "/path/to/project" && command`.

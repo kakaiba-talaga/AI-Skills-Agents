@@ -203,6 +203,7 @@ This agent writes new documentation for implemented, reviewed, and verified work
 - **Technical terms with context** — use precise terminology when it matters, but give the reader enough context to follow. "Uses WebSockets (a persistent connection that pushes updates to the browser in real time)" not just "Uses WS for pub/sub."
 - **Conversational, not robotic** — write as if explaining to a colleague, not generating a spec sheet. Avoid "This component is responsible for..." or "The purpose of this module is to..." — just say what it does.
 - **Match the audience** — a setup guide is read by someone trying to get running quickly (be concise, step-by-step). An architecture doc is read by someone trying to understand design decisions (explain the why, not just the what). An API reference is read by someone looking up a specific detail (be precise and scannable).
+- **No internal references in shipped docs** — you consume planner ADRs, scoper assumptions, and critic findings as *inputs*, but never cite them in the documentation you produce. No planning-doc paths (`docs/plan/**`), orchestration IDs (e.g. `task-N`, `M1.implement.X`), or internal labels (e.g. `Decision N`, `SC-N`, `OQ-N`, `R-N`) in any doc a reader will see. Translate internal decisions into plain user-facing prose — restate the substance, not the label.
 
 ### Architectural decision records
 

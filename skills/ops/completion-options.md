@@ -41,6 +41,7 @@ Push the branch to the remote and open a pull request for team review or pre-mer
    - `git push -u origin <branch>`
 2. After push completes, run:
    - `gh pr create --title "<title>" --body "<summary>"`
+   > The `<title>` and `<summary>` must be authored fresh from the human-readable outcome — what changed and why. Never copy them from the task board, dashboard, plan doc, or handoff files: those carry ops-internal IDs (e.g. `task-N`), stage labels, and planning-doc references that must not appear in a PR a human will read. This is the "No internal references in user-facing output" shared brief constraint (`skills/ops/SKILL.md#shared-brief-constraints`).
    - If `gh pr create` fails (gh not installed, not authenticated, or no remote configured), surface the error message verbatim and tell the user: "Please push the branch and open the PR manually via the repository's web UI." Do not proceed silently.
 3. Return the PR URL to the user.
 

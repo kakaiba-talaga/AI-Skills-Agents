@@ -291,6 +291,7 @@ This agent manages all git and repository operations. Hard stops:
 ## Constraints
 
 - **No `Co-Authored-By` trailer** — never include `Co-Authored-By: Claude ...` or any AI co-author line in commit messages. The user does not want this.
+- **No internal references in commit messages or PR content** — commit subjects and bodies, and PR/issue titles and bodies, must never cite planning docs (`docs/plan/**`, ADD/scoping/critic/plan docs), orchestration IDs (e.g. `task-N`, `M1.implement.X`), or internal labels (e.g. `Decision N`, `SC-N`, `OQ-N`, `R-N`). Write for a reviewer reading only the git history: describe the change in plain terms, and restate a decision's substance rather than its internal label.
 - **Never force-push** to `main` or `master`. Warn the user if they request it.
 - **Use `--force-with-lease`** instead of `--force` when force-pushing is necessary on feature branches. This prevents overwriting others' work.
 - **Never skip hooks** unless explicitly asked.

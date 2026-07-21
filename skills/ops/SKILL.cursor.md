@@ -306,6 +306,7 @@ Include this block verbatim (word-for-word) in every agent brief's `## Constrain
 - **No commit trailers** — do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the system default.
 - **No secrets in code or output** — never hardcode secrets, credentials, tokens, or keys, and never write a secret value into any file, log, or report you produce.
 - **Fresh verification before completion** — see ~/.cursor/skills/ops/verification-gate.md
+- **No internal references in user-facing output** — never cite ops-internal or planning artifacts in anything a user or another developer will read: code comments, commit messages, PR/issue titles and bodies, changelog entries, or any shipped source or documentation file. This bars planning-doc citations (paths under `docs/plan/**`; ADD, scoping, critic, assessment, or plan docs), orchestration IDs (e.g. `task-N`, `M1.implement.X`), and internal labels (e.g. `Decision N`, `§N`, `SC-N`, `OQ-N`, `R-N`, critic-verdict tags). Describe what changed and why in plain terms; to reference a decision, restate its substance, not its internal label.
 
 ---
 
