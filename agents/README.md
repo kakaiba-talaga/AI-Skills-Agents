@@ -16,7 +16,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [corpus-search](corpus-search.md) | opus | Terminal-native multi-hop corpus search for free-text evidence, file location, claim verification, and reference tracing — every finding cites path:line. Dispatched by `/ops` Phase 2.5c and standalone for investigative tasks. |
 | [critic](critic.md) | opus | Final quality gate. Reviews plans and scoping documents for flawed assumptions, gaps, ambiguities, and feasibility issues. Verdicts: ACCEPT / ACCEPT WITH RESERVATIONS / REVISE / REJECT. |
 | [cross-memory](cross-memory.md) | opus | Handles three intents: synthesize curated context blocks from the cross-memory store (User preferences / Project context / Harness rules / Notes); audit the store for staleness, duplicates, contradictions, and redaction misses; distill durable memories from project artifacts (git history, plan docs, handoffs, optional transcripts). Dispatched by `/ops`, `/kickoff`, and peer agents for `synthesize`; by `/cross-memory audit` for `audit`; by `/cross-memory reflect` for `distill`. |
-| [db](db.md) | sonnet | Performs database operations — schema migrations, queries, and backup/restore — enforcing backup-before-mutate and a permission-layer-enforced write gate on mutating commands. Composes with `ssh-executor` for databases reachable only through a bastion or tunnel. Escalates to opus proactively for destructive, schema-changing, or production operations rather than waiting for repeated failures. |
+| [db](db.md) | sonnet | Performs database operations — schema migrations, queries, and backup/restore — enforcing backup-before-mutate and a write gate on mutating commands whose primary control is the agent's own STOP-before-mutate discipline, not the permission layer (which reinforces it only on Claude Code). Composes with `ssh-executor` for databases reachable only through a bastion or tunnel. Escalates to opus proactively for destructive, schema-changing, or production operations rather than waiting for repeated failures. |
 | [debugger](debugger.md) | opus | Runtime bug investigation — hypothesis-driven root cause analysis, circuit breaker, similar pattern scan, regression verification. For build errors, see `debugger-build`. Available at any pipeline stage. |
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
 | [docs-lookup](docs-lookup.md) | opus | Fetches current third-party library and harness documentation from the open web and returns a code-ready snippet with a version-provenance stamp and one authoritative citation. Fetch-only and inline; a best-effort approximation of a documentation index, not a replacement for one. Dispatched by `/ops` Phase 2.5d or standalone. |
@@ -24,7 +24,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [executor](executor.md) | sonnet | Implements code changes precisely as specified in validated plans. Works through tasks in order, verifies against acceptance criteria, and flags blockers. |
 | [generalist](generalist.md) | sonnet | Disciplined in-domain catch-all for cross-lane residual work that no existing specialist owns — defers to the correct specialist first, then to the executor for anything beyond a minor, single-file edit. Replaces reflexive use of the harness `general-purpose`/`claude` agents for in-domain work. No web tools; web-dependent work routes to `web-research`. |
 | [git-master](git-master.md) | sonnet | Utility agent for git operations — branching, commits, PRs, merges, conflict resolution, releases, repo hygiene, and work-in-progress pause/resume. Generates commit messages standalone when `/commit-message` is unavailable. Available at any pipeline stage. |
-| [infra](infra.md) | sonnet | Provider-agnostic infrastructure agent for Infrastructure-as-Code, cloud CLIs, and Kubernetes — validates, plans, and converges Terraform/Pulumi/CloudFormation/CDK/Ansible stacks, `aws`/`gcloud`/`az` resources, and `kubectl`/`helm` manifests. Applies or destroys only behind a human-approved verbatim plan, gated primarily by the permission layer. Composes with `ssh-executor` for host-level access within a provisioned stack; escalates to opus proactively for mutating or production-targeting operations. |
+| [infra](infra.md) | sonnet | Provider-agnostic infrastructure agent for Infrastructure-as-Code, cloud CLIs, and Kubernetes — validates, plans, and converges Terraform/Pulumi/CloudFormation/CDK/Ansible stacks, `aws`/`gcloud`/`az` resources, and `kubectl`/`helm` manifests. Applies or destroys only behind a human-approved verbatim plan, gated primarily by the agent's own STOP-before-mutate discipline, not the permission layer (which reinforces it only on Claude Code). Composes with `ssh-executor` for host-level access within a provisioned stack; escalates to opus proactively for mutating or production-targeting operations. |
 | [interviewer](interviewer.md) | opus | Conducts structured Socratic interviews to crystallize ambiguous requirements. Identifies ambiguity dimensions, scores them 0.0–1.0, asks one targeted question at a time, and produces a requirements document. Dispatched before the planner when specs are vague. |
 | [planner](planner.md) | opus | Breaks specifications and requirements into structured implementation plans (Milestones > Stages > Tasks > Subtasks). Identifies dependencies, sequencing, and risks. Writes in clear, natural language. Does not estimate hours. |
 | [preflight](preflight.md) | sonnet | Validates project environment readiness — runtime, dependencies, git, config files, disk space. Returns a structured pass/fail/warn checklist. Runs before any agent dispatch. |
@@ -384,7 +384,7 @@ These agents operate independently of the pipeline and can be invoked at any sta
 
 - Performs schema migrations, queries, and backup/restore, always backing up before a mutating operation
 - Every migration ships as a forward/rollback pair, transaction-wrapped where the engine supports it
-- Write gate enforced primarily by the permission layer — mutating `psql`/`mysql`/`mongosh` commands and migrations are not auto-allowed and always prompt; the agent's own STOP-before-mutate is the backstop
+- Write gate whose primary control is the agent's own STOP-before-mutate discipline, portable across harnesses; on Claude Code, the permission layer additionally reinforces it since mutating `psql`/`mysql`/`mongosh` commands and migrations are not auto-allowed and always prompt
 - Never allow-lists a mutating command pattern
 - Composes with `ssh-executor` for databases reachable only through a bastion or tunnel — db decides the command and clears its write gate, ssh-executor runs it on the host with network access
 - Escalates to opus proactively (before the standard 3rd-attempt ladder) for destructive, schema-changing, or production-database operations
@@ -398,6 +398,15 @@ These agents operate independently of the pipeline and can be invoked at any sta
 - Similar pattern scan — greps for the same bug pattern elsewhere in the codebase after fixing
 - Minimal, targeted fixes with regression verification and regression test creation
 - Explicit scope boundaries — does not refactor, redesign, or optimize; hands off to the appropriate agent
+
+**Docs Lookup:**
+
+- Fetch-only agent (opus) that retrieves current third-party library documentation from the open web on demand, and secondarily harness (Claude Code/Cursor) documentation
+- Resolves a version from the brief, then a lockfile, then a manifest, before searching and fetching
+- Returns one code-ready snippet, a version-provenance stamp (resolved vs. fetched version, match status), and one authoritative citation per dispatch
+- Best-effort approximation of a documentation index, not a replacement for one — every lookup pays a live-fetch latency; no maintained crawl or ranking model behind it
+- Dispatched as the `/ops` Phase 2.5d advisory preflight, or standalone by name for a targeted "what's the current API for X" question
+- No file write, ever — holds no `Write`/`Edit`/`Bash` tools; every deliverable is inline in the response
 
 **Documentor:**
 
@@ -427,7 +436,7 @@ These agents operate independently of the pipeline and can be invoked at any sta
 
 - Provider-agnostic agent for Infrastructure-as-Code (Terraform, Pulumi, CloudFormation, CDK, Ansible), cloud CLIs (`aws`, `gcloud`, `az`), and Kubernetes (`kubectl`, `helm`) — one agent, not split per cloud
 - Operating spine: validate → plan/diff → human-gated apply → verify convergence (no-drift)
-- Destructive-operation gate enforced primarily by the permission layer — mutating commands are not auto-allowed and always prompt; the agent's own STOP-before-mutate is the backstop, not the primary control
+- Destructive-operation gate whose primary control is the agent's own STOP-before-mutate discipline, portable across harnesses; on Claude Code, the permission layer additionally reinforces it since mutating commands are not auto-allowed and always prompt
 - Never allow-lists a mutating command pattern, even for a fully autonomous run
 - Composes with `ssh-executor` — infra owns the cloud/cluster-API domain, ssh-executor owns host-level transport
 - Escalates to opus proactively (before the standard 3rd-attempt ladder) for mutating, multi-resource, or production-targeting operations
@@ -513,6 +522,10 @@ No outbound handoffs. Corpus-search returns citable evidence (path:line snippets
 | Root cause requires design change | **planner** (scope the change) or **executor** (if small and well-defined) |
 | Cannot reproduce | Back to **user** for additional context or reproduction steps |
 | Root cause in a dependency | No handoff — documents upstream issue and workaround |
+
+**Docs Lookup:**
+
+No outbound handoffs. Docs-lookup returns a citable result (code-ready snippet, version-provenance block, one citation) to the caller — the executor, documentor, or `/ops` orchestrator decides what to do with it.
 
 **Documentor** (when invoked outside the pipeline):
 
@@ -629,8 +642,8 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Glob` | all agents | Find files by pattern |
 | `Grep` | all agents | Search file contents |
 | `Agent` | ops | Spawn sub-agents |
-| `WebSearch` | planner, project-scoper, web-research | Search the web for context |
-| `WebFetch` | planner, project-scoper, web-research | Fetch web page content |
+| `WebSearch` | docs-lookup, planner, project-scoper, web-research | Search the web for context |
+| `WebFetch` | docs-lookup, planner, project-scoper, web-research | Fetch web page content |
 | `NotebookEdit` | executor | Edit Jupyter notebooks |
 | `TodoWrite` | any agent | Legacy todo list |
 | `Skill` | ops | Invoke skills (`/ralph-loop`, `/doc-sync`, `/code-review`, etc.) |

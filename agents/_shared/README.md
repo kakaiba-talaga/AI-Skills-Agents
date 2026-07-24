@@ -32,7 +32,7 @@ Bump the **module version** in this README when adding snippets or making breaki
 
 ## Agents that include `brief-format-snippet.md`
 
-These 17 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format-snippet.md` from `## Brief Format` (grep `brief-format-snippet` to audit):
+These 19 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format-snippet.md` from `## Brief Format` (grep `brief-format-snippet` to audit):
 
 | Agent | Agent-specific overrides (examples) |
 | :--- | :--- |
@@ -42,12 +42,14 @@ These 17 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format
 | `db.md` | File-class allowlist scoped to migration files + backup manifests; missing AC refuses |
 | `debugger.md` | Custom required/optional sections; missing `## Task` refuse |
 | `debugger-build.md` | Build-error lane; inherits shared defaults via pointer |
+| `docs-lookup.md` | Universal prose brief; no JSON-fenced format; no Edit/Write tools; mode ignored; missing AC proceeds |
 | `documentor.md` | `docs` file-class; missing AC proceeds |
 | `executor.md` | TDD mode; file-class allowlist; strict missing AC |
 | `generalist.md` | Defer-to-specialist gate + minor/small-edit boundary evaluated before Brief Format applies; missing AC refuses; file-class allowlist excludes agent-contract/plan-doc/docs |
 | `git-master.md` | Git operations scope |
 | `infra.md` | Required provider/environment fields; missing AC refuses; file-class allowlist scoped to IaC/manifest patterns |
 | `project-scoper.md` | `plan-doc` file-class; mode ignored |
+| `scout.md` | Missing AC optional (deliberate override); JSON-fenced brief is a lane signal to defer to `corpus-search`/`code-intel`; read-only, no write tools |
 | `security-reviewer.md` | Security-weighted Project Knowledge |
 | `ssh-executor.md` | Deploy JSON brief + preamble PK |
 | `verifier.md` | AC source priority; TDD commit-order check |
