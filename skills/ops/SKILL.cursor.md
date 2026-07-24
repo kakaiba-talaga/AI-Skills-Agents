@@ -29,12 +29,14 @@ Parse arguments as follows:
 
   1. **Phase 2.5b advisory preflight** (`phase-preflights.md`) — *silent skip-eligible at ceiling*: the governor may skip the code-intel preflight without surfacing it to the user (advisory; never blocks a dispatch).
   2. **Phase 2.5c advisory preflight** (`phase-preflights.md`) — *silent skip-eligible at ceiling*: same behavior with the corpus-search preflight.
-  3. **At-ceiling new-dispatch escalation** (`phase-dispatch.md` **Budget governor (model-escalation consultation)** sub-step and **Step 5b**) — *escalates to the user at ceiling*: covers both the model-escalation consultation (Step 4) and the re-plan planner/critic re-dispatch consultation (Step 5b); both are instances of the same at-ceiling semantics and the registry names this site once.
-  4. **Critique-tier consultation** (`plan-validation.md`) — *informs the already-visible tier decision*: at ceiling, the governor surfaces the Tier-3 cost trade-off as part of the always-visible tier decision; the tier call and its visibility rules are unchanged.
+  3. **Phase 2.5d advisory preflight** (`phase-preflights.md`) — *silent skip-eligible at ceiling*: same behavior with the docs-lookup preflight.
+  4. **At-ceiling new-dispatch escalation** (`phase-dispatch.md` **Budget governor (model-escalation consultation)** sub-step and **Step 5b**) — *escalates to the user at ceiling*: covers both the model-escalation consultation (Step 4) and the re-plan planner/critic re-dispatch consultation (Step 5b); both are instances of the same at-ceiling semantics and the registry names this site once.
+  5. **Critique-tier consultation** (`plan-validation.md`) — *informs the already-visible tier decision*: at ceiling, the governor surfaces the Tier-3 cost trade-off as part of the always-visible tier decision; the tier call and its visibility rules are unchanged.
 - `--brainstorm` — opt-in pre-planning gate: run interviewer + architect and require design approval before planner.
 - `--dispatch-log` — opt-in audit trail: append each dispatch and framework-guided direct-tool choice to `docs/ops-dispatch-log.md` (off by default).
 - `--code-intel` / `--code-intel=off` — Phase 2.5b: fire `code-intel` on every code-modifying task, or disable for the run.
 - `--corpus-search` / `--corpus-search=off` — Phase 2.5c: fire `corpus-search` on every eligible task, or disable for the run.
+- `--docs-lookup` / `--docs-lookup=off` — Phase 2.5d: fire `docs-lookup` on every eligible `executor` task, or disable for the run.
 - `--memory-inject=off|auto|always` — control `## Project Knowledge` injection into agent briefs (default `auto`).
 - `--security-review=off|always` — controls `[security-reviewer]` stage auto-fire. Absent: the stage fires when the task carries a security content signal or `change-analyzer` returns `security-review: run` on the post-executor diff. `off`: never auto-fire `security-reviewer` this run. `always`: auto-fire `security-reviewer` on every stage transition. Registered here alongside the other global run flags rather than a phase sub-file because it gates a pipeline stage, not a Phase-2.5 preflight.
 - `--no-adaptation-memory` — skip the Phase 4 capture step that writes this run's adaptations to the durable cross-run ledger. The ledger captures by default (gated by the write-threshold — a run with no actionable adaptation writes nothing); this flag is the opt-out, suppressing the capture for the run.
@@ -208,7 +210,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/phase-intake.md` for Phase 1 intake (starting-point table, trivial dispatch including state file creation (mandatory), save subcommand, brainstorm gate, plan persistence, Phase 1a, Phase 1.5, Phase 2 task board creation, and Agent Assignment Rules). If the file is missing, stop — cannot proceed without intake procedures.
 
-> **Reference:** You MUST Read `~/.cursor/skills/ops/phase-preflights.md` for the Phase 2.5b/2.5c advisory preflights (checks run before dispatch). If `phase-preflights.md` is missing, skip the advisory preflights — they are advisory and never block a dispatch. You MUST Read `~/.cursor/skills/ops/phase-dispatch.md` for Phase 2.5 preflight validation and the Phase 3 dispatch loop (including self-contained brief (mandatory) `description_ref` resolution, memory injection, and Agent Dispatch Procedure). If `phase-dispatch.md` is missing, stop.
+> **Reference:** You MUST Read `~/.cursor/skills/ops/phase-preflights.md` for the Phase 2.5b/2.5c/2.5d advisory preflights (checks run before dispatch). If `phase-preflights.md` is missing, skip the advisory preflights — they are advisory and never block a dispatch. You MUST Read `~/.cursor/skills/ops/phase-dispatch.md` for Phase 2.5 preflight validation and the Phase 3 dispatch loop (including self-contained brief (mandatory) `description_ref` resolution, memory injection, and Agent Dispatch Procedure). If `phase-dispatch.md` is missing, stop.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/phase-completion.md` for Phase 4 completion steps/process and Status Dashboard rendering. If the file is missing, proceed using Non-negotiables #3, #4, #7, and #8 for minimum completion behavior.
 
@@ -218,6 +220,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 | :--- | :--- | :--- |
 | 1 / 1a / 1.5 / 2 | `phase-intake.md` | Plan, branch, task board (state file verified on disk at board creation) |
 | 2.5b / 2.5c | `phase-preflights.md` | Advisory preflight (code-intel, corpus-search) |
+| 2.5d | `phase-preflights.md` | Advisory preflight (docs-lookup), runs last |
 | 2.5 | `phase-dispatch.md` | Preflight validation (environment check) |
 | 3 | `phase-dispatch.md` | Dispatch loop (self-contained brief enforced before each spawn) |
 | 4 | `phase-completion.md` | Deliverables, timing, cleanup, completion menu |
@@ -228,7 +231,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 | :--- | :--- |
 | `phase-intake.md` | After triage routes to `pipeline` or `trivial` / `save` |
 | `phase-dispatch.md` | Task board ready; before and during dispatch |
-| `phase-preflights.md` | At the Phase 2.5 entry; before a Phase 3 Step 2 dispatch (2.5b/2.5c advisory preflights) |
+| `phase-preflights.md` | At the Phase 2.5 entry; before a Phase 3 Step 2 dispatch (2.5b/2.5c/2.5d advisory preflights) |
 | `phase-completion.md` | All tasks completed; `status` dashboard |
 | `state-schema.md` | Any state file read/write (MUST) |
 | `handoffs.md` | Writing or reading handoffs (MUST) |
@@ -292,6 +295,8 @@ at both the RED step and the GREEN step.
 ```
 
 The executor reads `skills/ops/tdd-discipline.md` for the full discipline. The verifier adds a TDD-discipline check (commit-ordering assertion) when this section is present.
+
+**Phase 2.5d attachment (formal section, inline-content variant).** When Phase 2.5d fires, the team manager appends a `Library Docs Context:` block directly to the executor's brief — self-contained inline text, documented in `phase-preflights.md`, the same way `Code Intelligence Context:` is appended after a Phase 2.5b dispatch. This attachment is the `## Library Docs Context` optional section registered in `skills/ops/brief-contract.md`, alongside `## Code Intelligence Context` and `## Corpus Search Context`. Its shape diverges from those two siblings only in how the content arrives: `docs-lookup` has no JSON-fenced brief format and writes no disk report, so its section carries the snippet, version-provenance block, and citation inline in the brief text rather than a report-path pointer.
 
 ### Shared Brief Constraints {#shared-brief-constraints}
 

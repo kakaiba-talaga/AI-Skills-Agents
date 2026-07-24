@@ -20,7 +20,7 @@ Initially, these should work on Claude Code and Cursor. Other AI development too
 
 The project is organized into the following directories:
 
-- `/agents` — 27 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
+- `/agents` — 28 agents that can be used standalone or dispatched by skills. Each has YAML frontmatter (`name`, `model`, `description`, `tools`) and a markdown body.
 - `/skills` — 13 multi-file skills. Each skill is a directory with a `SKILL.md` entry point and companion files (helper docs, templates, etc.).
 - `/hooks` — Event hooks (e.g., post-compaction context re-injection, PostToolUse security pattern warnings).
 - `/docs` — Assessment and portability guide.
@@ -123,6 +123,7 @@ Before deleting, the script prints the full orphan list and prompts: `Delete N o
 | db | Yes | Yes | Database operations (migrations, queries, backup/restore); dispatched by `/ops` or standalone |
 | debugger | Yes | Yes | |
 | debugger-build | Yes | Yes | |
+| docs-lookup | Yes | Yes | Fetches current library/harness documentation from the open web with a version-provenance stamp and one citation; dispatched by `/ops` Phase 2.5d (advisory) or standalone |
 | documentor | Yes | Yes | |
 | executor | Yes | Yes | |
 | generalist | Yes | Yes | In-domain catch-all for cross-lane residual work no specialist owns; dispatched by `/ops` or standalone |

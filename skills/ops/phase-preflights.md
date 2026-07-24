@@ -1,8 +1,8 @@
-# Phase 2.5b / 2.5c advisory preflights
+# Phase 2.5b / 2.5c / 2.5d advisory preflights
 
 > **Parent:** `~/.claude/skills/ops/SKILL.md` — Non-negotiables, Agent Briefing Format, and Handoff Documents live in the hub.
 
-These two advisory preflights run before a Phase 3 Step 2 dispatch and enrich the dispatched agent's brief without ever blocking it. **Phase 2.5b** dispatches `code-intel` (impact analysis) before a code-modifying executor; **Phase 2.5c** dispatches `corpus-search` (multi-hop textual evidence) before an `executor`, `debugger`, or `documentor`. The trigger predicate, query-type set, and JSON brief shape differ per phase and are set out in each phase's section. Four sub-steps are common to both and are written once in **Shared preflight blocks** at the end — each phase references them.
+These three advisory preflights run before a Phase 3 Step 2 dispatch and enrich the dispatched agent's brief without ever blocking it. **Phase 2.5b** dispatches `code-intel` (impact analysis) before a code-modifying executor; **Phase 2.5c** dispatches `corpus-search` (multi-hop textual evidence) before an `executor`, `debugger`, or `documentor`; **Phase 2.5d** dispatches `docs-lookup` (current third-party library or harness documentation) before an `executor`, and always runs last in the sequence for a given task. The trigger predicate, query-type set, and brief shape differ per phase and are set out in each phase's section. Several sub-steps are common to 2.5b and 2.5c and are written once in **Shared preflight blocks** at the end — each of those two phases references them. Phase 2.5d reuses only the parts of those shared blocks its own section explicitly points to, and diverges from the rest: it dispatches a prose-only agent that writes no disk report and returns no JSON `status` field, so its predicate, sequencing, and refusal/yield detection are shaped differently — see the Phase 2.5d section for each divergence.
 
 ## Phase 2.5b — Code Intelligence Preflight (advisory)
 
@@ -262,6 +262,84 @@ When dual preflight ran, the path token reflects `trace_reference-<slug>.md` (wh
 ### Cleanup pointer
 
 Phase 4 step 9 cleans `.corpus-search/runs/<run-id>/` (ephemeral, this run only). Unlike code-intel, corpus-search has **no persistent index** — only run-scoped report directories are deleted. **Do not delete** the parent `.corpus-search/` directory or `docs/corpus-search/` (durable human opt-in reports).
+
+## Phase 2.5d — Library Docs Preflight (advisory)
+
+Before an `executor` dispatch in Phase 3 Step 2, the team manager may dispatch a **docs-lookup** agent to fetch current third-party library or harness documentation. This phase is *advisory* — its output enriches the executor's brief but never blocks it.
+
+### Trigger predicate
+
+Phase 2.5d is a deliberate divergence from the 2.5b/2.5c predicate shape, not a mirror of it. Where 2.5b and 2.5c keep an unconditional keyword/structural floor and let their own information-need hypothesis only *add* dispatches on top of it, **Phase 2.5d has no keyword/structural floor at all** — it fires **solely** on a categorical information-need hypothesis: *"this task writes code against a named library, and I cannot confirm its current API or usage without a live lookup."* This is a deliberate, safer choice, not an oversight: a library-name floor would force resolving the dependency manifest at predicate time — before the task is even dispatched — and that risks a private or internal library name leaking into the trigger itself. Every Phase 2.5d fire is, by construction, a hypothesis-added dispatch.
+
+**Eligible consumer set: `executor` only.** Phase 2.5b fires for any code-modifying task and Phase 2.5c extends to `debugger` and `documentor` as well; Phase 2.5d does not extend beyond `executor`.
+
+**Dedup invariant (at most once per task/stage).** For a single task/stage, `docs-lookup` fires **at most once** — the same at-most-once invariant 2.5b and 2.5c apply to `code-intel` and `corpus-search`.
+
+### Budget governor (preflight consultation)
+
+See **Shared preflight blocks → Budget governor**, with `docs-lookup` as the dispatched agent and the executor brief as the enriched brief.
+
+### Flags
+
+- `--docs-lookup` — alias for `--docs-lookup=always`. Fires `docs-lookup` on every eligible `executor` task regardless of the hypothesis predicate.
+- `--docs-lookup=off` — disables Phase 2.5d for the entire run.
+
+### Dispatch trigger point
+
+The team manager dispatches `docs-lookup` during **Phase 3 Step 2 (Batch parallel work), after any Phase 2.5b/2.5c dispatch on the same task, before composing the executor brief**. Phase 2.5d always runs **last** in the preflight sequence for a given task. Unlike 2.5b/2.5c, Phase 2.5d adds **no state-cache-invalidation step** — that step exists for 2.5b/2.5c only because each writes a disk report the consumer subsequently reads; `docs-lookup` writes nothing to disk, so there is nothing to invalidate before composing the brief.
+
+### Dispatch contract — what the team manager passes in
+
+Compose the **prose universal brief** — the same shape `web-research` and `scout` use, not the JSON-fenced brief 2.5b/2.5c pass to `code-intel`/`corpus-search`. Carry the library or harness name, an optional version, an optional topic, and `source` (`library` or `harness`) in `## Task` and, when a tighter budget is wanted, `## Constraints`. There is **no JSON-fenced brief** for this dispatch and **no `output_mode` field** — `docs-lookup` has no structured-brief format at all and returns inline unconditionally, so there is nothing to set.
+
+Convey the auto-fire cap as a prose override inside `## Constraints`: a single authoritative fetch, wall-clock capped at roughly 30 to 45 seconds. This is tighter than `docs-lookup`'s own standalone default (~15 fetches / 5 hops / 120 seconds soft wall-clock) and is always legal regardless of the general 3x-of-default override ceiling, because a tighter cap is permitted unconditionally. Operating under this cap trades yield for speed — a single-fetch, sub-45-second budget will frequently return nothing when the topic genuinely needs more than one candidate page — and that trade is acceptable here because Phase 2.5d is advisory and never-blocking.
+
+> **Literal agent-brief text — illustrative shape, keep fenced.** The block below is an example of the prose appended to the `docs-lookup` prompt string, not a user-facing UI output. Do not unfence it.
+
+```text
+## Task
+Fetch the current usage pattern for `<library-or-harness-name>` (source: library),
+version <version-if-known>, on the topic "<topic>".
+
+## Constraints
+[Shared Brief Constraints — see skills/ops/SKILL.md#shared-brief-constraints]
+- Auto-fire cap: a single authoritative fetch, wall-clock capped at roughly 30-45 seconds.
+```
+
+### Dispatch contract — what docs-lookup returns
+
+`docs-lookup` returns prose — a code-ready snippet, the mandatory version-provenance block (`resolved_version`, `doc_version_fetched`, `version_match`, `source`, `accessed`), and one citation — or a plain statement that no reliable documentation was found, or an explicit refusal (a private/internal target, a malformed request, or an ambiguous library name). Nothing is written to disk: there is no `.docs-lookup/runs/**` artifact and no corresponding Phase 4 cleanup pointer.
+
+### No-yield / refusal detection (inline, not `status`)
+
+`docs-lookup` has no JSON-fenced brief format and returns no JSON `status` field, so the Shared preflight blocks' refusal-handling language (which keys off `status: refused`) does not apply literally here. The team manager instead reads the response text directly: treat **"docs-lookup returned no usable snippet, or stated a refusal in prose"** as **no-yield** — attach nothing to the executor brief and proceed. This carries over the same advisory, never-blocking behavior 2.5b/2.5c apply on refusal, in spirit, without a structured signal to key off.
+
+### Yield record (post-return annotation)
+
+After the dispatch returns, record one entry in the run-level `adaptations` array with `type: preflight-yield` and one of the three categorical yield values defined in **Shared preflight blocks → Yield record** (`changed-brief`, `confirmed`, `no-yield`). Key the answering field by **`source`** — `docs-lookup`'s own field, `library` or `harness` — rather than an invented `query_type` enum; `docs-lookup` has no query-type field to report.
+
+### Dispatch log entry
+
+See **Shared preflight blocks → Dispatch log entry**, with `docs-lookup` as the agent.
+
+### Attaching to the executor brief
+
+After a successful Phase 2.5d dispatch, append a `Library Docs Context:` block directly to the executor's brief as the `## Library Docs Context` optional section defined in `skills/ops/brief-contract.md` — the inline-content variant of that section, appended the same way `Code Intelligence Context:` is appended after Phase 2.5b, carrying the snippet and provenance in the brief itself rather than a path to a disk report:
+
+> **Literal agent-brief text — keep fenced.** The block below is the exact shape of text appended to the executor's prompt string, not a user-facing UI output. Do not unfence it.
+
+```text
+Library Docs Context:
+  <the code-ready snippet returned by docs-lookup>
+
+  resolved_version:     <value>
+  doc_version_fetched:  <value>
+  version_match:        confirmed | unconfirmed | mismatch
+  source:                <the fetched URL>
+  accessed:              <ISO-8601 UTC access date>
+```
+
+The `version_match` value rides along verbatim so the executor sees any `mismatch` plainly.
 
 ## Shared preflight blocks
 

@@ -9,7 +9,7 @@ Agents include this file by pointer from their `## Brief Format` subsection. Pat
 Unless an agent's contract lists different required/optional sections:
 
 - **Required:** `## Task`, `## Scope`, `## Acceptance Criteria`, `## Constraints`
-- **Optional:** `## Context`, `## Mode`, `## Handoff Artifacts`, `## Code Intelligence Context`, `## Corpus Search Context`, `## Project Knowledge`
+- **Optional:** `## Context`, `## Mode`, `## Handoff Artifacts`, `## Code Intelligence Context`, `## Corpus Search Context`, `## Library Docs Context`, `## Project Knowledge`
 
 ## Project Knowledge precedence
 

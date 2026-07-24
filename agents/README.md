@@ -19,6 +19,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 | [db](db.md) | sonnet | Performs database operations — schema migrations, queries, and backup/restore — enforcing backup-before-mutate and a permission-layer-enforced write gate on mutating commands. Composes with `ssh-executor` for databases reachable only through a bastion or tunnel. Escalates to opus proactively for destructive, schema-changing, or production operations rather than waiting for repeated failures. |
 | [debugger](debugger.md) | opus | Runtime bug investigation — hypothesis-driven root cause analysis, circuit breaker, similar pattern scan, regression verification. For build errors, see `debugger-build`. Available at any pipeline stage. |
 | [debugger-build](debugger-build.md) | opus | Focused variant for build/compilation errors — import errors, type errors, dependency issues, config errors. Systematic fix with progress tracking. Use instead of `debugger` when the error type is known to be a build issue. |
+| [docs-lookup](docs-lookup.md) | opus | Fetches current third-party library and harness documentation from the open web and returns a code-ready snippet with a version-provenance stamp and one authoritative citation. Fetch-only and inline; a best-effort approximation of a documentation index, not a replacement for one. Dispatched by `/ops` Phase 2.5d or standalone. |
 | [documentor](documentor.md) | sonnet | Writes new documentation for implemented features, creates guides, documents architectural decisions, and updates project scoping after milestones. Writes in clear, natural language tailored to the audience. Delegates to `/doc-sync` for accuracy checks, or runs its own audit when the skill is unavailable. |
 | [executor](executor.md) | sonnet | Implements code changes precisely as specified in validated plans. Works through tasks in order, verifies against acceptance criteria, and flags blockers. |
 | [generalist](generalist.md) | sonnet | Disciplined in-domain catch-all for cross-lane residual work that no existing specialist owns — defers to the correct specialist first, then to the executor for anything beyond a minor, single-file edit. Replaces reflexive use of the harness `general-purpose`/`claude` agents for in-domain work. No web tools; web-dependent work routes to `web-research`. |
@@ -38,7 +39,7 @@ All agents support `help` — invoke any agent with the task `help` to see its q
 
 ### Model assignments
 
-Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, interviewer, planner, project-scoper, security-reviewer, web-research. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, db, documentor, executor, generalist, git-master, infra, preflight, rollback, scout, ssh-executor, verifier, work-verifier. No agent defaults to **fable**; it is reachable only as a guarded last-resort escalation rung (`opus → fable`) behind an explicit confirmation gate — see the ops model-escalation behavior.
+Agents that require deep reasoning, nuanced judgment, or complex analysis use **opus**: architect, code-intel, corpus-search, critic, cross-memory, debugger, debugger-build, docs-lookup, interviewer, planner, project-scoper, security-reviewer, web-research. Agents that follow structured instructions, execute plans, or perform well-scoped checks use **sonnet**: change-analyzer, code-reviewer, code-reviewer-diff, db, documentor, executor, generalist, git-master, infra, preflight, rollback, scout, ssh-executor, verifier, work-verifier. No agent defaults to **fable**; it is reachable only as a guarded last-resort escalation rung (`opus → fable`) behind an explicit confirmation gate — see the ops model-escalation behavior.
 
 `infra` and `db` additionally carry a per-agent proactive-opus escalation policy — triggered by mutating, destructive, multi-resource, or production-targeting operations, before the fleet's standard 3rd-failed-attempt ladder — that is distinct from every other sonnet agent listed above. See each agent's own Model Escalation Policy section (`agents/infra.md`, `agents/db.md`) for the exact trigger.
 
@@ -133,6 +134,16 @@ Agents are invoked automatically by Claude Code when a task matches their descri
 - _"ModuleNotFoundError when running pytest — debug-build it"_
 - _"Fix the type errors in the converter package"_
 - _"Dependency errors after upgrading — have debugger-build resolve them"_
+
+### Docs Lookup
+
+- _"What's the current constructor signature for `httpx.Client` on the version this project is pinned to?"_
+- _"Look up how to configure retry/backoff with `tenacity` and give me a code-ready snippet with a citation."_
+- _"Fetch the current `aws_s3_bucket` resource syntax for the Terraform provider version this repo uses."_
+
+Best-effort, not a pre-indexed documentation service — every lookup pays a live search-and-fetch, and coverage depends on whether a web search surfaces the authoritative page for the resolved version.
+
+On Claude Code, a caller may prefer the harness-native `claude-code-guide` agent over `docs-lookup` for questions about the Claude Code SDK or API itself — it's purpose-built for that documentation specifically.
 
 ### Documentor
 

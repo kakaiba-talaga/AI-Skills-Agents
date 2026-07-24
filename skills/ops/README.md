@@ -81,18 +81,27 @@ The team manager auto-detects which agent to assign based on task content:
 | :--- | :--- |
 | architect | Design exploration, architecture decision documents, trade-off evaluation |
 | change-analyzer | Classifying diffs and recommending pipeline stage skips |
+| code-intel | Indexing the project into a symbol graph and answering structural queries (callers, dependencies, impact, implementations, execution flow) — dispatched by Phase 2.5b (advisory) before an `executor` dispatch, or standalone |
 | code-reviewer | Reviewing code quality, auditing |
+| code-reviewer-diff | Standalone diff review when `/code-review` is unavailable — full diff-gathering, exclusion filters, cross-file impact analysis |
+| corpus-search | Multi-hop free-text evidence search, file location, claim verification, reference tracing — dispatched by Phase 2.5c (advisory) before an eligible task, or standalone |
 | critic | Reviewing plans, quality gates |
+| cross-memory | Synthesizing cross-memory context blocks, auditing the memory store for staleness/duplicates/contradictions, distilling durable memories from project artifacts |
+| db | Database operations — schema migrations, queries, backup/restore, enforcing backup-before-mutate |
 | debugger | Investigating bugs, diagnosing errors, unexpected behavior, test failures |
 | debugger-build | Build errors, import errors, type errors, dependency/compilation/config errors |
+| docs-lookup | Current-version documentation lookup for one named third-party library or harness — dispatched by Phase 2.5d (advisory) before an `executor` dispatch, or standalone |
 | documentor | Writing or updating documentation |
 | executor | Implementing, creating, modifying code |
+| generalist | Small, in-domain cross-lane work no existing specialist owns — single-file, minor edits only; defers to the matching specialist or the executor otherwise |
 | git-master | Git operations, branching, PRs |
+| infra | Infrastructure-as-Code, cloud CLI, and Kubernetes operations — validate, plan, converge behind a human-approved verbatim plan |
 | interviewer | Clarifying ambiguous requirements via structured follow-up questions |
 | planner | Breaking down work, designing |
 | preflight | Environment readiness checks (runtime, dependencies, git, disk space) |
 | project-scoper | Estimating effort, analyzing requirements |
 | rollback | Rolling back agent-produced changes after failures |
+| scout | Read-only reconnaissance for open, fuzzy repo questions — how something works, where something happens, whether a claim holds across the codebase |
 | security-reviewer | Security audits, vulnerability scanning, OWASP checks, auth review |
 | ssh-executor | Deploying to remote servers, SSH commands, file transfer, remote verification |
 | verifier | Validating acceptance criteria, testing |
@@ -128,6 +137,7 @@ The team manager auto-detects which agent to assign based on task content:
 | `--security-review=off\|always` | By default, the security review runs only when the change looks security-related; `off` disables it; `always` runs it on every stage. |
 | `--code-intel[=off]` | Phase 2.5b: fire `code-intel` on every code-modifying task (`--code-intel`) or disable it (`=off`) |
 | `--corpus-search[=off]` | Phase 2.5c: fire `corpus-search` on every eligible task or disable it (`=off`) |
+| `--docs-lookup[=off]` | Phase 2.5d: fire `docs-lookup` on every eligible `executor` task (`--docs-lookup`) or disable it (`=off`) |
 | `--memory-inject=off\|auto\|always` | Control `## Project Knowledge` injection into agent briefs (default `auto`) |
 | `--no-adaptation-memory` | Skip the Phase 4 capture that writes this run's adaptations to the durable cross-run ledger (capture is on by default, threshold-gated) |
 | `ralph` | Wrap workflow in a `/ralph-loop` for iterative metric-driven goals |
