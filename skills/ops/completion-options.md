@@ -14,6 +14,12 @@ At the end of a successful run, present a structured decision menu so the next s
 
 ---
 
+## Foreground dispatch
+
+Every git-master dispatch in this menu, Merge locally, Push and open PR, and Discard, runs in the foreground: each procedure consumes that dispatch's result in the step right after it fires. Merge locally confirms the merge landed at step 3; Push and open PR runs `gh pr create` at step 2, after the push completes; Discard confirms the branch deletion at step 3. A detached dispatch would let those steps run before the git operation finishes. The push case fails most visibly, since the PR command would target a ref not yet on the remote. This mirrors the canonical foreground list in `skills/ops/dispatch-policy.md`.
+
+---
+
 ## Option 1 — Merge locally
 
 Merge the feature branch into main using `--ff-only` to preserve linear history, then delete the local branch.
@@ -87,7 +93,7 @@ If `--worktree` was set during the run, clean up **only** worktrees that this ru
 3. For each entry in `worktrees_created`:
    a. Confirm the path on disk matches the recorded path exactly.
    b. Confirm the path does not appear in `git worktree list` output as a worktree that existed before this run (i.e., `added_at` is within this run's time window).
-   c. Only if both checks pass: `git worktree remove --force <path>`.
+   c. Only if both checks pass: `git worktree remove --force <path>` — this step runs on the quiescence guarantee established by the re-entrant guard immediately before step 9 in `skills/ops/phase-completion.md`, and does not re-derive it.
 4. If the state file has no `worktrees_created` entries, skip worktree cleanup entirely.
 5. Never remove a worktree that is not listed in the run's state file, regardless of name or path similarity.
 

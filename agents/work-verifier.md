@@ -32,8 +32,12 @@ If the task is `help` or asks what this agent can do, display the following refe
 ### Verdicts
   completed      All evidence shows work is done. Skip re-dispatch.
   partial        Some work done. Re-dispatch with context.
-  not-started    No evidence of work. Re-dispatch normally.
+  not-started    No evidence of work. Re-dispatch.
   broken         Files exist but content is wrong. Rollback first.
+
+  Every re-dispatch above is gated: the caller must confirm it no
+  longer holds the original agent's spawn. A spawn still held means
+  the agent is live and no re-dispatch occurs.
 
 ### Output format
   Per-deliverable verdict with check results and re-dispatch
@@ -217,9 +221,9 @@ After verification, the caller uses the per-deliverable verdicts to decide next 
 | Verdict | Caller action |
 | :--- | :--- |
 | **completed** | Mark the task done in the state file. Write any missing handoff document. |
-| **partial** | Re-dispatch the original agent with the re-dispatch context this agent provides. The re-dispatched agent continues from where the previous one left off. |
-| **not-started** | Re-dispatch the original agent normally with the original brief. |
-| **broken** | Dispatch the **rollback** agent to revert the broken output, then re-dispatch the original agent on a clean slate. |
+| **partial** | Re-dispatch the original agent with the re-dispatch context this agent provides, but only **after** the caller confirms it no longer holds the original agent's spawn; a spawn still held means the agent is live and no re-dispatch occurs. The re-dispatched agent continues from where the previous one left off. |
+| **not-started** | Re-dispatch the original agent normally with the original brief, but only **after** the caller confirms it no longer holds the original agent's spawn; a spawn still held means the agent is live and no re-dispatch occurs. |
+| **broken** | Dispatch the **rollback** agent to revert the broken output, then re-dispatch the original agent on a clean slate, but only **after** the caller confirms it no longer holds the original agent's spawn; a spawn still held means the agent is live and no re-dispatch occurs. |
 
 Receives work from:
 

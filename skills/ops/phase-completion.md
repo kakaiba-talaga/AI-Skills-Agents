@@ -10,9 +10,12 @@ When every task is `completed`:
 
 **Otherwise (multi-task run):** execute all 10 steps as specified below.
 
-1. **Confirm all agents have finished** — read the state file and verify no tasks are `"in_progress"`. If any agent is still running, wait for it to return before proceeding. Never report completion while agents are still active.
-2. **Verify deliverables exist on disk** — check that every deliverable task produced a real file. Read (or at minimum glob for) each expected artifact. If a deliverable file is missing or empty, the workflow is **not complete** — dispatch the appropriate agent to create it before proceeding. Never report completion based on chat output alone; the user should not have to ask "where is the document?" (Non-negotiable — see #4.)
-3. **Run a final verification pass** — if the work involved code changes, dispatch a **verifier** agent to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
+1. **Confirm all agents have finished** — read the state file and verify no tasks are `"in_progress"`. If any agent is still running, wait for it to return before proceeding — under detached dispatch this means waiting at a beat for outstanding completion notifications, not spinning in a busy loop, and not merely checking once and moving on. Never report completion while agents are still active.
+2. **Verify deliverables exist on disk** — check that every deliverable task produced a real file. Read (or at minimum glob for) each expected artifact. If a deliverable file is missing or empty, the workflow is **not complete** — dispatch the appropriate agent to create it before proceeding, and run that dispatch in the **foreground**: step 3 follows immediately with no check between them, so a still-running deliverable dispatch would leave step 3's verifier to run its final pass against an incomplete deliverable set and report a pass that isn't earned yet. Never report completion based on chat output alone; the user should not have to ask "where is the document?" (Non-negotiable — see #4.)
+3. **Run a final verification pass** — if the work involved code changes, dispatch a **verifier** agent in the **foreground** to run the full test suite against the combined changes, since this dispatch is a named foreground exception in `dispatch-policy.md` and the last correctness check before completion is reported. This catches integration issues that per-task verification may miss.
+
+> **Re-entrant guard, immediately before step 4:** re-run the zero-in-progress check from step 1 — read the state file again and verify no tasks are `"in_progress"`. Steps 2 and 3 dispatch agents of their own, so by this point the phase may have put new work in flight itself; step 4 must not proceed until that work has also returned.
+
 4. **Compute timing summary** — (Non-negotiable — see #3.) Read all task entries from the state file. Calculate:
    - **Total wall time** — from the first task's `started_at` to the last task's `completed_at`.
    - **Total estimated time** — sum of all `estimated_minutes`.
@@ -22,7 +25,7 @@ When every task is `completed`:
    - **Longest task** — flag the slowest task (useful for future optimization).
    - **Estimation accuracy** — overall ratio of actual to estimated. Feed significant variances into cross-run learning (e.g., "verification tasks in this project consistently take 2x the estimate").
 
-   > **Reference:** See `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the bullet points above.
+   > **Reference:** See `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time, background notification pickup). If the file is missing, proceed using the bullet points above.
 
    > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.
 
@@ -43,6 +46,9 @@ When every task is `completed`:
 
    **Hard ordering invariant:** the capture writes the ledger **before** this run's board file is deleted in step 9. There is no path in which the board is deleted before the ledger is written — the ledger derives entirely from the board's `adaptations` and `triage_confidence`, so a delete-first ordering would persist nothing. The `--no-adaptation-memory` flag skips this capture step entirely for the run.
 8. List all files changed across all agents.
+
+> **Re-entrant guard, immediately before step 9:** re-run the zero-in-progress check once more — read the state file and verify no tasks are `"in_progress"` before any deletion begins. This is the last point in the phase at which a zero-in-progress check is evaluable at all: step 9 deletes the very state file the check reads. Every step after it, including the completion-options menu in step 10 and the worktree removal it can reach, inherits this checkpoint's guarantee and cannot re-derive it — a downstream step trying to check for itself would be reading a file that no longer exists.
+
 9. **Clean up ephemeral (short-lived; this run only) temp files, handoffs, state, and advisory preflight run artifacts.**
 
    > **Run-id confirmation gate:** For each `<run-id>`-bearing path below, confirm the embedded `<run-id>` segment matches the active run's `run_id` field from the state file before issuing the `rm`. For `_tmp_*` (which carries no `<run-id>` segment), apply the no-bulk-delete rule: remove files one at a time. Never issue a directory-level or recursive delete for any path.
@@ -116,4 +122,4 @@ Health indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2
 
 The Timing section is mandatory in every dashboard display — see Non-negotiables #7. Show elapsed time for in-progress tasks and final duration for completed tasks. At completion, always include total wall time, per-stage totals, and the longest task.
 
-> **Reference:** See `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the dashboard template above.
+> **Reference:** See `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time, background notification pickup). If the file is missing, proceed using the dashboard template above.

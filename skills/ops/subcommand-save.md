@@ -131,6 +131,18 @@ Default is N. If the user says no or presses Enter without input, stop — the s
 
 **Step 8 — Invoke `/cross-memory reflect` as a nested skill.**
 
+Before invoking, check the board file's `tasks` array for any task with `status: "in_progress"`. This guard runs **before** the nested-skill call, and is independent of the `pending_nested_skill` check in step 7 above: that check tracks a previously-invoked nested skill still awaiting its own return path, while this one tracks the run's own in-flight agent dispatches under detached-by-default dispatch. Either condition can be true on its own, both at once, or neither.
+
+If one or more tasks are **`in_progress`** — meaning an agent dispatch from this run has not yet returned — do not invoke `/cross-memory reflect`. Skip rather than wait: reflecting over a run whose agents have not yet returned would distill durable facts from a partial corpus, before the outstanding work has had a chance to shape what those facts even are. Print the following line verbatim, substituting the count of in-flight tasks:
+
+```
+Save complete; reflect skipped because <N> task(s) are still in flight.
+```
+
+Stop. The user can invoke `/cross-memory reflect` manually once the in-flight task(s) return.
+
+If zero tasks are `in_progress`, proceed with the ritual below.
+
 Apply the standard write-before / clear-after ritual documented in SKILL.md Non-negotiable #10.
 
 **Write-before** (immediately before the `/cross-memory reflect` call): write the following `pending_nested_skill` object to the state file:

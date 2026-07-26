@@ -41,6 +41,7 @@
   do #N next       Promote a task to dispatch immediately
   add <task>       Inject a new task into the board
   reprioritize     Pause and show board for reordering
+  (the session stays interactive throughout — ask a question or give any other instruction at any time, not just the commands above)
 
 ### Autonomy modes
   Interactive (default)  Checkpoints after each pipeline stage

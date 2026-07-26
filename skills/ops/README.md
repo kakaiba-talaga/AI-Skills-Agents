@@ -497,15 +497,15 @@ The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase po
 | `help-card.md` | Quick-reference card for commands, flags, and mid-run actions | `help` command |
 | `plan-validation.md` | Spec clarity evaluation, plan complexity scoring, critic verdict handling, scoper/critic output descriptions, execute-skip detection, adaptation rules | Phase 1a Plan Validation (Tier 2/3 runs) |
 | `state-schema.md` | State file JSON structure, field definitions, directory conventions | Phase 2 state file creation |
-| `dispatch-policy.md` | Foreground/background dispatch decision criteria, thresholds, batch rules | Phase 3 dispatch decisions (tasks 8+ min) |
+| `dispatch-policy.md` | Background-default dispatch rule, closed foreground-exception list, batch/predecessor rules, health-monitoring and harness/worktree interactions | Every agent spawn |
 | `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules, subagent dispatch decision framework | Team manager tool use decisions |
 | `dispatch-log.md` | Dispatch decision log spec — opt-in via `--dispatch-log` flag; file location, retention, entry format, kinds, append procedure, audit usage | Appending entries to `docs/ops-dispatch-log.md` when `--dispatch-log` is set |
 | `handoffs.md` | Full handoff template, run identity rules, naming examples, accumulation rules, cleanup lifecycle | Writing or reading handoff documents |
 | `integrations.md` | Deslop and Ralph Loop integration procedures | Verify→review stage transition; `ralph` flag |
-| `timing-edge-cases.md` | 7 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time) | Phase 4 completion and Status Dashboard display |
+| `timing-edge-cases.md` | 8 timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time, background notification pickup) | Phase 4 completion and Status Dashboard display |
 | `cost-tracking.md` | Token estimation heuristics, model pricing, cost dashboard format, per-task and per-model rollup templates | Phase 4 completion (cost estimate and dashboard) |
 | `tdd-discipline.md` | RED-GREEN-REFACTOR discipline rules loaded by executor and verifier | `--tdd` flag set |
-| `interruption-recovery.md` | Detailed procedures for cancel, reprioritize, inject tasks, remove tasks, session recovery, foreground/background dispatch explainer | User interrupts, `resume` command, dispatch context |
+| `interruption-recovery.md` | Detailed procedures for cancel (multi-agent concurrency-cap wait, in-flight file writes), pause vs save (pause is not instantaneous), reprioritize, inject tasks, remove tasks, session recovery (in-session spawn-ownership orphan qualifier), background-default dispatch explainer (closed foreground list, two residual blocking cases) | User interrupts, `resume` command, dispatch context |
 | `subcommand-save.md` | Full save flow, schema, ritual values, redaction integration, resume interaction | `save` subcommand |
 | `completion-options.md` | Four-option completion menu (merge / PR / keep / discard), per-option workflow, destructive-option confirmation gate, worktree cleanup by provenance | Phase 4 completion (present decision menu and capture user choice) |
 | `pointer-format.md` | Standard format for pointer lines, usage notes for extraction agents | Meta-reference for maintaining pointer consistency |

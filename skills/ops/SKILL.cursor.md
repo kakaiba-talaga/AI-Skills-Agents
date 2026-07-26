@@ -579,7 +579,7 @@ stage skips, the team manager's contradiction read) are consumed.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/interruption-recovery.md` for detailed procedures for cancel/abort, reprioritize, inject tasks, remove tasks, session recovery, and how foreground vs. background dispatch works. If the file is missing, proceed using the summary table below.
 
-> **Reference:** On `resume`, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per in-progress task to determine completion status.
+> **Reference:** On `resume`, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per in-progress task the orchestrator classifies as **orphaned** — a task whose spawn the orchestrator still holds is live and is not re-dispatched. See `interruption-recovery.md`'s Session Recovery section for the full rule.
 
 ### Summary of user commands during a run
 

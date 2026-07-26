@@ -33,3 +33,9 @@
 - **Active wall time** = wall time minus checkpoint pauses.
 - In the completion summary, show: `"Wall time: 25m (20m active, 5m in checkpoints)"`.
 - In autonomous mode, there are no checkpoint pauses, so wall time = active wall time.
+
+**8. Background notification pickup:** A detached agent finishes its work at one moment, and the orchestrator learns of it only later, when it processes the completion notification. The gap between those two moments is dispatch latency, not agent runtime:
+
+- `metadata.duration_seconds` is taken from the duration the completion notification itself reports (the agent's own measured runtime), not computed by subtracting `started_at` from `completed_at`. This yields true agent time directly, so nothing needs excluding and full calibration coverage is retained.
+- `completed_at` minus `started_at` no longer equals `duration_seconds` once pickup latency is present. That divergence is correct: agent time is the agent's own reported runtime, while wall time correctly still includes the pickup latency, because the user really did wait through it.
+- This behavior has been observed on one harness. Harnesses or notifications that do not carry a duration use the exclusion mechanism already defined in rule 4 as the fallback: the `timing_note` marker and the rule against reporting a duration that includes downtime.

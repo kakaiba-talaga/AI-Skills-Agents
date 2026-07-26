@@ -6,7 +6,7 @@
 When the user says "stop", "cancel", or "abort":
 
 1. **Stop dispatching** — do not spawn any new agents.
-2. **Let active agents finish** — foreground agents are already running and will return. For background agents, wait for them to complete their current work (they cannot be killed mid-execution).
+2. **Let active agents finish** — foreground agents are already running and will return. For background agents, wait for them to complete their current work (they cannot be killed mid-execution). Under a concurrency cap of N, this wait can span up to N agents in flight rather than one, so cancelling a run with several background agents running takes longer than cancelling one with a single agent. While that wait plays out, those agents' file writes keep landing on disk — the working tree keeps moving until every agent returns.
 3. **Mark remaining pending tasks as cancelled** — update their descriptions with the reason. Do not delete them (the user may want to resume later).
 4. **Show the final dashboard** — display what completed, what was in progress when cancelled, and what never started.
 5. **Preserve the state file** — the user can `/ops resume` later to pick up from the cancelled state.
@@ -15,7 +15,7 @@ Do not ask "are you sure?" — if the user says stop, stop. They can always resu
 
 ### Pause vs Save
 
-Both verbs interrupt an active run, but they target different problems. **`pause`** is a mid-session bookmark: the team manager stops dispatching new work, lets any currently-running agents finish, and then waits. Conversation context is still alive, so the user can type `resume` moments later and pick up exactly where things left off — no files read back, no reconstruction needed. Use `pause` for a coffee break, a quick side-lookup, or a brief detour inside the same session.
+Both verbs interrupt an active run, but they target different problems. **`pause`** is a mid-session bookmark: the team manager stops dispatching new work, lets any currently-running agents finish, and then waits — that wait is not instantaneous, since an in-flight agent cannot be stopped mid-execution and may keep working, and keep writing files, until it returns. Conversation context is still alive, so the user can type `resume` moments later and pick up exactly where things left off — no files read back, no reconstruction needed. Use `pause` for a coffee break, a quick side-lookup, or a brief detour inside the same session.
 
 **`save`** is a journal entry for context loss. The user invokes it as a deliberate prelude (step before) to clearing the context window, closing the terminal, or stepping away long enough that the conversation will not survive. Unlike `pause`, `save` captures the conversation-side state that the state file alone cannot hold — verbal decisions made mid-run, the working hypothesis, the "where I was" note — and writes it to a save file on disk. After saving, the user typically clears the window and later runs `/ops resume` in a fresh session, which reads both the on-disk state file and the save file together to reconstruct full context. See `~/.claude/skills/ops/subcommand-save.md` for the complete save invocation flow and file schema.
 
@@ -61,7 +61,7 @@ If the conversation is interrupted (terminal closed, context reset, session time
 - **Plan document on disk** survives — it contains the overall work scope and acceptance criteria.
 - Tasks that were `in_progress` when the session died remain marked as such, but the agent that was working on them is gone.
 
-All `in_progress` tasks are considered **orphaned** (the agent that owned the task is gone, so its status can't be trusted) after a session boundary — the agents from the prior session no longer exist. The **work-verifier** agent (`~/.claude/agents/work-verifier.md`) handles orphan detection (via timeout budgets per agent type) and determines whether each orphaned task's work was actually applied.
+All `in_progress` tasks are considered **orphaned** (the agent that owned the task is gone, so its status can't be trusted) after a session boundary — the agents from the prior session no longer exist. Within a single session, that blanket rule does not hold: an `in_progress` task counts as orphaned only if the orchestrator no longer holds its spawn — a spawn still held means the agent is live, so keep watching it rather than re-dispatching it. The **work-verifier** agent (`~/.claude/agents/work-verifier.md`) handles orphan detection (via timeout budgets per agent type) and determines whether each orphaned task's work was actually applied.
 
 On `/ops resume`:
 
@@ -87,8 +87,10 @@ The team manager does not rely on conversation history for stage-to-stage contex
 
 ## How Dispatch Works (Foreground vs Background)
 
-By default, the team manager spawns agents in the **foreground** — the session blocks until each agent (or parallel batch) returns. The user cannot send messages while a foreground agent is running.
+By default, the team manager spawns agents in the **background** — the session stays interactive for the life of the dispatch, and the user can send messages while agents are running. The team manager gets notified when a background agent (or parallel batch) completes.
 
-For longer-running tasks, spawn agents with `run_in_background: true`. The session remains interactive — the user can send messages, and the team manager gets notified when background agents complete. See Phase 3 Step 3 "Foreground vs. Background Dispatch Policy" for the specific criteria governing when to use background dispatch.
+A closed list of dispatches still runs in the foreground and blocks the session until they return; see `dispatch-policy.md` for the full list and the reasoning behind each entry. See Phase 3 Step 3 "Foreground vs. Background Dispatch Policy" for the specific criteria governing when a dispatch is foregrounded instead.
 
-The interruption handling below applies at the points where the team manager has control — between foreground agent returns, or any time during background dispatch.
+Two of those blocking cases are common enough that the user will notice them directly: `/ops resume` dispatches one blocking work-verifier per task it classifies as orphaned, to determine what actually landed before deciding what to re-dispatch, and any beat that classifies a task's liveness as unknown dispatches one blocking work-verifier for the same reason. Both are latency the user has accepted in exchange for not duplicating work.
+
+The interruption handling below applies at the points where the team manager has control — while a background agent is in flight, or at any of the foreground dispatch points described above.
