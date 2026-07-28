@@ -192,7 +192,7 @@ There is no persistent index. Every dispatch performs fresh `rg`/`Glob`/`Read` i
 
 - `/ops` Phase 4 deletes `.corpus-search/runs/<run-id>/` — ephemeral run artifacts only.
 - `docs/corpus-search/` durable reports are **not** deleted by Phase 4.
-- Agent-emitted `_tmp_*` files follow the standard `_tmp_*` batch cleanup protocol.
+- Agent-emitted `_tmp_*` files are deleted individually, one `rm` per file — never swept with a glob, which could also remove a concurrently running agent's scratch files.
 
 ## Query Handlers
 

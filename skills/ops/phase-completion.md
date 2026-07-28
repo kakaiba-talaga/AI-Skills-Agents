@@ -54,7 +54,7 @@ When every task is `completed`:
    > **Run-id confirmation gate:** For each `<run-id>`-bearing path below, confirm the embedded `<run-id>` segment matches the active run's `run_id` field from the state file before issuing the `rm`. For `_tmp_*` (which carries no `<run-id>` segment), apply the no-bulk-delete rule: remove files one at a time. Never issue a directory-level or recursive delete for any path.
 
    **Delete (this run only):**
-   - `_tmp_*` — temporary files created during this run (use `rm _tmp_*` to remove them)
+   - `_tmp_*` — temporary files created during this run; delete only the files this run created, one `rm` per file. Never `rm _tmp_*` — the glob also catches another agent's scratch files and prior runs' artifacts.
    - `.agents/handoffs/<run_id>/` — this run's handoff subdirectory; verify the `<run_id>` segment matches the active `run_id` before each `rm`
    - `.code-intel/runs/<run-id>/` — ephemeral run-scoped impact-analysis reports and JSON sidecars for this run only; confirm the `<run-id>` segment matches before each `rm`
    - `.corpus-search/runs/<run-id>/` — ephemeral corpus-search reports and JSON sidecars for this run only; confirm the `<run-id>` segment matches before each `rm`

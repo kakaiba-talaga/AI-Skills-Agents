@@ -161,10 +161,12 @@ ANCHOR: 4. **Dispatch:** Spawn the agent via the Agent tool using the same Agent
 @@END
 
 @@PATCH
-ACTION: replace_line
-ANCHOR: 5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+ACTION: replace
+ANCHOR: 6. **On result:** If this run was promoted in the preceding Promotion check step, skip this step entirely —
+@@STOP
+   Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 @@CONTENT
-5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 @@END
 
 @@PATCH

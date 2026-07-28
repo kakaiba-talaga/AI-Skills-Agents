@@ -28,7 +28,7 @@ Iteration history is tracked in two places:
 
 1. Use the **Write tool** to create a temp file (e.g., `_tmp_jsonl_event.txt`) containing the single JSON line. Generate the timestamp internally — do not use `$(date ...)` in Bash.
 2. Use **Bash** to append: `cat _tmp_jsonl_event.txt >> .ralph-state/<task_id>.history.jsonl`
-3. Leave the temp file in place — it will be cleaned up in batch with other `_tmp_*` files at the next checkpoint.
+3. Delete the temp file once the append in step 2 has succeeded: `rm _tmp_jsonl_event.txt`. Do not leave it in place for a later checkpoint — remove it now, one file at a time.
 
 This is the **only** permitted method for JSONL appends. Direct `echo '...' >>` with JSON content is **forbidden** — it will always trigger a security prompt.
 

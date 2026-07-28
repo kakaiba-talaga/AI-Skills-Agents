@@ -305,7 +305,7 @@ Include this block verbatim (word-for-word) in every agent brief's `## Constrain
 - **No compound Shell commands** — never use `&&`, `;`, or `||`. Make separate Shell tool calls; use parallel calls for independent commands.
 - **No `cd` prefix** — the working directory is already the project root. Run commands directly (e.g., `git diff file.py`, `python -m pytest`).
 - **Relative paths only** — use absolute paths only for resources outside the project (e.g., `~/.cursor/`). Absolute paths break permission matching.
-- **Temporary files** — use `_tmp_` prefix (e.g., `_tmp_test.py`) in the project root. Never in `/tmp/` or `%TEMP%`. Clean up with `rm _tmp_*`.
+- **Temporary files** — use `_tmp_` prefix (e.g., `_tmp_test.py`) in the project root. Never in `/tmp/` or `%TEMP%`. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated.
 - **No sub-agent spawning** — do not use the Task tool. Only the team manager orchestrates.
 - **No scope expansion** — report discovered out-of-scope work; do not act on it.
 - **No commit trailers** — do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the system default.

@@ -183,7 +183,7 @@ A full rebuild is bounded by the wall-clock caps (60s soft / 600s hard) and the 
 
 - `query_type: "clean"` drops `index.sqlite` and its WAL sidecars. Close the SQLite connection before deleting (WAL sidecars can be locked on Windows).
 - `/ops` Phase 4 does **not** clean the index — it is persistent infrastructure.
-- Indexer-emitted `_tmp_*` files follow the standard `_tmp_*` batch cleanup protocol.
+- Indexer-emitted `_tmp_*` files are deleted individually, one `rm` per file — never swept with a glob, which could also remove a concurrently running agent's scratch files.
 
 ## Indexer Pipeline
 

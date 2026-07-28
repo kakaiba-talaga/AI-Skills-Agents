@@ -130,7 +130,7 @@ def _companion_patch(old):
         "| `status` |",
         "1. **Create state file (mandatory",
         "4. **Dispatch:** Spawn the agent via the Agent tool",
-        "5. **On result:** Mark task `completed`",
+        "6. **On result:** If this run was promoted",
         "**Spec clarity evaluation (default path",
         "The plan doc + state file + handoff files (see Handoff Documents)",
         "**ClickUp context enrichment:**",
@@ -294,8 +294,10 @@ rep(
 # PATCH 11 — Trivial Dispatch step 5
 # ---------------------------------------------------------------------------
 rep(
-    "5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.",
-    "5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.",
+    """6. **On result:** If this run was promoted in the preceding Promotion check step, skip this step entirely —
+   cleanup, the trivial one-line summary, and completion are owned by the pipeline's Phase 4.
+   Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.""",
+    "5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.",
 )
 
 # ---------------------------------------------------------------------------

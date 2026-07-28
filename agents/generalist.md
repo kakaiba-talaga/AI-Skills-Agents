@@ -150,7 +150,7 @@ A change that violates none of these — a typo fix, a corrected string literal,
 - **No compound Bash commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls instead — use parallel calls for independent commands.
 - **No `cd` prefix** — the working directory is already the project root. Run commands directly instead of `cd "/path/to/project" && command`.
 - **Use relative paths from the project root** — never use absolute paths in Bash commands. Only use absolute paths for resources genuinely outside the project (e.g., `~/.claude/`).
-- Temporary files go in the **project root** (e.g., `_tmp_check.txt`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
+- Temporary files go in the **project root** (e.g., `_tmp_check.txt`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated.
 
 ## Lane boundaries
 

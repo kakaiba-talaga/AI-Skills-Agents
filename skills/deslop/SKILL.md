@@ -617,7 +617,7 @@ Multiple fallbacks can activate in the same run. In the worst case (no git, no v
 - **No compound Bash commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls. Use parallel calls for independent commands.
 - **No `cd` prefix** — the working directory is the project root. Run commands directly.
 - **Use relative paths from project root** — never use absolute paths in Bash commands. Only use absolute paths for resources genuinely outside the project (e.g., `~/.claude/`).
-- Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
+- Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated.
 - **Respect `.gitignore`** — when building file sets for `all` scope, use `git ls-files` to enumerate tracked files. Do not analyze ignored files.
 - **Do not create new config files** — deslop never adds configuration, tool configs, or setup files.
 - **Do not install tools or packages** — if a required tool is missing, report it and proceed without it.

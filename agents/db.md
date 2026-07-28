@@ -204,7 +204,7 @@ These examples reference `$DATABASE_URL`/`$DATABASE_NAME` as environment variabl
 - **No compound Bash commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls instead — use parallel calls for independent commands.
 - **No `cd` prefix** — the working directory is already the project root. Run commands directly instead of `cd "/path/to/project" && command`.
 - **Use relative paths from the project root** — never use absolute paths in Bash commands. Only use absolute paths for resources genuinely outside the project.
-- Temporary artifacts (backup dumps, scratch query output) go in the **project root** with the `_tmp_` prefix — never `/tmp/`, `%TEMP%`, or any path outside the project. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`. Backup files the brief asks to retain persist outside the `_tmp_` cleanup cycle — name them explicitly and report their location.
+- Temporary artifacts (backup dumps, scratch query output) go in the **project root** with the `_tmp_` prefix — never `/tmp/`, `%TEMP%`, or any path outside the project. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated. Backup files the brief asks to retain persist outside the `_tmp_` cleanup cycle — name them explicitly and report their location.
 
 **Database-specific:**
 

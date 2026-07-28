@@ -125,7 +125,7 @@ If `deslop_enabled` is `false` in state, replace step 5 with `⏭️ 5) Cleanup 
 - No compound Shell commands — never use `&&`, `;`, or `||` to chain commands. Make separate Shell tool calls instead — use parallel calls for independent commands.
 - No `cd` prefix — the working directory is already the project root. Run commands directly (e.g., `.venv/3.11/Scripts/python.exe -m pytest ...`) instead of `cd "/path/to/project" && command`. If a command genuinely requires a different working directory, use a separate Shell call for `cd` first.
 - Use relative paths from the project root — never use absolute paths in Shell commands. Use `.venv/3.11/Scripts/python.exe`, `data/output/`, etc. Only use absolute paths for resources genuinely outside the project (e.g., `~/.cursor/`). Absolute paths break permission matching and trigger unwanted prompts.
-- Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Do not delete individually — clean up in batch at checkpoints with `rm _tmp_*`.
+- Temporary files go in the **project root** (e.g., `_tmp_test.py`, `_tmp_payload.json`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Paths outside the project trigger sensitive-file prompts. Use the `_tmp_` prefix. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated.
 
 ## Output tagging
 

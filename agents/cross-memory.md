@@ -102,7 +102,7 @@ Write allowed only to paths matching one of these globs (canonical-store ownersh
 3. _tmp_*  (project-relative)
    Covers staging files the agent writes during the audit (e.g., diff fixtures, sidecar
    reconciliation logs). Same convention as the rest of the fleet — _tmp_ prefix at the
-   project root, batch-cleaned.
+   project root, deleted one file at a time rather than swept with a glob.
 
 Refuse-and-halt on first Write violation:
   1. Refuse the operation.

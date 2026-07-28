@@ -52,7 +52,7 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
      (logic change, multiple modules, an unexpected surface):
      1. Append a `type: promotion` entry to `adaptations` recording the contradiction reason.
      2. Do NOT run On result cleanup. Keep the state file and run-id intact; do not
-        `rm _tmp_*`, do not delete `.ops-state/<run-id>-board.json`.
+        delete any of this run's `_tmp_` files, do not delete `.ops-state/<run-id>-board.json`.
      3. **Branch isolation (deferred branch on promotion):** Before any code-modifying
         downstream stage runs, check the current branch. If it is `main`/`master` (or the run
         otherwise lacks an isolating working branch), trigger deferred branch creation —
@@ -80,7 +80,7 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
 
 6. **On result:** If this run was promoted in the preceding Promotion check step, skip this step entirely —
    cleanup, the trivial one-line summary, and completion are owned by the pipeline's Phase 4.
-   Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: `rm _tmp_*`, delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+   Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 
 No Phase 4 ceremony: skip steps 3–8 (final verification pass, timing summary, cost, task board display, narrative summary, file list). Step 10 (next steps) is folded into the one-line summary above.
 
