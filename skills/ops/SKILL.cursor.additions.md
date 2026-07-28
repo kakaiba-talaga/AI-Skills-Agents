@@ -27,17 +27,17 @@
        @@END
 
      NOTE ON ACTIONS: the transform itself only has one primitive — rep(old, new), a
-     first-occurrence string replace (tooling/transform-cursor-ops.ps1:179-187) — plus the
+     first-occurrence string replace (tooling/transform-cursor-ops.ps1:176-184) — plus the
      trailing global substitution. The ACTION labels above are descriptive shorthand for how
      a given rep() behaves (a single-line old reads as "replace_line"; a multi-line old reads
      as "replace"; PATCH 0's prepend is rep(first_line, frontmatter+first_line)). There is no
      delete_line, insert_before, insert_after, or ANCHOR_CONTEXT primitive in the script; do
      not document patches using those.
 
-     COMPANION-SUPPRESSED PATCHES: ~16 patches (PATCH 6-20, 22-34, 45-46) target anchors
+     COMPANION-SUPPRESSED PATCHES: 31 patches (PATCH 6-20, 23, 25-34, 45-46) target anchors
      that moved to skills/ops/phase-*.md companion files during the B1 extraction. Their
      anchors are absent from the current hub, so they silently no-op (suppressed via
-     _companion_patch(), tooling/transform-cursor-ops.ps1:139-177). They are retained in the
+     _companion_patch(), tooling/transform-cursor-ops.ps1:139-174). They are retained in the
      script — and documented here — so they reactivate if the hub re-absorbs that content.
 -->
 
@@ -127,7 +127,7 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: | Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
+ANCHOR: | Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the pinned-down requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 @@CONTENT
 | Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 @@END
@@ -141,21 +141,21 @@ ANCHOR: | `resume` | Read the state file. **Check `pending_nested_skill` before 
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: | `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |
+ANCHOR: | `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent with orphan detection enabled. Display the dashboard (`phase-completion.md` § Status Dashboard), stop. |
 @@CONTENT
 | `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) via `Task(subagent_type="generalPurpose")` with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |
 @@END
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: 1. **Create state file (mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Bash(command="mkdir -p .ops-state")`. Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back.
+ANCHOR: 1. **Create state file (mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`, where `<slug>` is a short lowercase, hyphen-separated label). Ensure `.ops-state/` exists (create the directory if missing). Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with Read. Record `triage_confidence` on the task entry: the `level` (high/medium/low) and the `signals` the Triage Gate noted when it routed this run as trivial.
 @@CONTENT
 1. **Create state file (mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Shell(command="mkdir -p .ops-state")`. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with `Read`. Also call `TodoWrite(merge=false)` with the single task item.
 @@END
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: 4. **Dispatch:** Spawn the agent via the Agent tool using the same Agent Dispatch Procedure (Phase 3 Step 3) — read frontmatter for `model`, set description/model/prompt (agent reads its own body as first action).
+ANCHOR: 4. **Dispatch:** Set the task to `in_progress` in the board file first (`phase-dispatch.md` Step 3 item 1; **Cursor:** include Write → verify → `TodoWrite`). Then spawn the assigned agent using the Agent Dispatch Procedure in `phase-dispatch.md` Step 3 — the agent reads its own definition as its first action. **Claude Code:** `Agent` tool with frontmatter `model`. **Cursor:** `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`; use `generalPurpose` when the type is not in the built-in enum. Per Non-negotiable #11 (status–spawn atomicity), the `in_progress` write and the `Agent()` spawn must be emitted in the **same assistant message** — never split across turns.
 @@CONTENT
 4. **Dispatch:** Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`. The prompt instructs the agent to read its own definition as its first action (see Agent Dispatch Procedure for the self-read prompt template).
 @@END
@@ -164,7 +164,7 @@ ANCHOR: 4. **Dispatch:** Spawn the agent via the Agent tool using the same Agent
 ACTION: replace
 ANCHOR: 6. **On result:** If this run was promoted in the preceding Promotion check step, skip this step entirely —
 @@STOP
-   Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
+   Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: first sweep this run's board for anything durable and relocate it, using the same destination table as `phase-completion.md` step 9a (the non-promoted trivial path never writes a handoff file, since it has exactly one task and no stage transition ever occurs to trigger one, so there is nothing under `.agents/handoffs/<run_id>/` for the sweep to check), then delete unconditionally: this run's `_tmp_` files one at a time (never `rm _tmp_*`), then `.ops-state/<run-id>-board.json`, then verify the board is gone. This path borrows only the destination table from 9a, not 9a's cleanup-record file: it never writes `.ops-state/<run-id>-cleanup.json`, because the sweep's result is consumed in the same turn and needs no carrier across a step boundary. Fold the cleanup outcome into the summary: what was done, file(s) changed if any, actual duration, and the cleanup result. When the sweep found nothing durable, the cleanup result stays a single clause (e.g., "board removed; nothing durable to relocate") and the whole summary stays one line. When the sweep did relocate something, list each item by content and destination the same way `phase-completion.md` step 9c's relocation report does, appended after the summary line rather than folded into it; brevity is for the common case of an empty sweep, not for a run that has something to report.
 @@CONTENT
 5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.
 @@END
@@ -244,7 +244,7 @@ Parse the plan into discrete, assignable tasks. Create the state file and TodoWr
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: 1. Run `Bash(command="mkdir -p .ops-state")`.
+ANCHOR: 1. Ensure `.ops-state/` exists (create the directory if missing).
 @@CONTENT
 1. Run `Shell(command="mkdir -p .ops-state")` (or `mkdir .ops-state` on Windows if it doesn't exist — check first with `ls .ops-state` or `dir .ops-state`).
 @@END
@@ -258,7 +258,7 @@ ANCHOR: 2. Use the Write tool to create `.ops-state/<run-id>-board.json` with th
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: 3. Verify the file exists by reading it back. If the read fails, the state file was not created — stop and fix before proceeding.
+ANCHOR: 3. Verify the file exists by reading it back with Read. If the read fails, the state file was not created — stop and fix before proceeding.
 @@CONTENT
 3. Verify the file exists by reading it back with `Read(path=".ops-state/<run-id>-board.json")`. If the read fails, the state file was not created — stop and fix before proceeding.
 @@END
@@ -311,7 +311,7 @@ ANCHOR: Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`).
 Dispatch a **preflight** agent (see `~/.cursor/agents/preflight.md`) via `Task(subagent_type="generalPurpose")`.
 @@END
 
-<!-- PATCH 21 issues no rep(): it is a comment-only "REMOVED" marker in the script (transform-cursor-ops.ps1:490-492). Phase 3 dispatch + Cursor state sync live in phase-dispatch.md (B1 companions). Do not re-insert TodoWrite-only hub steps here. -->
+<!-- PATCH 21 issues no rep(): it is a comment-only "REMOVED" marker in the script (transform-cursor-ops.ps1:491-493, transform-cursor-ops.sh:476-478). Phase 3 dispatch + Cursor state sync live in phase-dispatch.md (B1 companions). Do not re-insert TodoWrite-only hub steps here. -->
 
 @@PATCH
 ACTION: replace_line
@@ -321,17 +321,10 @@ ANCHOR: **When genuinely in doubt**, dispatch an **interviewer** to clarify — 
 @@END
 
 @@PATCH
-ACTION: replace_line
-ANCHOR: **Your first action:** Read your full agent definition from `~/.claude/agents/<agent_type>.md`.
-@@CONTENT
-**Your first action:** Read your full agent definition from `~/.cursor/agents/<agent_type>.md`.
-@@END
-
-@@PATCH
 ACTION: replace
 ANCHOR: **Dispatch example:**
 @@STOP
-> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.
+> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the background-default rule, the closed foreground list, batch rules, the user-message procedure, and harness conditions. If the file is missing, default to **foreground** dispatch — the closed list of blocking exceptions is unavailable, so the orchestrator cannot know which dispatches must block; blocking a dispatch that could have run detached only costs latency, while detaching one that needed to block risks consuming a result before it exists.
 @@CONTENT
 5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
 6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
@@ -343,21 +336,21 @@ ANCHOR: **Dispatch example:**
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: | **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
+ANCHOR: | **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. **Cursor:** Write → verify → `TodoWrite`, then write handoff (see Handoff Documents). Check for newly unblocked tasks. |
 @@CONTENT
 | **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Update TodoWrite. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |
 @@END
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: | **Failed — 2nd attempt** | Dispatch a **debugger** agent (or **debugger-build** if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
+ANCHOR: | **Failed — 2nd attempt** | Dispatch a **debugger** agent (or **debugger-build** if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. Until the debugger returns, the task is not ready — Step 1 must not treat it as a dispatch candidate, however many scans occur while the diagnostic is in flight, so a detached return to Step 1 cannot fire the third attempt blind, before the findings it depends on have arrived. |
 @@CONTENT
 | **Failed — 2nd attempt** | Dispatch the **debugger** via `Task(subagent_type="debugger")` (or `Task(subagent_type="debugger-build")` if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |
 @@END
 
 @@PATCH
 ACTION: replace
-ANCHOR: | **Failed — 3rd attempt** | Escalate model (sonnet → opus, opus → fable) and re-dispatch with full error history. Skip if already on fable; security-reviewer caps at opus and never escalates to fable. See Model Escalation in Adaptability. |
+ANCHOR: | **Failed — 3rd attempt** | Escalate model (sonnet → opus, opus → fable) and re-dispatch with full error history. Skip if already on fable; security-reviewer caps at opus and never escalates to fable. See Model Escalation in Adaptability. The `opus → fable` step goes through the **`fable`-escalation confirmation gate** (see Model Escalation in Adaptability): interactive (and `--supervised`) waits for the user; autonomous waits best-effort ~1 minute then defaults NO and runs the 3rd attempt on the original `opus` model. `security-reviewer` never reaches the gate. |
 @@STOP
 | **Failed — at the loop cap** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. Cap is mode-aware: 3 loops in interactive/supervised, 5 loops in autonomous. In autonomous mode, loops 4 and 5 re-dispatch on the already-escalated model (opus after the fable gate defaults NO) with debugger findings from the 2nd attempt carried forward — the model tier does not climb further and the fable gate does not re-fire. |
 @@CONTENT
@@ -387,7 +380,7 @@ When every task is `completed` (check state file):
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: dispatch a **verifier** agent to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
+ANCHOR: 3. **Run a final verification pass** — if the work involved code changes, dispatch a **verifier** agent in the **foreground** to run the full test suite against the combined changes, since this dispatch is a named foreground exception in `dispatch-policy.md` and the last correctness check before completion is reported. This catches integration issues that per-task verification may miss.
 @@CONTENT
 dispatch a verifier agent via `Task(subagent_type="verifier")` to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.
 @@END
@@ -401,7 +394,7 @@ ANCHOR:    - **Estimation accuracy** — overall ratio of actual to estimated. F
 
 @@PATCH
 ACTION: replace_line
-ANCHOR:    > **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the bullet points above.
+ANCHOR:    > **Reference:** See `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time, background notification pickup). If the file is missing, proceed using the bullet points above.
 @@CONTENT
    > **Reference:** You MUST Read `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, calibration, idle time). If the file is missing, proceed using the bullet points above.
 @@END
@@ -421,10 +414,30 @@ When spawning an agent via the Task tool, always provide a **complete, self-cont
 @@END
 
 @@PATCH
+ACTION: replace
+ANCHOR: ```
+@@STOP
+[Subject from the task]
+@@CONTENT
+````
+```text
+## Task
+[Subject from the task]
+````
+@@END
+
+@@PATCH
 ACTION: replace_line
 ANCHOR: - **No compound Bash commands** — never use `&&`, `;`, or `||`. Make separate Bash tool calls; use parallel calls for independent commands.
 @@CONTENT
 - **No compound Shell commands** — never use `&&`, `;`, or `||`. Make separate Shell tool calls; use parallel calls for independent commands.
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: - **Relative paths only** — use absolute paths only for resources outside the project (e.g., `~/.claude/`). Absolute paths break permission matching.
+@@CONTENT
+- **Relative paths only** — use absolute paths only for resources outside the project (e.g., `~/.cursor/`). Absolute paths break permission matching.
 @@END
 
 @@PATCH
@@ -491,10 +504,38 @@ executor(task3) ──┘
 @@END
 
 @@PATCH
+ACTION: replace
+ANCHOR: ## Verify → Fix Loop
+@@STOP
+```
+@@CONTENT
+## Verify → Fix Loop
+
+> **ASCII flow diagram — keep fenced.** The blocks below are loop diagrams for reference, not user-facing UI output. Do not unfence them.
+
+```text
+executor → verifier → [FAIL] → executor (fix) → verifier (re-verify) → [PASS] → code-reviewer
+                                     ↑                    |
+                                     └────── [FAIL] ──────┘
+```
+@@END
+
+@@PATCH
 ACTION: replace_line
 ANCHOR: 1. After the verifier reports failures, create a **fix task** assigned to the executor. Include the verifier's specific findings (not just "it failed").
 @@CONTENT
 1. After the verifier reports failures, create a **fix task** in the state file and TodoWrite assigned to the executor. Include the verifier's specific findings (not just "it failed").
+@@END
+
+@@PATCH
+ACTION: replace
+ANCHOR: ```
+@@STOP
+```
+@@CONTENT
+```text
+code-reviewer → [REQUEST CHANGES] → executor (fix) → verifier (re-verify) → code-reviewer (re-review)
+```
 @@END
 
 @@PATCH
@@ -538,9 +579,16 @@ ANCHOR: > **Reference:** When rollback is needed, dispatch a **rollback** agent 
 ACTION: replace
 ANCHOR: - <agent> → Task #N: "<subject>" (in_progress, Xs elapsed) [health indicator]
 @@STOP
-Health indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2.5×), 🔴 OVERRUN (> 2.5×), 👻 ORPHAN? (elapsed > agent-type timeout, no completion received)
+Health indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2.5×), 🔴 OVERRUN (> 2.5×; a sustained OVERRUN may trigger a diagnose-and-recover action — see Phase 3 Step 4 in `phase-dispatch.md`), 👻 ORPHAN? (elapsed > agent-type timeout, no completion received)
 @@CONTENT
 - <agent> → Task #N: "<subject>" (in_progress, Xs elapsed)
+@@END
+
+@@PATCH
+ACTION: replace_line
+ANCHOR: > **Reference:** See `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time, background notification pickup). If the file is missing, proceed using the dashboard template above.
+@@CONTENT
+> **Reference:** You MUST Read `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, calibration, idle time). If the file is missing, proceed using the dashboard template above.
 @@END
 
 @@PATCH
@@ -598,6 +646,41 @@ ANCHOR: ### Learning across runs
 @@STOP
 > **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start and `/timing-calibrator capture` at completion.
 @@CONTENT
+@@END
+
+@@PATCH
+ACTION: replace
+ANCHOR: ### Adaptation log
+@@STOP
+## Ralph Loop Integration
+@@CONTENT
+### Adaptation log
+
+Every adaptation is tracked, reported in the dashboard's **Adaptations** section, and summarized at Phase 4 completion. User feedback on adaptations is saved as project memory for future runs.
+
+At each pipeline stage transition, the team manager also performs a short reflection beat (see Phase 3 Step 5) — a bounded self-critique of whether the remaining plan still holds in light of what the stage produced. The beat is advisory and additive-only: it may propose adding or re-sequencing work through the mechanisms above, but if it identifies work that should be removed, it escalates to the user rather than acting — the scope-reduction guardrail applies unchanged. Each beat is recorded in the `adaptations` log and surfaced in the dashboard's Adaptations section. When the beat identifies material remaining-graph invalidation — a finished stage's outcome that makes two or more remaining tasks impossible, redundant, or falsely-assumed — it hands the unfinished tasks to the dynamic re-planning of the remaining graph procedure described in Phase 3 Step 5.
+
+---
+
+## Skill Invocation (Read-and-Dispatch)
+
+Since Cursor has no `Skill` tool, the ops skill invokes other skills by reading their skill file and dispatching:
+
+1. **Read** the target skill file from `~/.cursor/skills/<name>/SKILL.md`
+2. **Dispatch** via `Task(subagent_type="generalPurpose", prompt=<skill content + arguments>)` for heavier skills, or follow the instructions inline for lightweight ones
+
+**Mapping:**
+
+| Skill | Read from | Dispatch method |
+| :--- | :--- | :--- |
+| deslop | `~/.cursor/skills/deslop/SKILL.md` | `Task(subagent_type="generalPurpose")` with `--conservative` flag |
+| linter | `~/.cursor/skills/linter/SKILL.md` | `Task(subagent_type="generalPurpose")` or follow inline |
+| clickup | `~/.cursor/skills/clickup/SKILL.md` | `Task(subagent_type="generalPurpose")` with task ID |
+| deploy | `~/.cursor/skills/deploy/SKILL.md` | `Task(subagent_type="generalPurpose")` with deployment spec |
+
+---
+
+## Ralph Loop Integration
 @@END
 
 @@PATCH

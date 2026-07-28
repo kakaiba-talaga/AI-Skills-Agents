@@ -41,7 +41,7 @@ When invoked with `ralph` (e.g., `/ops ralph "improve test coverage to 80%"`), t
 1. The ralph loop provides the outer iteration — each loop pass runs one full team-manager cycle (plan → implement → verify → review).
 2. After each cycle, the ralph loop's **Reflect** stage evaluates whether the acceptance criteria (e.g., 80% coverage) have been met.
 3. If not met, the ralph loop starts a new iteration — the team manager re-plans based on what's still missing, creates new tasks, and dispatches again.
-4. The team manager's task board is reset between ralph iterations. Handoff files from the previous iteration persist on disk in `.agents/handoffs/` and carry forward as context — the team manager reads them when planning the next iteration.
+4. Each ralph iteration runs as a complete team-manager cycle in its own right, including that cycle's own Phase 4 completion. Phase 4 deletes the iteration's task board and its handoff subdirectory under `.agents/handoffs/` unconditionally as part of ordinary per-run cleanup, so no handoff document survives from one iteration into the next. Context instead carries forward through the ralph loop's own persisted state file: its `context.summary`, `context.learnings`, and `context.notes` fields, together with the `progress.work_items` array, are what the team manager draws on when planning the next iteration's tasks.
 
 **When to use ralph mode:**
 

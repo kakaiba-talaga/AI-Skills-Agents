@@ -143,10 +143,7 @@ def _companion_patch(old):
         "**When genuinely in doubt**, dispatch an **interviewer**",
         "**Display the task board after creation.** After the state file is written",
         "Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`)",
-        "2. **Resolve description_ref (self-contained brief",
-        "**Your first action:** Read your full agent definition",
         "**Dispatch example:**",
-        "After updating timing, check elapsed time of all in-progress background agents",
         "| **Passed**",
         "| **Failed — 2nd attempt**",
         "| **Failed — 3rd attempt**",
@@ -479,14 +476,6 @@ rep(
 # Do not re-insert TodoWrite-only steps into SKILL.cursor.md — they never applied here.
 
 # ---------------------------------------------------------------------------
-# PATCH 22 — Self-read template: ~/.claude/agents → ~/.cursor/agents
-# ---------------------------------------------------------------------------
-rep(
-    "**Your first action:** Read your full agent definition from `~/.claude/agents/<agent_type>.md`.",
-    "**Your first action:** Read your full agent definition from `~/.cursor/agents/<agent_type>.md`.",
-)
-
-# ---------------------------------------------------------------------------
 # PATCH 23 — Remove Example block + "Use the brief format below." + Foreground section
 #            Replace with Cursor steps 5 and 6
 # ---------------------------------------------------------------------------
@@ -526,14 +515,6 @@ Default is **foreground**. Use **background** (`run_in_background: true`) for ta
 **Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.""",
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 24 — Remove "After updating timing..." paragraph
-# ---------------------------------------------------------------------------
-rep(
-    "After updating timing, check elapsed time of all in-progress background agents against their estimates. Emit a `⚠️ SLOW` warning when elapsed exceeds 1.5× estimate, or `🔴 OVERRUN` when elapsed exceeds 2.5× estimate. Warnings are emitted once per threshold crossing per task. For tasks with `estimate_source: \"ops\"` (rough estimates), suppress SLOW and emit OVERRUN only.\n\n| Outcome | Action |",
-    "After updating timing, check elapsed time of all in-progress background agents against their estimates. Emit a `⚠️ SLOW` warning when elapsed exceeds 1.5× estimate, or `🔴 OVERRUN` when elapsed exceeds 2.5× estimate. Warnings are emitted once per threshold crossing per task. For tasks with `estimate_source: \"ops\"` (rough estimates), suppress SLOW and emit OVERRUN only.\n\n| Outcome | Action |",
 )
 
 # ---------------------------------------------------------------------------

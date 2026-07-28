@@ -112,7 +112,7 @@ Code Intelligence Context: see .code-intel/runs/<run-id>/impact_analysis-<symbol
 
 ### Cleanup pointer
 
-Phase 4 step 9 cleans `.code-intel/runs/<run-id>/` (ephemeral, this run only — analogous to `.agents/handoffs/<run_id>/`). Persistent infrastructure (`.code-intel/index.sqlite` and its WAL/SHM sidecars) is **not** Phase 4 cleaned.
+Phase 4 step 9b cleans `.code-intel/runs/<run-id>/` (ephemeral, this run only — analogous to `.agents/handoffs/<run_id>/`). Persistent infrastructure (`.code-intel/index.sqlite` and its WAL/SHM sidecars) is **not** Phase 4 cleaned.
 
 ## Phase 2.5c — Corpus Search Preflight (advisory)
 
@@ -261,7 +261,7 @@ When dual preflight ran, the path token reflects `trace_reference-<slug>.md` (wh
 
 ### Cleanup pointer
 
-Phase 4 step 9 cleans `.corpus-search/runs/<run-id>/` (ephemeral, this run only). Unlike code-intel, corpus-search has **no persistent index** — only run-scoped report directories are deleted. **Do not delete** the parent `.corpus-search/` directory or `docs/corpus-search/` (durable human opt-in reports).
+Phase 4 step 9b cleans `.corpus-search/runs/<run-id>/` (ephemeral, this run only). Unlike code-intel, corpus-search has **no persistent index** — only run-scoped report directories are deleted. **Do not delete** the parent `.corpus-search/` directory or `docs/corpus-search/` (durable human opt-in reports).
 
 ## Phase 2.5d — Library Docs Preflight (advisory)
 

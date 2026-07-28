@@ -197,4 +197,4 @@ A mental model: `pause` is a bookmark; `save` is a journal entry. You bookmark a
 
 ## Phase 4 cleanup
 
-The save file is ephemeral and run-scoped. The Phase 4 cleanup step that deletes the board file also deletes `.ops-state/<run-id>-save.json` if present. No manual cleanup is required.
+The save file is ephemeral and run-scoped. The Phase 4 cleanup step that deletes the board file also deletes `.ops-state/<run-id>-save.json` if present. This deletion is preceded by the Phase 4 step 9a relocation sweep (see `~/.claude/skills/ops/phase-completion.md` step 9a), which reads the save file's `open_questions`, `working_hypothesis`, and `verbal_decisions` before it goes and routes anything durable to its real home. No manual cleanup is required beyond what the sweep already does.

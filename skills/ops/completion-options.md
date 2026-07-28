@@ -59,7 +59,7 @@ Push the branch to the remote and open a pull request for team review or pre-mer
 
 No action required. The branch stays as-is for follow-up work.
 
-**Procedure:** Confirm to the user that the branch is preserved and summarize its current HEAD commit and any open items from the run.
+**Procedure:** Confirm to the user that the branch is preserved and summarize its current HEAD commit and any open items from the run, drawing the open-items summary from the relocation report the Cleanup block rendered immediately before this menu (`skills/ops/phase-completion.md`'s Phase 4 completion section, step 9c).
 
 **Recommended when:** the user wants to add more commits before merging, or needs to revisit a deferred task.
 
@@ -88,14 +88,14 @@ If `--worktree` was set during the run, clean up **only** worktrees that this ru
 
 **Provenance check procedure:**
 
-1. Read the run's state file (`.ops-state/<run-id>-board.json`).
-2. Locate the `worktrees_created` array — each entry records `{path, added_at}` for worktrees this run registered.
+1. Read the `worktrees_created` array from the cleanup record file, `.ops-state/<run-id>-cleanup.json`, which 9a wrote before 9b deleted the board file (`skills/ops/phase-completion.md`'s Phase 4 completion section, step 9a); by the time this procedure runs, in step 10, the board file itself no longer exists, so the cleanup record is the only surviving source for this array.
+2. That array's entries each record `{path, added_at}` for worktrees this run registered.
 3. For each entry in `worktrees_created`:
    a. Confirm the path on disk matches the recorded path exactly.
    b. Confirm the path does not appear in `git worktree list` output as a worktree that existed before this run (i.e., `added_at` is within this run's time window).
-   c. Only if both checks pass: `git worktree remove --force <path>` — this step runs on the quiescence guarantee established by the re-entrant guard immediately before step 9 in `skills/ops/phase-completion.md`, and does not re-derive it.
-4. If the state file has no `worktrees_created` entries, skip worktree cleanup entirely.
-5. Never remove a worktree that is not listed in the run's state file, regardless of name or path similarity.
+   c. Only if both checks pass: `git worktree remove --force <path>` — this step runs on the quiescence guarantee established by the re-entrant guard immediately before step 9b in `skills/ops/phase-completion.md`, and does not re-derive it.
+4. **Distinguish an empty array from a missing record.** If the cleanup record file exists and its `worktrees_created` array has no entries, this genuinely means the run created no worktrees: skip worktree cleanup silently, a normal outcome. If the cleanup record file itself is missing, that is a failure the empty-array case cannot stand in for: surface it to the user with the path (`.ops-state/<run-id>-cleanup.json`) rather than skipping silently, since a run that should have this file but doesn't leaves no signal that any worktrees it created were ever cleaned up.
+5. Never remove a worktree that is not listed in the `worktrees_created` array read from the cleanup record, regardless of name or path similarity.
 
 ---
 

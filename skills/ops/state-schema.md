@@ -96,7 +96,7 @@ Field meanings:
 
 - `skill` — the nested skill invoked (e.g., `"/deslop"`, `"/clickup"`). Matches the skill identifier.
 - `invoked_at` — ISO-8601 UTC timestamp of invocation. Enables future stale-marker detection.
-- `resume_phase` — short identifier of where the team manager must resume. Allowed values (open set): `"phase-1-intake"`, `"phase-3-dispatch"`, `"phase-3-deslop-stage"`, `"phase-3-save-followup"`.
+- `resume_phase` — short identifier of where the team manager must resume. Allowed values (open set): `"phase-1-intake"`, `"phase-3-dispatch"`, `"phase-3-deslop-stage"`, `"phase-3-save-followup"`, `"phase-4-cleanup-sweep"` (9a's relocation sweep invoking `/cross-memory save`; see `phase-completion.md`'s Phase 4 completion section, step 9a).
 - `resume_notes` — one-line human-readable instruction the team manager re-reads when clearing the marker.
 
 **Lifecycle:** `null` → set on write-before → consumed and acted upon on clear-after → `null`.
@@ -126,6 +126,38 @@ Field meanings:
 **Write lifecycle:** The team manager appends an entry to `worktrees_created` each time a worktree is created. This happens in Phase 1.5 when `--worktree` is set and git-master creates worktrees, or at any other point during the run where git-master creates additional worktrees on the team manager's behalf. The entry is written immediately after the git-master confirms the worktree was created.
 
 **Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `[]`. No migration is required.
+
+---
+
+### Cleanup record file
+
+A **file distinct from the board**, not a root-level field on it. It is written by Phase 4 step 9a and deleted by step 10 (see `phase-completion.md`'s Phase 4 completion section, steps 9a, 9b, and 10), and it exists for exactly the span between them: the board, the save file, and the handoffs are all deleted at step 9b, but two things 9a produces, its own relocation record and a copy of the board's `worktrees_created` array, still have readers after that delete. This file is what carries them across it.
+
+**Path:** `.ops-state/<run-id>-cleanup.json`, alongside the board and save file.
+
+**Shape:**
+
+```json
+{
+  "run_id": "auth-middleware-2026-04-14",
+  "relocations": [
+    {"content": "Non-obvious decision: switched retry backoff from linear to exponential", "destination": "docs/plan/auth-middleware-plan.md"}
+  ],
+  "worktrees_created": [
+    {"path": "/absolute/path/to/worktree", "added_at": "2026-04-14T10:05:00Z"}
+  ]
+}
+```
+
+Field meanings:
+
+- `run_id`: confirmed before any `rm` targeting this file, checked against the `<run-id>` segment in the file's own path and the run this Phase 4 execution is completing. The board is already deleted by delete time, so this is an internal-consistency check between the path, the field, and the run being completed, not the re-read of a still-live board every other `<run-id>`-bearing path in Phase 4 cleanup performs.
+- `relocations`: one entry per item 9a's sweep relocated, each naming the `content` and the `destination` it went to. An empty array means the sweep found nothing durable, a normal outcome, not an error.
+- `worktrees_created`: copied verbatim from the board's own `worktrees_created` field (above) at the moment 9a writes this file, before 9b deletes the board.
+
+**Lifecycle:** written once by 9a, before 9b's deletes; read by 9c's Cleanup block render and by the worktree-cleanup-by-provenance procedure (`completion-options.md`); deleted by step 10, after both of those readers are finished with it, with the delete verified and retried once on failure. Its delete happening later than the board's is a sequencing consequence of step 10 needing the file, not a retention exception: it is not on the board's never-delete list, and the run does not report completion while it is still on disk.
+
+**Backward compatibility:** New file; a run using an older version of this skill never wrote one, and there is nothing to migrate. Its absence during the stale-artifact sweep at Phase 1 (see `handoffs.md`) is the expected outcome once step 10 has already deleted it for a completed run.
 
 ---
 

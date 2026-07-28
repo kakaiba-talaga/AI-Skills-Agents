@@ -170,7 +170,13 @@ For non-trivial tasks (>2 implementation tasks or multi-stage work), the team ma
 
 Structured context summaries passed between pipeline stages, **saved to disk** at `.agents/handoffs/<run_id>/`. Each agent starts fresh, so handoff documents preserve what was done, key decisions, files changed, and guidance for the next agent.
 
-Handoff files are scoped per run — each run gets its own subdirectory (e.g., `caching-layer-2026-04-09/`). This prevents interference when multiple sessions use the team manager concurrently on the same project. On successful completion, the run's handoff directory is cleaned up. On pause/cancel, it's kept for `resume`.
+Handoff files are scoped per run — each run gets its own subdirectory (e.g., `caching-layer-2026-04-09/`). This prevents interference when multiple sessions use the team manager concurrently on the same project. On successful completion, anything durable in the handoffs is relocated to a permanent home first (see Cleanup at Completion below), and then the run's handoff directory is deleted. On pause/cancel, the directory is kept intact for `resume`.
+
+### Cleanup at Completion
+
+Finishing a run doesn't mean deleting the board and walking away. Before removing the task board, the save file, and the run's handoffs, the team manager checks each one for anything worth keeping beyond the run itself: a decision made mid-run that later work depends on, a follow-up the run spotted but didn't get to, a pattern worth remembering for future runs. Each of those gets a permanent home first, a plan document, this documentation, a commit message, the durable adaptation ledger, or `/cross-memory save`, depending on what it is. Only then does the team manager delete its own files, and it verifies the deletes actually happened before reporting the run complete. The completion summary lists what got relocated and where, so nothing that mattered disappears along with the scaffolding that held it temporarily.
+
+One file in this process is the shortest-lived thing this skill ever writes: `.ops-state/<run-id>-cleanup.json` holds the relocation record and a copy of which git worktrees the run created, for the handful of steps at the very end of completion that still need them after the board itself is gone. It's created partway through completion and deleted before the run reports done. Unlike the state file, plan document, or handoffs, it never has to survive a paused session, because it never exists during one.
 
 ### Verify → Fix Loop
 
@@ -457,7 +463,7 @@ By design, `/ops` creates a working branch before any agents modify code when yo
 `resume` relies on a state file at `.ops-state/<run-id>-board.json`. State is only written when a run has progressed past the task-board creation step, or when `/ops save` was called explicitly. If the previous session ended before that point, there is nothing to resume — start a new run instead.
 
 **Where is the state file?**
-`.ops-state/` in your project root. Each run gets its own file named after the run ID (e.g., `.ops-state/caching-layer-2026-04-09-board.json`). The state file, the plan document under `docs/plan/`, and handoff files under `.agents/handoffs/` together hold everything needed for a full session recovery.
+`.ops-state/` in your project root. Each run gets its own file named after the run ID (e.g., `.ops-state/caching-layer-2026-04-09-board.json`). The state file, the plan document under `docs/plan/`, and handoff files under `.agents/handoffs/` together hold everything needed for a full session recovery. Late in a successful run you may briefly see a second file there, `.ops-state/<run-id>-cleanup.json`; it exists only for the last few steps of completion and is gone by the time the run reports done, so there's nothing to act on if you spot it.
 
 **An agent is looping and the task never completes.**
 The team manager retries a failing task up to the Verify→Fix loop cap: 3 attempts in interactive/supervised mode, 5 in autonomous. The loops are: base brief → debugger diagnosis → model escalation (sonnet → opus, or → fable if approved), then in autonomous mode loops 4–5 re-dispatch on the already-escalated model with debugger findings carried forward. The `opus → fable` escalation is gated — autonomous runs default to staying on `opus` unless you approve `fable` within ~1 minute. If you see the same task cycling, type `stop` to halt dispatching, then inspect what the last agent returned. You can then `skip` the task, adjust the plan, and resume.
@@ -496,7 +502,7 @@ The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase po
 | :--- | :--- | :--- |
 | `help-card.md` | Quick-reference card for commands, flags, and mid-run actions | `help` command |
 | `plan-validation.md` | Spec clarity evaluation, plan complexity scoring, critic verdict handling, scoper/critic output descriptions, execute-skip detection, adaptation rules | Phase 1a Plan Validation (Tier 2/3 runs) |
-| `state-schema.md` | State file JSON structure, field definitions, directory conventions | Phase 2 state file creation |
+| `state-schema.md` | State file JSON structure, field definitions, directory conventions, cleanup record file schema | Phase 2 state file creation, Phase 4 cleanup |
 | `dispatch-policy.md` | Background-default dispatch rule, closed foreground-exception list, batch/predecessor rules, health-monitoring and harness/worktree interactions | Every agent spawn |
 | `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules, subagent dispatch decision framework | Team manager tool use decisions |
 | `dispatch-log.md` | Dispatch decision log spec — opt-in via `--dispatch-log` flag; file location, retention, entry format, kinds, append procedure, audit usage | Appending entries to `docs/ops-dispatch-log.md` when `--dispatch-log` is set |
