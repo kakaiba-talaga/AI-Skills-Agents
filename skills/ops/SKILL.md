@@ -281,7 +281,7 @@ Include this block verbatim (word-for-word) in every agent brief's `## Constrain
 - **Relative paths only** — use absolute paths only for resources outside the project (e.g., `~/.claude/`). Absolute paths break permission matching.
 - **Temporary files** — use `_tmp_` prefix (e.g., `_tmp_test.py`) in the project root. Never in `/tmp/` or `%TEMP%`. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated.
 - **No sub-agent spawning** — do not use the Agent tool. Only the team manager orchestrates.
-- **No scope expansion** — report discovered out-of-scope work; do not act on it.
+- **No scope expansion** — report discovered out-of-scope work; do not act on it. Checking a premise you were handed is part of the task, not scope expansion: see `~/.claude/skills/ops/brief-contract.md` `## Premise Accuracy`.
 - **No commit trailers** — do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the system default.
 - **No secrets in code or output** — never hardcode secrets, credentials, tokens, or keys, and never write a secret value into any file, log, or report you produce.
 - **Fresh verification before completion** — see ~/.claude/skills/ops/verification-gate.md

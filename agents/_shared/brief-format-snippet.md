@@ -22,3 +22,7 @@ Unless an agent's contract states otherwise: refuse the dispatch — do not infe
 ## Internal inconsistency (default)
 
 When sections conflict (e.g., `## Scope` cites file A and `## Acceptance Criteria` requires changes in file B): escalate rather than silently picking one side. Return a `NEEDS-INPUT` verdict naming which sections conflict. See `~/.claude/skills/ops/brief-contract.md` `## Section Precedence` for precedence rules.
+
+## Premise accuracy (default)
+
+When a brief's stated premise contradicts the artifact, the artifact governs: report the contradiction, then correct or escalate rather than comply. Confirming a premise you were handed is part of the task, not scope expansion. The agent honors the mandatory `NEEDS-INPUT` escalation when the correction to a disproved premise touches a security, correctness, or safety surface (keyword heuristic per `~/.claude/skills/ops/brief-contract.md` `## Section Precedence`). See `~/.claude/skills/ops/brief-contract.md` `## Premise Accuracy` for the full rule.

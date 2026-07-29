@@ -202,6 +202,38 @@ Which governs this task — the durable rule (redact unconditionally) or the tas
 
 ---
 
+## Premise Accuracy
+
+"Missing-Section Behavior" above governs a brief that omits something it should contain. This section governs a different defect: a brief that contains every required section, correctly formed, but states something false about how the system it describes actually works. A brief can be structurally complete and still be wrong.
+
+### Producer obligation: the team manager
+
+A brief must not state a **mechanism claim** as fact unless its author verified it against the artifact. A mechanism claim is any statement about how something works: a file's encoding or line endings, whether a given line is operative or merely decorative, what a transform does to a particular string, which text an anchor tracks, what a config file enforces, and claims of the same shape.
+
+Sourcing a mechanism claim from memory or from a prior conversation does not count as verification. Memory records a moment, and the artifact can change after that moment, or the memory can have recorded a transient state as though it were a standing one. Re-check the claim against the current artifact before writing it into a brief.
+
+When a mechanism claim is load-bearing (the task's scope or approach depends on it) and the author has not verified it, the brief must mark the claim as unverified rather than state it flatly, so the receiving agent knows which premises to test before acting on them. A short parenthetical is enough: `(unverified, confirm against the file before relying on it)`.
+
+### Consumer obligation: every receiving agent
+
+The artifact wins. When a brief's stated premise contradicts what the agent observes in the files it is scoped to, the observation governs, not the brief's prose.
+
+The premise this section governs is the mechanism claim defined above, not a design choice or approach preference, so disagreement with how a brief chose to solve a problem is never grounds for refusal under this section, only a disproved factual claim about how the artifact behaves.
+
+Do not comply with an instruction whose stated premise you have disproved. Report the contradiction, state what the artifact shows, then either proceed on the corrected premise when the correction is unambiguous, or stop and report when the correction changes what the task should be.
+
+When the correction to a disproved premise touches a security, correctness, or safety surface, judged under the same keyword heuristic used for the mandatory `NEEDS-INPUT` escalation in "Section Precedence" above (here scanning the artifact's contradicting content and the corrected instruction, since there is no durable rule's body to scan), the agent MUST escalate via `NEEDS-INPUT` instead of applying either branch above: name the disproved premise, state what the artifact shows, and ask the user to confirm before proceeding.
+
+Checking a premise you were handed is part of the task, not scope expansion. The no-scope-expansion constraint carried in every brief restricts what the agent does beyond the assigned task; it does not restrict confirming the assigned task's own premises before acting on them.
+
+A wrong premise is distinct from a missing section. A brief carrying a false but present premise is handled under this section: report and correct. A brief missing a required section entirely is handled under "Missing-Section Behavior" above: refuse or proceed per that table, as appropriate.
+
+### Uniformity across agents
+
+The obligation this section defines is uniform: every consuming agent owes the same duty to verify a premise against the artifact, report a contradiction, and correct it, and no agent carries a version of the rule that differs from any other's. Delivery of that obligation, however, is not uniform, and this contract cannot guarantee it: how the rule reaches a given agent depends on that agent's dispatch route, and no route guarantees it.
+
+---
+
 ## Mode Handling
 
 The `## Mode` section carries one of four values: `interactive`, `autonomous`, `supervised`, or `tdd`.
@@ -376,6 +408,28 @@ autonomous
 **Read-only-scope note:** The `## Scope` section above lists only read paths (`~/.cross-memory/**` and the source inputs) plus `_tmp_*` for filter computation staging. There are no new write paths. The agent does not write `reflect_declined.md` — the skill does, after the user types `decline <id>` in the interactive loop.
 
 The distill intent's filter consumes Sets A, B, and C deterministically (always produces the same result for the same input) against the three threshold signals (`slug_overlap: 0.85`, `tag_overlap: 0.8`, `body_token_jaccard: 0.7`); Set D is applied at the LLM-prompt layer during raw-candidate generation and is not part of the deterministic filter. The agent receives all four reference sets via the `reference_sets:` constraint block and the three threshold values via the `thresholds:` block.
+
+### Example 4: Premise correction (any consuming agent)
+
+```
+## Task
+Update the config writer so it keeps the file's existing line endings.
+
+## Scope
+- `src/config/loader.py` (edit)
+
+## Acceptance Criteria
+1. The writer preserves the file's current line-ending convention on every write.
+
+## Constraints
+[Shared Brief Constraints — see skills/ops/SKILL.md#shared-brief-constraints]
+- The file uses CRLF line endings; do not normalize them to LF.
+```
+
+Before editing, the executor checks `.gitattributes` and the file itself: both enforce LF,
+not CRLF. The constraint's stated premise is false. The executor reports the contradiction,
+states that the artifact shows LF, and proceeds on the corrected premise: write LF, matching
+the repository convention, rather than the brief's stated CRLF.
 
 ---
 
