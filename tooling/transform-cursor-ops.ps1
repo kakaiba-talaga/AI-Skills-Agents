@@ -841,7 +841,7 @@ Note: Cursor does not support model escalation (changing the model between attem
 # PATCH 50 — Remove "Learning across runs" section
 # ---------------------------------------------------------------------------
 rep(
-    "### Learning across runs\n\nUses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at run start, apply as soft defaults, log when applied.\n\n> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start and `/timing-calibrator capture` at completion.\n\n### Adaptation log",
+    "### Learning across runs\n\nUses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at run start, apply as soft defaults, log when applied.\n\n> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start; completion-time calibration writes happen directly per `phase-completion.md` step 4a, and the skill remains the user-invoked path for a full recomputation on demand.\n\n### Adaptation log",
     "### Adaptation log",
 )
 

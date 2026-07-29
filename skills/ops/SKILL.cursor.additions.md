@@ -644,8 +644,9 @@ Note: Cursor does not support model escalation (changing the model between attem
 ACTION: replace
 ANCHOR: ### Learning across runs
 @@STOP
-> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start and `/timing-calibrator capture` at completion.
+### Adaptation log
 @@CONTENT
+### Adaptation log
 @@END
 
 @@PATCH
