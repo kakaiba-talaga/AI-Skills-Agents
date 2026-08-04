@@ -215,9 +215,16 @@ Read the plan hierarchy (milestones > stages > tasks). For each actionable task,
 - **agent_type**: Agent to assign (see Agent Assignment Rules)
 - **stage**: Pipeline stage — `plan`, `implement`, `verify`, `review`, `document`
 - **priority**: `1` (critical path) through `5` (nice-to-have)
-- **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, invoke `/timing-calibrator read` (see `~/.claude/skills/timing-calibrator/SKILL.md`) for historical averages per agent type. If calibration data exists, use historical averages. If no calibration data, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
+- **estimated_minutes**: Estimated time to complete. Source from the project-scoper's hour estimates if a scoping document exists (convert hours to minutes). If no scoping doc, read historical averages per agent type from the timing calibration file directly (see 2a below). If calibration data exists, use historical averages. If no calibration data, produce a rough estimate: trivial (1-5 min), scoped (5-15 min), complex (15-45 min)
 - **estimate_source**: `"scoping-doc"`, `"calibration"`, or `"ops"`
 - **blocked_by**: Array of task IDs this task depends on
+
+**2a. Read the timing calibration file directly for the estimate above.** When no scoping-doc estimate is available, read the timing calibration file in the project memory directory (`~/.claude/projects/<project>/memory/feedback_ops_timing_patterns.md`) directly for the `estimated_minutes` lookup above. The read:
+
+- **Is a direct, non-interactive read.** It does not route through `/timing-calibrator read`. Invoking a skill here would halt task board creation and require an `/ops resume` before Phase 2 could finish, the same reason the step 4a completion-time write in `phase-completion.md` writes its own file directly rather than routing through `/timing-calibrator capture`.
+- **Is keyed by project.** The file lives in this project's memory directory; a record from another project never applies here.
+- **Falls back gracefully when absent.** If the file does not exist, or has no entry for the agent type in question, proceed with the rough-estimate heuristic above — the same "no data" fallback the skill's own `read` command documents.
+- **Leaves `/timing-calibrator` as the user-invoked path.** The skill is still there for a full recomputation on demand; the pipeline does not call it.
 
 > **Reference:** See `~/.claude/skills/ops/state-schema.md` for the `description_ref` resolution algorithm and field definitions.
 

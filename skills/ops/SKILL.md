@@ -506,7 +506,7 @@ In autonomous mode, after the 3rd-attempt model escalation, loops 4 and 5 re-dis
 
 Uses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at run start, apply as soft defaults, log when applied.
 
-> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start; completion-time calibration writes happen directly per `phase-completion.md` step 4a, and the skill remains the user-invoked path for a full recomputation on demand.
+> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Run-start calibration reads happen directly per `phase-intake.md`'s Phase 2 task board creation step (2a), and completion-time calibration writes happen directly per `phase-completion.md` step 4a; the skill remains the user-invoked path for a full recomputation on demand.
 
 ### Adaptation log
 

@@ -119,6 +119,7 @@ $pyScript = @'
 import sys
 import hashlib
 import os
+import glob
 import difflib
 
 in_path   = sys.argv[1]
@@ -172,11 +173,34 @@ def _companion_patch(old):
         "## Team Manager — Status",
     ))
 
+# ---------------------------------------------------------------------------
+# Companion corpus: anchors on the skip list above claim their text relocated
+# into skills/ops/phase-*.md, siblings of the hub file (see the "Post-B1"
+# comment above). Confirm that claim instead of trusting it — an anchor whose
+# quoted text was later rewritten or deleted has nowhere left to have moved
+# to, and silently skipping it forever hides a dead patch.
+# ---------------------------------------------------------------------------
+_companion_dir = os.path.dirname(in_path) or "."
+_companion_paths = sorted(glob.glob(os.path.join(_companion_dir, "phase-*.md")))
+_companion_corpus = []
+for _companion_path in _companion_paths:
+    with open(_companion_path, "rb") as _f:
+        _raw = _f.read()
+    _companion_corpus.append(_raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n").decode("utf-8"))
+
+def _found_in_companions(old):
+    """Return True when the anchor's exact text exists in a phase-*.md companion."""
+    return any(old in content for content in _companion_corpus)
+
 def rep(old, new):
     global text
     idx = text.find(old)
     if idx < 0:
-        if not _companion_patch(old):
+        if _companion_patch(old):
+            if not _found_in_companions(old):
+                first = old.split("\n")[0][:80]
+                print(f"WARNING: PATCH ANCHOR ORPHANED (marked as relocated, but not found in any skills/ops/phase-*.md companion): {first}...", file=sys.stderr)
+        else:
             first = old.split("\n")[0][:80]
             print(f"WARNING: PATCH NOT FOUND: {first}...", file=sys.stderr)
         return
@@ -832,7 +856,7 @@ Note: Cursor does not support model escalation (changing the model between attem
 # PATCH 50 — Remove "Learning across runs" section
 # ---------------------------------------------------------------------------
 rep(
-    "### Learning across runs\n\nUses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at run start, apply as soft defaults, log when applied.\n\n> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Invoke `/timing-calibrator read` at run start; completion-time calibration writes happen directly per `phase-completion.md` step 4a, and the skill remains the user-invoked path for a full recomputation on demand.\n\n### Adaptation log",
+    "### Learning across runs\n\nUses the memory system (`~/.claude/projects/<project>/memory/`). Check memory at run start, apply as soft defaults, log when applied.\n\n> **Reference:** The `/timing-calibrator` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) manages estimation calibration, model escalation patterns, and cross-run learning. Run-start calibration reads happen directly per `phase-intake.md`'s Phase 2 task board creation step (2a), and completion-time calibration writes happen directly per `phase-completion.md` step 4a; the skill remains the user-invoked path for a full recomputation on demand.\n\n### Adaptation log",
     "### Adaptation log",
 )
 
