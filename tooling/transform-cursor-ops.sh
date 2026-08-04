@@ -126,36 +126,19 @@ def _companion_patch(old):
     """Return True when the anchor lives in phase companions, not the hub."""
     first = old.split("\n", 1)[0]
     return first.startswith((
-        "| Spec or requirement text |",
         "| `resume` |",
-        "| `status` |",
-        "1. **Create state file (mandatory",
-        "4. **Dispatch:** Spawn the agent via the Agent tool",
-        "6. **On result:** If this run was promoted",
         "**Spec clarity evaluation (default path",
         "The plan doc + state file + handoff files (see Handoff Documents)",
         "**Also skip when:** `resume`, `status`",
         "Parse the plan into discrete, assignable tasks. Create the state file.",
-        "1. Run `Bash(command=\"mkdir -p .ops-state\")`.",
         "2. Use the Write tool to create `.ops-state/<run-id>-board.json`",
-        "3. Verify the file exists by reading it back. If the read fails",
-        "**4. Write state file to disk:**",
         "**When genuinely in doubt**, dispatch an **interviewer**",
         "**Display the task board after creation.** After the state file is written",
         "Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`)",
-        "**Dispatch example:**",
-        "| **Passed**",
-        "| **Failed — 2nd attempt**",
-        "| **Failed — 3rd attempt**",
         "| **Blocked**",
         "Orphan detection is handled by the **work-verifier** agent",
         "When every task is `completed`:",
-        "dispatch a **verifier** agent to run the full test suite",
         "   - **Estimation accuracy**",
-        "   > **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` fo",
-        "> **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` for t",
-        "   > **Reference:** Invoke the `/timing-calibrator capture` skill",
-        "## Team Manager — Status",
     ))
 
 # ---------------------------------------------------------------------------
@@ -271,53 +254,11 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 )
 
 # ---------------------------------------------------------------------------
-# PATCH 6 — Input table: Spec row
-# ---------------------------------------------------------------------------
-rep(
-    '| Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |',
-    '| Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch **planner** via `Task(subagent_type="planner")`. If ambiguous, dispatch **interviewer** first via `Task(subagent_type="interviewer")`, then **planner** with the crystallized requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |',
-)
-
-# ---------------------------------------------------------------------------
 # PATCH 7 — Input table: resume row
 # ---------------------------------------------------------------------------
 rep(
     "| `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. Treat an `in_progress` task as orphaned **only if the orchestrator does not still hold its spawn in the current context**; a spawn still held means the agent is live — keep watching it and do not re-dispatch it. A held spawn is reachable only in a same-session resume — ordinarily one typed while background agents from this session are still running — since across a session boundary the orchestrator holds nothing, so every inherited in-progress task classifies as orphaned. Dispatch a **work-verifier** agent per remaining in-progress task to determine actual completion status. Then run Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |",
     "| `resume` | Read the state file from `.ops-state/`. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. A task is orphaned only if the orchestrator no longer holds its spawn; a spawn still held means the agent is live and is not re-dispatched. Dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) per remaining in-progress task to determine actual completion status. Run Phase 2.5 preflight if environment may have changed, then skip to Phase 3 (Dispatch Loop). Recreate TodoWrite display from state file via `TodoWrite(merge=false)`. For full recovery procedure, see Interruption Handling → Session Recovery. |",
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 8 — Input table: status row
-# ---------------------------------------------------------------------------
-rep(
-    "| `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |",
-    '| `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent (see `~/.cursor/agents/work-verifier.md`) via `Task(subagent_type="generalPurpose")` with orphan detection enabled. Display the dashboard (see Status Dashboard), stop. |',
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 9 — Trivial Dispatch step 1
-# ---------------------------------------------------------------------------
-rep(
-    '1. **Create state file (mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Bash(command="mkdir -p .ops-state")`. Use the Write tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back.',
-    '1. **Create state file (mandatory):** Generate a `run-id` (`<slug>-<ISO-date>`). Run `Shell(command="mkdir -p .ops-state")`. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with one task entry. Use `description_inline` for the task entry (trivial-path runs have no persisted plan doc, so there is no `description_ref` pointer to set). Verify the file exists by reading it back with `Read`. Also call `TodoWrite(merge=false)` with the single task item.',
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 10 — Trivial Dispatch step 4
-# ---------------------------------------------------------------------------
-rep(
-    "4. **Dispatch:** Spawn the agent via the Agent tool using the same Agent Dispatch Procedure (Phase 3 Step 3) — read frontmatter for `model`, set description/model/prompt (agent reads its own body as first action).",
-    '4. **Dispatch:** Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)`. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`. The prompt instructs the agent to read its own definition as its first action (see Agent Dispatch Procedure for the self-read prompt template).',
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 11 — Trivial Dispatch step 5
-# ---------------------------------------------------------------------------
-rep(
-    """6. **On result:** If this run was promoted in the preceding Promotion check step, skip this step entirely —
-   cleanup, the trivial one-line summary, and completion are owned by the pipeline's Phase 4.
-   Otherwise: Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). **Cursor only:** Write → Read verify → `TodoWrite` per `phase-dispatch.md` § **Cursor: state file sync**. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.""",
-    "5. **On result:** Mark task `completed` in the state file (record `completed_at`, `duration_seconds`). Update TodoWrite. Run cleanup: delete this run's `_tmp_` files one at a time — never `rm _tmp_*` — then delete `.ops-state/<run-id>-board.json`. Output one concise summary line: what was done, file(s) changed if any, actual duration.",
 )
 
 # ---------------------------------------------------------------------------
@@ -403,55 +344,8 @@ rep(
 )
 
 rep(
-    '1. Run `Bash(command="mkdir -p .ops-state")`.',
-    '1. Run `Shell(command="mkdir -p .ops-state")` (or `mkdir .ops-state` on Windows if it doesn\'t exist — check first with `ls .ops-state` or `dir .ops-state`).',
-)
-
-rep(
     '2. Use the Write tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.',
     '2. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.',
-)
-
-rep(
-    "3. Verify the file exists by reading it back. If the read fails, the state file was not created — stop and fix before proceeding.",
-    '3. Verify the file exists by reading it back with `Read(path=".ops-state/<run-id>-board.json")`. If the read fails, the state file was not created — stop and fix before proceeding.',
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 17 — Phase 2 step 4 + 5 reorder: Write→TodoWrite + new Verify block
-# ---------------------------------------------------------------------------
-rep(
-    """**4. Write state file to disk:**
-
-Use the Write tool to overwrite `.ops-state/<run-id>-board.json` with the complete JSON (all tasks populated from steps 2-3).
-
-**5. Verify state file on disk (MANDATORY):**
-
-Before displaying the task board, confirm the state file exists and is valid:
-
-1. Read `.ops-state/<run-id>-board.json` — verify the file contains valid JSON with a non-empty `tasks` array.
-2. If the file is missing or empty, **stop and re-create it**. Do not proceed to dispatch without a valid state file on disk.
-3. Confirm `.ops-state/` is ignored: run `git check-ignore -q .ops-state/`. If it exits `0`, the path is already ignored (possibly via a catch-all such as `**/.*`) — do **not** modify `.gitignore`. Only if it exits non-zero (genuinely unignored) append `.ops-state/` to `.gitignore`. Never decide by string-matching `.gitignore` lines — a literal scan cannot see catch-all coverage.
-
-**Agent Assignment Rules**""",
-    """**4. Write state file and create TodoWrite display:**
-
-Use the `Write` tool to overwrite `.ops-state/<run-id>-board.json` with the complete JSON (all tasks populated from steps 2-3). Then call `TodoWrite(merge=false)` with all tasks. **Both writes are mandatory** — the state file is the source of truth, TodoWrite is the display layer.
-
-```text
-TodoWrite items (one per task):
-  id: "task-0"
-  content: "[executor][implement] Implement auth middleware"
-  status: "pending"
-
-  id: "task-1"
-  content: "[verifier][verify] Verify auth middleware"
-  status: "pending"
-
-  ...
-```
-
-**Agent Assignment Rules**""",
 )
 
 # ---------------------------------------------------------------------------
@@ -491,72 +385,6 @@ rep(
 # Do not re-insert TodoWrite-only steps into SKILL.cursor.md — they never applied here.
 
 # ---------------------------------------------------------------------------
-# PATCH 23 — Remove Example block + "Use the brief format below." + Foreground section
-#            Replace with Cursor steps 5 and 6
-# ---------------------------------------------------------------------------
-rep(
-    """**Dispatch example:**
-
-> **Code invocation example — keep fenced.** The block below is a code-style invocation example, not a user-facing UI output. Do not unfence it.
-
-```
-Agent(
-  description: "Implement auth middleware",
-  model: "sonnet",
-  subagent_type: "executor",
-  prompt: <self-read template + task brief>
-)
-UI renders: executor(Implement auth middleware)
-```
-
-DO NOT set `description: "executor(Implement auth middleware)"` when `subagent_type: "executor"` is set.
-This produces `executor(executor(Implement auth middleware))` in the UI.
-
-Use the brief format below.
-3. For parallel batches, issue all Agent tool calls in a **single message** so they run concurrently.
-
-**Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
-
-> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.
-
-**Foreground vs. Background Dispatch Policy**
-
-Default is **foreground**. Use **background** (`run_in_background: true`) for tasks estimated at 8+ minutes when other tasks can advance concurrently. Adapt the threshold based on runtime conditions.
-
-> **Reference:** You MUST Read `~/.claude/skills/ops/dispatch-policy.md` for the full foreground/background decision criteria, batch rules, and interaction with health monitoring and worktree isolation. If the file is missing, proceed using the summary above.""",
-    """5. Spawn the agent via `Task(subagent_type="<agent_type>", prompt=<self-read prompt + brief>)` using the brief format below. For agents not in the Cursor built-in enum, use `Task(subagent_type="generalPurpose", prompt=<self-read prompt + brief>)`.
-6. For parallel batches, issue all Task calls in a **single message** so they run concurrently.
-
-**Dispatch Log Append (opt-in via `--dispatch-log`)** — when the `--dispatch-log` flag is set, append a one-line entry to `docs/ops-dispatch-log.md` after each dispatch (or direct-tool choice governed by the Subagent Dispatch Decision Framework), capturing kind, framework row, and short description. This applies universally when enabled: Phase 3 dispatch loop, Trivial Dispatch, Brainstorm Gate, Phase 1a scoper/critic, Phase 2.5 preflight, and every other agent dispatch. When the flag is not set, skip entirely — do not touch the log file. The log is persistent across runs and serves as the audit trail for framework adherence.
-
-> **Reference:** You MUST Read `~/.cursor/skills/ops/dispatch-log.md` for the file location, append procedure, entry format, kinds table, and audit usage. If the file is missing, proceed using the summary above. Read only when `--dispatch-log` is set.""",
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 25 — Step 4 outcome: Passed row
-# ---------------------------------------------------------------------------
-rep(
-    '| **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |',
-    '| **Passed** — acceptance criteria met | Update state file: `status` → `"completed"`. Update TodoWrite. Write a handoff document (see Handoff Documents). Check for newly unblocked tasks. |',
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 26 — Step 4 outcome: Failed 2nd attempt
-# ---------------------------------------------------------------------------
-rep(
-    "| **Failed — 2nd attempt** | Dispatch a **debugger** agent (or **debugger-build** if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |",
-    '| **Failed — 2nd attempt** | Dispatch the **debugger** via `Task(subagent_type="debugger")` (or `Task(subagent_type="debugger-build")` if the failure is a build/import/type error) to diagnose the root cause. Use its findings to re-brief the original agent with a corrected approach. |',
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 27 — Step 4 outcome: Failed 3rd + remove 4th
-# ---------------------------------------------------------------------------
-rep(
-    "| **Failed — 3rd attempt** | Escalate model (sonnet → opus, opus → fable) and re-dispatch with full error history. Skip if already on fable; security-reviewer caps at opus and never escalates to fable. See Model Escalation in Adaptability. |\n| **Failed — 4th attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |",
-    "| **Failed — 3rd attempt** | Escalate to the user with: the task, all attempts, errors, debugger findings, and your diagnosis. Pause this chain; continue other independent chains. |",
-)
-
-# ---------------------------------------------------------------------------
 # PATCH 28 — Blocked row
 # ---------------------------------------------------------------------------
 rep(
@@ -581,35 +409,11 @@ rep(
 )
 
 # ---------------------------------------------------------------------------
-# PATCH 31 — Phase 4 step 3
-# ---------------------------------------------------------------------------
-rep(
-    "dispatch a **verifier** agent to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.",
-    'dispatch a verifier agent via `Task(subagent_type="verifier")` to run the full test suite against the combined changes. This catches integration issues that per-task verification may miss.',
-)
-
-# ---------------------------------------------------------------------------
 # PATCH 32 — Estimation accuracy
 # ---------------------------------------------------------------------------
 rep(
     '   - **Estimation accuracy** — overall ratio of actual to estimated. Feed significant variances into cross-run learning (e.g., "verification tasks in this project consistently take 2x the estimate").',
     "   - **Estimation accuracy** — overall ratio of actual to estimated. Note significant variances for future runs.",
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 33 — timing-edge-cases.md ref (bullet points context)
-# ---------------------------------------------------------------------------
-rep(
-    "   > **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the bullet points above.",
-    "   > **Reference:** You MUST Read `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, calibration, idle time). If the file is missing, proceed using the bullet points above.",
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 34 — timing-calibrator ref (replaces estimation-feedback.md)
-# ---------------------------------------------------------------------------
-rep(
-    "   > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.claude/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.",
-    "   > **Reference:** Invoke the `/timing-calibrator capture` skill (see `~/.cursor/skills/timing-calibrator/SKILL.md`) with the run's task metadata to persist timing patterns.",
 )
 
 # ---------------------------------------------------------------------------
@@ -773,22 +577,6 @@ rep(
 rep(
     "> **Reference:** When rollback is needed, dispatch a **rollback** agent (see `~/.claude/agents/rollback.md`) with the affected file list, scope level, and run ID.",
     "> **Reference:** When rollback is needed, dispatch a **rollback** agent (see `~/.cursor/agents/rollback.md`) via `Task(subagent_type=\"generalPurpose\")` with the affected file list, scope level, and run ID.",
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 45 — Status Dashboard: ``` → ```text + remove health indicators
-# ---------------------------------------------------------------------------
-rep(
-    "## Team Manager — Status\n\n### Active\n- <agent> → Task #N: \"<subject>\" (in_progress, Xs elapsed) [health indicator]\n\nHealth indicators: ✓ ON TRACK (elapsed < 1.5× estimate), ⚠️ SLOW (1.5–2.5×), 🔴 OVERRUN (> 2.5×), 👻 ORPHAN? (elapsed > agent-type timeout, no completion received)",
-    "## Team Manager — Status\n\n### Active\n- <agent> → Task #N: \"<subject>\" (in_progress, Xs elapsed)",
-)
-
-# ---------------------------------------------------------------------------
-# PATCH 46 — timing-edge-cases.md ref in Status Dashboard
-# ---------------------------------------------------------------------------
-rep(
-    "> **Reference:** You MUST Read `~/.claude/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, model escalation, calibration, idle time). If the file is missing, proceed using the dashboard template above.",
-    "> **Reference:** You MUST Read `~/.cursor/skills/ops/timing-edge-cases.md` for timing edge case rules (retry time, parallel execution, internal tasks, resume timing, calibration, idle time). If the file is missing, proceed using the dashboard template above.",
 )
 
 # ---------------------------------------------------------------------------
