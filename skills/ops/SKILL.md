@@ -102,7 +102,7 @@ All task board operations use the state file as the primary store. **Every mutat
 7. **Timing section mandatory** — always include Timing in every dashboard display (mid-run and completion).
 8. **Dashboard gating** — runs with ≤ 2 non-internal tasks: render full dashboard at completion only; stage transitions use one-liner `✓ [stage] complete (Xs)`. Always render full dashboard on `/ops status`.
 9. **Trivial route still enforces the state-file and self-contained-brief invariants** — even on the trivial path, a state file is created and verified on disk and the agent brief is fully self-contained. The triage gate never bypasses these invariants. A run promoted from the trivial route to the full pipeline keeps its existing run-id and state file; the verified state file on disk and the fully self-contained agent brief continue to hold across the promotion exactly as on any other pipeline run.
-10. **Nested skill returns are mid-loop events.** A nested-skill return is a **mid-loop checkpoint**, never a terminal event — never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. Run this ritual around every nested-skill invocation (e.g., `/deslop`, `/clickup`):
+10. **Nested skill returns are mid-loop events.** A nested-skill return is a **mid-loop checkpoint**, never a terminal event — never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. Run this ritual around every nested-skill invocation (e.g., `/deslop`, `/cross-memory reflect`):
 
     **Write-before** (immediately before invoking the nested skill):
     1. Build the `pending_nested_skill` record (fields: `skill`, `invoked_at`, `resume_phase`, `resume_notes`). See `state-schema.md`.
@@ -114,14 +114,14 @@ All task board operations use the state file as the primary store. **Every mutat
     **Clear-after** (immediately after the nested skill returns):
     1. Re-read the state file from disk.
     2. Consult `pending_nested_skill.resume_phase` and `resume_notes` to know where to resume and how to proceed.
-    3. Capture any output that downstream phases need — into a handoff file where one exists per the Handoff Documents section, or into the next agent's brief when no handoff procedure applies (e.g., ClickUp).
+    3. Capture any output that downstream phases need — into a handoff file where one exists per the Handoff Documents section, or into the next agent's brief when no handoff procedure applies.
     4. Clear `pending_nested_skill` back to `null`.
     5. Write the state file to disk.
     6. Execute the resume action (subject to the post-`Skill()` two-turn caveat below).
 
     The dispatch loop terminates **only** on Phase 4 completion (all tasks `completed`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
 
-    **Caveat (Skill-tool two-turn reality): post-`Skill()` mechanism limitation.** When a nested skill is invoked via the **Skill** tool (e.g., `/deslop`, `/clickup`), the next assistant turn IS the skill's processing — the LLM is operating in the skill's prompt context, not the team manager's. The team manager has no turn from which to "continue dispatching in the same turn" with the skill. Under this mechanism, the "clear-after" ritual above must be split across two turns: the skill's response turn must end with an explicit user-visible halt notice, and the user's `/ops resume` invocation then completes the clear-after steps. Failing to emit the halt notice leaves the user staring at the skill's final output with no signal that further dispatching is needed — this is a structural limitation, not a workflow preference.
+    **Caveat (Skill-tool two-turn reality): post-`Skill()` mechanism limitation.** When a nested skill is invoked via the **Skill** tool (e.g., `/deslop`, `/cross-memory reflect`), the next assistant turn IS the skill's processing — the LLM is operating in the skill's prompt context, not the team manager's. The team manager has no turn from which to "continue dispatching in the same turn" with the skill. Under this mechanism, the "clear-after" ritual above must be split across two turns: the skill's response turn must end with an explicit user-visible halt notice, and the user's `/ops resume` invocation then completes the clear-after steps. Failing to emit the halt notice leaves the user staring at the skill's final output with no signal that further dispatching is needed — this is a structural limitation, not a workflow preference.
 
       **Mandatory halt-notice template** (the team manager — operating as the skill — emits these lines as the final lines of the skill's response output, before yielding the turn to the user):
 

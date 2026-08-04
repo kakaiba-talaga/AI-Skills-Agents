@@ -190,13 +190,6 @@ The plan doc + state file + handoff files provide complete state recovery across
 @@END
 
 @@PATCH
-ACTION: replace_line
-ANCHOR: **ClickUp context enrichment:** If a ClickUp task ID is referenced, pull task details before planning. Invoke `/clickup Get task <id>` if the skill is available, or fall back to `curl https://api.clickup.com/api/v2/task/<id>` with the token from `~/.claude/config/clickup/config.json`. Extract title, description, status, checklist items, and comments as spec context. Intake-only — does not write back to ClickUp.
-@@CONTENT
-**ClickUp context enrichment:** If a ClickUp task ID is referenced, pull task details before planning. Read `~/.cursor/skills/clickup/SKILL.md` and dispatch via `Task(subagent_type="generalPurpose")` if available; otherwise fall back to `curl https://api.clickup.com/api/v2/task/<id>` with token from `~/.cursor/config/clickup/config.json`. Extract title, description, status, checklist items, and comments as spec context. Intake-only — does not write back to ClickUp.
-@@END
-
-@@PATCH
 ACTION: replace
 ANCHOR: **Also skip when:** `resume`, `status`, or user says "just do it" / "skip validation".
 @@STOP
@@ -676,7 +669,6 @@ Since Cursor has no `Skill` tool, the ops skill invokes other skills by reading 
 | :--- | :--- | :--- |
 | deslop | `~/.cursor/skills/deslop/SKILL.md` | `Task(subagent_type="generalPurpose")` with `--conservative` flag |
 | linter | `~/.cursor/skills/linter/SKILL.md` | `Task(subagent_type="generalPurpose")` or follow inline |
-| clickup | `~/.cursor/skills/clickup/SKILL.md` | `Task(subagent_type="generalPurpose")` with task ID |
 | deploy | `~/.cursor/skills/deploy/SKILL.md` | `Task(subagent_type="generalPurpose")` with deployment spec |
 
 ---

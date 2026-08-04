@@ -113,7 +113,7 @@ where `Xms` is the wall-clock time for the save itself (steps 4 and 5 combined).
 
 Before displaying any prompt, read the state file's `pending_nested_skill` field. This guard runs **before** the y/N prompt is shown, not after.
 
-If `pending_nested_skill` is **non-null** — meaning a prior nested skill (e.g., `/deslop`, `/clickup`) is already in flight and its return path has not yet executed — do not show the reflect prompt. Print the following line verbatim, substituting the in-flight skill name from the marker:
+If `pending_nested_skill` is **non-null** — meaning a prior nested skill (e.g., `/deslop`, `/cross-memory reflect`) is already in flight and its return path has not yet executed — do not show the reflect prompt. Print the following line verbatim, substituting the in-flight skill name from the marker:
 
 ```
 Save complete; reflect skipped because a nested skill (<name>) is already in flight.

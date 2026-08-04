@@ -62,7 +62,7 @@ The short answer is: the *file* is not, but the *running system* is — and it q
 
 ## How It Works
 
-1. **Intake** — Receives a spec, requirement, or existing plan. If a ClickUp task ID is referenced, pulls task details via the `/clickup` skill (falls back to manual API if the skill is unavailable).
+1. **Intake** — Receives a spec, requirement, or existing plan. If a ClickUp task ID is referenced, performs a direct read-only lookup of task details, skipping enrichment if it is unavailable.
 2. **Plan Validation** — Scores plan complexity and automatically chooses whether to dispatch project-scoper (gap analysis, estimates) and/or critic (feasibility review, verdict) before execution. Three tiers: skip (trivial), scope only (medium), scope + critique (complex/architectural).
 3. **Task Board** — Breaks work into tasks with dependencies, assigns each to a specialist agent.
 4. **Dispatch Loop** — Spawns agents (in parallel where safe), tracks results, handles failures.
@@ -194,7 +194,7 @@ The manager creates bookkeeping tasks (merging branches, final verification, com
 
 Spawned agents are workers, not managers. They cannot spawn sub-agents, make scope decisions, or invoke orchestration commands. The team manager enforces these rules in every brief.
 
-The team manager does not end its turn on a nested-skill return — nested-skill invocations (deslop, clickup, etc.) are mid-loop events, not terminal events. The team manager writes a `pending_nested_skill` marker to the state file before invoking, and clears it after return.
+The team manager does not end its turn on a nested-skill return — nested-skill invocations (deslop, etc.) are mid-loop events, not terminal events. The team manager writes a `pending_nested_skill` marker to the state file before invoking, and clears it after return.
 
 > **Note:** When `/ops` is wrapped with `/ralph-loop` (`/ops ralph`), nested-skill invocations inside the ralph-loop wrapper (e.g., ralph-loop's Cleanup stage → `/deslop`) are governed by ralph-loop's own prompt, which does not currently have an equivalent non-negotiable. A follow-up fix to `skills/ralph-loop/` is needed for full coverage. See Appendix A of the fix plan.
 
