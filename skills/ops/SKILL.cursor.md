@@ -176,13 +176,26 @@ Classify the invocation before reading any further. Apply the first matching rul
 | Route | Predicate | Behavior |
 | :--- | :--- | :--- |
 | **save** | Argument is `save` | Execute save subcommand per `phase-intake.md` § Save Subcommand. |
-| **trivial** | Single-sentence scope AND no code changes across multiple modules AND user did not say `plan` AND not `resume` / `status` / `execute` AND no stage-crossing dependencies implied (no verify→review→document chain) | Skip to **Trivial Dispatch** in `phase-intake.md`. Never reads Phase 1a, Phase 2.5, or full Phase 4. |
+| **trivial** | Every file the work will write can be named now, without dispatching anything to find out (the write set, not the read set — inability to name it is the answer: route to pipeline) AND no code changes across multiple modules AND user did not say `plan` AND not `resume` / `status` / `execute` AND no stage-crossing dependencies implied (no verify→review→document chain) | Skip to **Trivial Dispatch** in `phase-intake.md`. Never reads Phase 1a, Phase 2.5, or full Phase 4. |
 | **status-only** | Argument is `status` | Read state file, render dashboard (`phase-completion.md`), stop. |
 | **pipeline** | Everything else — `plan`, `execute`, `resume`, `--brainstorm`, any multi-stage or multi-module request | Full workflow: Phase 1a → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 (see phase companions). |
 
-**Trivial examples:** "commit the changes using git-master", "run the deploy script to all channels", "get the assessment doc updated", "fix this typo in README".
+**Trivial examples** (each annotated with the clause that decides it):
 
-**NOT trivial:** "add a new agent for X" (multiple files + stages), "refactor the foo module" (code across modules), "investigate this bug" (implies debugger→executor→verifier chain).
+- "commit the changes using git-master" — write set is nameable: the commit is the only write, nothing to dispatch first to find out.
+- "run the deploy script to all channels" — write set is nameable: the channel list is already known, and nothing downstream implies a stage-crossing chain.
+- "get the assessment doc updated" — write set is nameable: one file, `docs/ASSESSMENT.md`; the research behind the update can read as widely as it needs to.
+- "fix this typo in README" — write set is nameable: one file, one line.
+- "There's a stray reference to the old skill name somewhere in that doc, it's bugged me for weeks — track it down and fix it wherever it shows up in that one file" — three sentences, but the write set is still one named file. Length was never the test.
+
+**NOT trivial** (each annotated with the clause that decides it):
+
+- "add a new agent for X" — fails "no code changes across multiple modules": the write set spans the agent file, the manifest, and the README.
+- "refactor the foo module" — fails the same clause: code changes land across modules.
+- "investigate this bug" — fails "no stage-crossing dependencies implied": a debugger→executor→verifier chain is already implied.
+- "refactor the auth module" — one sentence, and exactly the case the old first clause missed. It would have passed "single-sentence scope," but the write set can't be named before dispatching something to go look, so it fails the write-set clause.
+
+These examples illustrate the predicate; they do not replace it. When a request doesn't resemble any of them, apply the predicate directly.
 
 If the predicate (the yes/no condition that decides this) is ambiguous — when you cannot determine with confidence that ALL trivial conditions are met — route to `pipeline`.
 
