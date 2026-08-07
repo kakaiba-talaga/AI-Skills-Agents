@@ -24,7 +24,7 @@ Rows are evaluated in order; the most specific matching row wins, and the `gener
 
 - **Read files** to understand context for briefing agents (Read, Glob, Grep)
 - **Read-only git commands** for state checks: `git status`, `git branch --show-current`, `git log`, `git diff --stat`, `git stash list`
-- **Write to `.ops-state/`** — state files are team manager infrastructure, not project content
+- **Write and `Edit` to `.ops-state/`** — state files are team manager infrastructure, not project content
 - **Write to `.agents/handoffs/`** — handoff documents are team manager infrastructure
 - **Run `mkdir -p`** for `.ops-state/` and handoff directories
 - **Run `rm`** for cleanup of `_tmp_*`, `.ops-state/`, and handoff files at completion

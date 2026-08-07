@@ -226,15 +226,15 @@ rep(
 # PATCH 5 — State Operations intro + table (2-col → 3-col) + TodoWrite section
 # ---------------------------------------------------------------------------
 rep(
-    "All task board operations use the state file as the primary store. **Every mutation must write the state file to disk** — do not rely on in-memory state alone.\n\n| Operation | State file action |\n| :--- | :--- |\n| **Create task** | Append to `tasks` array, write file to disk |\n| **Update status** | Update task's `status`, `started_at`, etc., write file to disk |\n| **Scan for ready** | Read file from disk, filter tasks where `status==\"pending\"` and all `blocked_by` entries are `\"completed\"` |\n| **Complete task** | Update `status`, `completed_at`, `duration_seconds`, write file to disk |\n| **Resume** | Read file from disk — full state recovered |\n| **Report** | Read file from disk, compute timing/estimates/variance |",
-    """All task board operations use the state file as the primary store and TodoWrite as the display layer. **Every mutation must write the state file to disk using the `Write` tool** — do not rely on in-memory state alone.
+    "All task board operations use the state file as the primary store. **Every mutation must apply a targeted `Edit` to the state file on disk** — do not rely on in-memory state alone, and do not re-type the whole document with `Write`. `Edit` fails loudly on a mismatched anchor, but it does not detect a malformed replacement string — that is why the read-back verify in `phase-dispatch.md` remains mandatory after every mutation.\n\n| Operation | State file action |\n| :--- | :--- |\n| **Create task** | Append to `tasks` array via targeted `Edit`, verify with `Read` |\n| **Update status** | Update task's `status`, `started_at`, etc. via targeted `Edit`, verify with `Read` |\n| **Scan for ready** | Read file from disk, filter tasks where `status==\"pending\"` and all `blocked_by` entries are `\"completed\"` |\n| **Complete task** | Update `status`, `completed_at`, `duration_seconds` via targeted `Edit`, verify with `Read` |\n| **Resume** | Read file from disk — full state recovered |\n| **Report** | Read file from disk, compute timing/estimates/variance |",
+    """All task board operations use the state file as the primary store and TodoWrite as the display layer. **Every mutation must apply a targeted `Edit` to the state file on disk using the `Edit` tool** — do not rely on in-memory state alone, and do not re-type the whole document with `Write`. `Edit` fails loudly on a mismatched anchor, but it does not detect a malformed replacement string — that is why the read-back verify below remains mandatory after every mutation.
 
-| Operation | State file action (via `Write` tool) | TodoWrite action |
+| Operation | State file action (via `Edit` tool) | TodoWrite action |
 | :--- | :--- | :--- |
-| **Create task** | Append to `tasks` array, `Write` file to disk | `TodoWrite(merge=false)` with full task list |
-| **Update status** | Update task's `status`, `started_at`, etc., `Write` file to disk | `TodoWrite(merge=true)` with `[{id, content, status}]` |
+| **Create task** | Append to `tasks` array via targeted `Edit`, verify with `Read` | `TodoWrite(merge=false)` with full task list |
+| **Update status** | Update task's `status`, `started_at`, etc. via targeted `Edit`, verify with `Read` | `TodoWrite(merge=true)` with `[{id, content, status}]` |
 | **Scan for ready** | `Read` file from disk, filter tasks where `status=="pending"` and all `blocked_by` entries are `"completed"` | — (read-only) |
-| **Complete task** | Update `status`, `completed_at`, `duration_seconds`, `Write` file to disk | `TodoWrite(merge=true)` with `[{id, status: "completed"}]` |
+| **Complete task** | Update `status`, `completed_at`, `duration_seconds` via targeted `Edit`, verify with `Read` | `TodoWrite(merge=true)` with `[{id, status: "completed"}]` |
 | **Resume** | `Read` file from disk — full state recovered | `TodoWrite(merge=false)` to recreate display from state file |
 | **Report** | `Read` file from disk, compute timing/estimates/variance | — (read-only) |
 
@@ -250,7 +250,7 @@ status: "pending"
 
 The format is `[agent_type][stage] subject`. The ops skill updates both the state file and TodoWrite on every status change.
 
-> **Cursor dispatch ritual:** Before Phase 3, read `~/.cursor/skills/ops/phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Never call `TodoWrite` until the board file `Write` + `Read` verify succeed in the same turn.""",
+> **Cursor dispatch ritual:** Before Phase 3, read `~/.cursor/skills/ops/phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Never call `TodoWrite` until the board file's targeted `Edit` and its `Read` verify succeed in the same turn.""",
 )
 
 # ---------------------------------------------------------------------------
@@ -344,8 +344,8 @@ rep(
 )
 
 rep(
-    '2. Use the Write tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.',
-    '2. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with the initial structure: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": []}`.',
+    '2. Use the Write tool to create `.ops-state/<run-id>-board.json` with the initial structure, including every documented root key at its documented default: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": [], "adaptations": [], "worktrees_created": [], "pending_nested_skill": null, "pending_fable_confirm": null, "memory_inject_banner_emitted": false}`. `budget` is omitted here — it is written only when `--budget=<N>` is set (see `state-schema.md`).',
+    '2. Use the `Write` tool to create `.ops-state/<run-id>-board.json` with the initial structure, including every documented root key at its documented default: `{"run_id": "<run-id>", "state_dir": ".ops-state/", "plan_file": "<path or null>", "tasks": [], "adaptations": [], "worktrees_created": [], "pending_nested_skill": null, "pending_fable_confirm": null, "memory_inject_banner_emitted": false}`. `budget` is omitted here — it is written only when `--budget=<N>` is set (see `state-schema.md`).',
 )
 
 # ---------------------------------------------------------------------------
@@ -388,8 +388,8 @@ rep(
 # PATCH 28 — Blocked row
 # ---------------------------------------------------------------------------
 rep(
-    "| **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task describing the issue. Pause dependent chain. Flag to user. |",
-    "| **Blocked** — agent hit an external dependency or environment issue | Create a new blocker task in the state file and TodoWrite. Pause dependent chain. Flag to user. |",
+    '| **Blocked** — agent hit an external dependency or environment issue | Same `Edit`: `status` → `"blocked"`, increment `attempts`. Create a new blocker task describing the issue. Pause dependent chain. Flag to user. |',
+    '| **Blocked** — agent hit an external dependency or environment issue | Same `Edit`: `status` → `"blocked"`, increment `attempts`. Create a new blocker task in the state file and TodoWrite. Pause dependent chain. Flag to user. |',
 )
 
 # ---------------------------------------------------------------------------

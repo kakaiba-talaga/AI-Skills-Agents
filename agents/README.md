@@ -652,7 +652,7 @@ If you experience an unexpected permission prompt, find the relevant entry below
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
-| `Write` | ops | Create/update `.ops-state/<run-id>-board.json` state file |
+| `Write`, `Edit` | ops | Create `.ops-state/<run-id>-board.json` state file (`Write`) and mutate it (`Edit`) |
 | `Read` | ops | Read state file for resume, status, and dispatch |
 
 ### Plan and worktree tools

@@ -145,7 +145,7 @@ If zero tasks are `in_progress`, proceed with the ritual below.
 
 Apply the standard write-before / clear-after ritual documented in SKILL.md Non-negotiable #10.
 
-**Write-before** (immediately before the `/cross-memory reflect` call): write the following `pending_nested_skill` object to the state file:
+**Write-before** (immediately before the `/cross-memory reflect` call): apply a targeted `Edit` setting `pending_nested_skill` on the root object to the following object, then `Read` the file back to confirm the field matches and the document still parses as valid JSON:
 
 ```json
 {
@@ -169,7 +169,7 @@ Apply the clear-after steps of the `pending_nested_skill` ritual:
 1. Re-read the state file from disk (cache invalidated by nested-skill return per the existing invalidation rule).
 2. Read `pending_nested_skill.resume_phase` and `resume_notes`.
 3. No handoff file is written — the reflect output is informational and does not need to be threaded into a downstream agent brief.
-4. Set `pending_nested_skill` to `null` and write the state file.
+4. Apply a targeted `Edit` setting `pending_nested_skill` to `null`, then `Read` the file back to confirm the field is `null` and the document still parses as valid JSON.
 5. Print a one-line summary referencing reflect's run summary.
 
 Do not terminate the active run. `/ops save` returns control to the user, but the run remains in whatever state it was in before save (paused, awaiting next dispatch, between dispatches, etc.).

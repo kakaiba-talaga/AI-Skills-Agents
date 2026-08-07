@@ -76,14 +76,14 @@ The state file is stored at `.ops-state/<run-id>-board.json`.
 
 ### State Operations
 
-All task board operations use the state file as the primary store. **Every mutation must write the state file to disk** — do not rely on in-memory state alone.
+All task board operations use the state file as the primary store. **Every mutation must apply a targeted `Edit` to the state file on disk** — do not rely on in-memory state alone, and do not re-type the whole document with `Write`. `Edit` fails loudly on a mismatched anchor, but it does not detect a malformed replacement string — that is why the read-back verify in `phase-dispatch.md` remains mandatory after every mutation.
 
 | Operation | State file action |
 | :--- | :--- |
-| **Create task** | Append to `tasks` array, write file to disk |
-| **Update status** | Update task's `status`, `started_at`, etc., write file to disk |
+| **Create task** | Append to `tasks` array via targeted `Edit`, verify with `Read` |
+| **Update status** | Update task's `status`, `started_at`, etc. via targeted `Edit`, verify with `Read` |
 | **Scan for ready** | Read file from disk, filter tasks where `status=="pending"` and all `blocked_by` entries are `"completed"` |
-| **Complete task** | Update `status`, `completed_at`, `duration_seconds`, write file to disk |
+| **Complete task** | Update `status`, `completed_at`, `duration_seconds` via targeted `Edit`, verify with `Read` |
 | **Resume** | Read file from disk — full state recovered |
 | **Report** | Read file from disk, compute timing/estimates/variance |
 
@@ -104,19 +104,19 @@ All task board operations use the state file as the primary store. **Every mutat
 9. **Trivial route still enforces the state-file and self-contained-brief invariants** — even on the trivial path, a state file is created and verified on disk and the agent brief is fully self-contained. The triage gate never bypasses these invariants. A run promoted from the trivial route to the full pipeline keeps its existing run-id and state file; the verified state file on disk and the fully self-contained agent brief continue to hold across the promotion exactly as on any other pipeline run.
 10. **Nested skill returns are mid-loop events.** A nested-skill return is a **mid-loop checkpoint**, never a terminal event — never write "Handing control back" (or any equivalent closing phrase) and end the turn after a nested skill returns. Run this ritual around every nested-skill invocation (e.g., `/deslop`, `/cross-memory reflect`):
 
-    **Write-before** (immediately before invoking the nested skill):
+    **Write-before** (immediately before invoking the nested skill) — the **Edit → Read verify** ritual:
     1. Build the `pending_nested_skill` record (fields: `skill`, `invoked_at`, `resume_phase`, `resume_notes`). See `state-schema.md`.
     2. Read the state file from disk.
-    3. Set the `pending_nested_skill` field on the root object.
-    4. Write the state file to disk.
+    3. Apply a targeted `Edit` setting the `pending_nested_skill` field on the root object to the record built in step 1.
+    4. `Read` the file back to confirm the field matches and the document still parses as valid JSON.
     5. Invoke the nested skill.
 
-    **Clear-after** (immediately after the nested skill returns):
+    **Clear-after** (immediately after the nested skill returns) — the same **Edit → Read verify** ritual:
     1. Re-read the state file from disk.
     2. Consult `pending_nested_skill.resume_phase` and `resume_notes` to know where to resume and how to proceed.
     3. Capture any output that downstream phases need — into a handoff file where one exists per the Handoff Documents section, or into the next agent's brief when no handoff procedure applies.
-    4. Clear `pending_nested_skill` back to `null`.
-    5. Write the state file to disk.
+    4. Apply a targeted `Edit` clearing `pending_nested_skill` back to `null`.
+    5. `Read` the file back to confirm the field is `null` and the document still parses as valid JSON.
     6. Execute the resume action (subject to the post-`Skill()` two-turn caveat below).
 
     The dispatch loop terminates **only** on Phase 4 completion (all tasks `completed`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
@@ -130,6 +130,8 @@ All task board operations use the state file as the primary store. **Every mutat
       Substitute `task-N`, `\<agent-type\>`, and `\<subject\>` with the actual values from the next pending task's `id`, `agent_type`, and `subject` fields. The `pending_nested_skill` record persists across the user-interaction boundary so `/ops resume` can reconstruct the dispatch state and continue from the correct point.
 
 11. **Status–spawn atomicity** — a task transitions to `in_progress` **only** in the same assistant message that also contains its `Agent()` spawn call. Never write `in_progress` — to the state file *or* to a rendered dashboard or prose — in a message that does not also spawn the agent. This governs the *transition* to running, not steady-state redisplay: re-rendering an already-dispatched running task in a later `/ops status` or dashboard turn reports existing reality and is fine. For a parallel batch, the single state-file write plus all the batch's `Agent()` calls ride one message — each task's `in_progress` write and its spawn stay co-located. This is the dispatch-side counterpart to #4: #4 forbids reporting completion without a real deliverable on disk; #11 forbids reporting a task as running without a real spawn behind it. A phantom `in_progress` (status written, no agent spawned) is what breaks `resume` and `status`, which then treat it as a live-but-orphaned dispatch. (Mechanically: emit the state-file write and the `Agent()` call(s) as parallel tool uses within one assistant message.)
+
+    **Reconciliation carve-out.** A targeted `Edit` can fail on a bad anchor after its message's `Agent()` spawn has already gone out — the spawn is live, but the failed `Edit` leaves the task reading `pending` with no `started_at` or `model_used` on disk. This is not a gap in the rule above: the transition already happened the moment the spawn went out, it just failed to reach the board. Repairing it is a **reconciliation** write — a follow-up `Edit` that sets the same `in_progress` fields the failed transition would have set — applied as soon as the failure is discovered (see `phase-dispatch.md`'s next-turn reconciliation check). A reconciliation write never authorizes recording `in_progress` for a task that was never actually spawned; it only makes the board match a spawn that already exists.
 
 12. **Ephemeral state is never a home for durable content.** At Phase 4 cleanup, relocate anything durable to its real home (step 9a), then delete this run's board, save file, and handoffs unconditionally (step 9b), then verify the deletes landed and report them (step 9c). The one file 9a itself creates to carry that relocation record and the board's `worktrees_created` array past 9b's deletes, the cleanup record at `.ops-state/<run-id>-cleanup.json`, is deleted too, just later: step 10 removes it once its readers are done, and the run does not report completion while it is still on disk. The board's contents are never a reason to keep the board. `.ops-state/` is gitignored, so retaining a board does not preserve anything: it hides it. This is the completion-side counterpart to #4 and #11: #4 forbids claiming completion without a real deliverable on disk, #11 forbids reporting a task as running without a real spawn behind it, and #12 forbids leaving the run's own scaffolding on disk as a substitute for either. See `phase-completion.md` step 9 for the procedure.
 

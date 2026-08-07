@@ -146,7 +146,7 @@ The team manager auto-detects which agent to assign based on task content:
 
 ### Cursor state file sync
 
-On **Cursor**, `/ops` uses `.ops-state/<run-id>-board.json` as the source of truth and `TodoWrite` only as an IDE display layer. After board creation, the team manager must **Write → Read verify → TodoWrite** on every status change — updating `TodoWrite` alone breaks `resume`, timing, and handoffs. See `phase-dispatch.md` § **Cursor: state file sync (mandatory)**.
+On **Cursor**, `/ops` uses `.ops-state/<run-id>-board.json` as the source of truth and `TodoWrite` only as an IDE display layer. After board creation, the team manager must **Edit → Read verify → TodoWrite** on every status change — updating `TodoWrite` alone breaks `resume`, timing, and handoffs. See `phase-dispatch.md` § **Cursor: state file sync (mandatory)**.
 
 ### Branch Isolation
 
@@ -491,7 +491,7 @@ The skill uses companion files for conditional sections, loaded on demand via Re
 | :--- | :--- | :--- |
 | `phase-intake.md` | Phase 1 intake, trivial dispatch (state file creation — mandatory), save subcommand, brainstorm gate, plan persistence, Phase 1a/1.5/2 task board | Triage routes to `pipeline`, `trivial`, or `save` |
 | `phase-preflights.md` | Phase 2.5b/2.5c advisory preflights — code-intel and corpus-search — with the shared preflight blocks (budget-governor guard, yield-record, refusal-handling, dispatch-log entry) | Phase 2.5 entry |
-| `phase-dispatch.md` | Phase 2.5 validation, Phase 3 dispatch loop (self-contained brief enforced before each spawn, memory injection, agent dispatch); **Cursor:** § state file sync (Write → verify → TodoWrite) | Task board ready; through dispatch |
+| `phase-dispatch.md` | Phase 2.5 validation, Phase 3 dispatch loop (self-contained brief enforced before each spawn, memory injection, agent dispatch); **Cursor:** § state file sync (Edit → verify → TodoWrite) | Task board ready; through dispatch |
 | `phase-completion.md` | Phase 4 completion ceremony, status dashboard, cleanup | All tasks done; `status` route |
 
 The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase pointer index. See the **Companion index** table in `SKILL.md` for MUST vs See on branch-only companions.

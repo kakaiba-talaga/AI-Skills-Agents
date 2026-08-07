@@ -4,7 +4,7 @@
 
 ## Cursor: dual-layer board
 
-When the active harness is **Cursor**, ops uses a JSON board file plus `TodoWrite` for IDE display. **Only the board file is authoritative** for `resume`, timing, dependencies, and handoffs. Every status mutation (a change written to the state file) must follow the Write → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Updating `TodoWrite` without writing the board file in the same turn is a protocol violation.
+When the active harness is **Cursor**, ops uses a JSON board file plus `TodoWrite` for IDE display. **Only the board file is authoritative** for `resume`, timing, dependencies, and handoffs. Every status mutation (a change written to the state file) must follow the Edit → Read verify → TodoWrite ritual in `phase-dispatch.md` § **Cursor: state file sync (mandatory)**. Updating `TodoWrite` without applying the board-file `Edit` in the same turn is a protocol violation.
 
 ## Directory Conventions
 
@@ -72,6 +72,36 @@ The state file JSON structure:
   "memory_inject_banner_emitted": false
 }
 ```
+
+## Anchor derivation for targeted `Edit`
+
+`Edit` requires a **unique** `old_string` match. The block above shows the structure in a fixed, illustrative key order; it is not a template to copy into an `old_string`. The five boards actually on disk in `.ops-state/` at the time this section was written showed four different root-key orderings and between 8 and 28 root keys, and one had task objects with a different key order and three undocumented fields. An anchor copied from the structure block above will not match a real board — derive the anchor from the file as it was just read, not from this document.
+
+**Structural rule: anchor a task-scoped mutation on the task's `id` line.** For any mutation that targets one task, begin the `old_string` at that task's `"id": "task-N",` line. Task ids are unique by construction, so this line is always a safe, unique starting point. Nothing else on a task object is guaranteed unique: two sibling tasks created in the same parallel batch can carry the same `priority`, the same `estimated_minutes`, and the same `blocked_by` array, producing byte-identical spans anywhere else in the object.
+
+**A fresh `Read` is required before every mutating `Edit`.** This is a hard harness requirement, not a style preference — the `Edit` tool fails unless the target file has been read (or written) in the current session, and the anchor it matches against must be byte-exact. The state cache described in `phase-dispatch.md` § State cache (Phase 3 Step 1) is a semantic snapshot with no byte-exactness guarantee, so it can never serve as the source of an `Edit` anchor. The cache remains valid for *scanning* — deciding which tasks are ready, rendering a dashboard — but any mutation needs the real bytes from a fresh `Read` first.
+
+**Structural rule: an array append anchors on the array's tail, not on an `id` line.** The element being appended does not exist yet, so it has no `id` line to start from — this is a different shape of edit from the mutation case above, and the anchor has to be built from what is already there: the array's existing tail. Anchor the `old_string` on the array's closing bracket together with enough of the preceding element to be unique, and write the new element into the `new_string` ahead of that bracket. For the `tasks` array, the last task's `"id": "task-N",` line remains the reliable disambiguator, for the same reason it disambiguates a mutation: a trailing `"_internal": false` followed by a closing brace repeats once per task and is not unique on its own, so the anchor has to reach back to the id line. This is not a hypothetical — appending a task to a live board in this repo needed exactly that anchor, for exactly that reason.
+
+**Empty arrays anchor on the key, not a tail.** `adaptations`, `worktrees_created`, and `tasks` can all be `[]` before anything has been appended. With nothing in the array, there is no tail to reach into, so the anchor is the key and its empty brackets together — `"adaptations": []`, for example — which is unique on its own because the key itself is unique at the root.
+
+**The comma lives in the replacement, not the anchor.** Appending after an existing element requires adding a comma to what was previously the array's last element, and that comma sits inside the `new_string`, not the `old_string` `Edit` matches against. `Edit` fails loudly when the anchor itself doesn't match, but it has no way to notice a malformed replacement string — a missing or stray comma still lands as a successful tool result. That is exactly the failure the read-back check after every mutating `Edit` (see `phase-dispatch.md`'s dispatch-loop ritual) — confirming the changed field(s) and confirming the document still parses as valid JSON — exists to catch. It is not a second hazard needing a check of its own.
+
+## Status enum
+
+Per-task `status` values used across this skill:
+
+| Value | Meaning |
+| :--- | :--- |
+| `pending` | Not yet dispatched, or queued for re-dispatch after a soft failure or a clarification round-trip. |
+| `in_progress` | Dispatched; the orchestrator holds (or held) an active spawn for this task. |
+| `completed` | Acceptance criteria met; the agent's return was processed. |
+| `failed` | Exhausted the Verify → Fix loop cap without passing. |
+| `blocked` | Paused pending user resolution — an external dependency/environment issue, or an agent-reported scope issue. |
+| `deleted` | Removed from the plan (see Interruption Handling — Remove Tasks / Reprioritize). |
+| `cancelled` | Removed from the plan via the `"skip [stage/task]"` mid-run command (see `SKILL.md` § Interruption Handling summary table). |
+
+`deleted` and `cancelled` are both used for the same underlying case — a task removed from the plan — in different files. This is a factual observation, not a reconciliation: the two spellings are not unified here, and no migration between them is implied.
 
 ### pending_nested_skill
 
@@ -235,6 +265,8 @@ Field meanings:
 - `near_note_fired` — boolean recording whether the near-ceiling note has already fired for the current threshold crossing. The near-ceiling note fires once per crossing, not on every choice point past the near-ceiling line; this flag suppresses the repeat. Persisting it in the state object lets the once-per-crossing rule survive a `resume`.
 
 **Write lifecycle:** `consumed_so_far` and `near_note_fired` are flushed to the state file **before** an at-ceiling escalation surfaces to the user — pinned to the same before-the-stop point the `adaptations` event log uses ("written immediately when the adaptation is decided, before the next dispatch proceeds"). Flushing before the stop means a `resume` of a run interrupted mid-escalation recovers the full budget context: the ceiling, the consumed-so-far tally, and whether the near-ceiling note already fired this crossing.
+
+Unlike the other additive root fields documented above, `budget` is deliberately **not** part of the default set a board creation site emits — it is legitimately absent whenever no ceiling is set (see the "When null (or absent)" behavior above). The **first** write that sets `budget` on a board that was created without one is therefore a root-key **insertion**, not a replacement — there is no existing `budget` key for an `Edit` anchor to target. This is a real gap left by this section's `budget`-is-optional design; it is not addressed here.
 
 **Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `null` (no budget set). No migration is required.
 
