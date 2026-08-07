@@ -252,9 +252,9 @@ Orphan detection is handled by the **work-verifier** agent (see `~/.cursor/agent
 
 @@PATCH
 ACTION: replace_line
-ANCHOR: When every task is `completed`:
+ANCHOR: Phase 4 triggers when every task has reached a **terminal status** — `completed`, `failed`, `blocked`, `deleted`, or `cancelled` — not only when every task is `completed`.
 @@CONTENT
-When every task is `completed` (check state file):
+Phase 4 triggers when every task has reached a **terminal status** — `completed`, `failed`, `blocked`, `deleted`, or `cancelled` — not only when every task is `completed` (check state file).
 @@END
 
 @@PATCH

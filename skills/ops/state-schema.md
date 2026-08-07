@@ -103,6 +103,8 @@ Per-task `status` values used across this skill:
 
 `deleted` and `cancelled` are both used for the same underlying case — a task removed from the plan — in different files. This is a factual observation, not a reconciliation: the two spellings are not unified here, and no migration between them is implied.
 
+Five of these — `completed`, `failed`, `blocked`, `deleted`, and `cancelled` — are **terminal** for Phase 4's completion trigger (`phase-completion.md` § Phase 4 — Completion): a run is complete once every task has reached one of them, not only when every task is `completed`. `pending` and `in_progress` are the two non-terminal statuses.
+
 ### pending_nested_skill
 
 Root-level field tracking whether the team manager is currently inside a nested-skill invocation.
@@ -353,7 +355,7 @@ cleaned up** at Phase 4 — it is the corpus future runs learn from.
 
 **Per-run rollup record shape.** The ledger does not store raw per-event prose. At completion,
 the team manager appends **one rollup record per run**, keyed by project. Each record names
-eight fields:
+nine fields:
 
 - `run_id` — the completing run's `run_id`.
 - `project` — the project slug the run executed against. A record learned in one project never
@@ -375,6 +377,13 @@ eight fields:
   run (the pairs a future run consults when pre-sequencing a known-conflicting dispatch).
 - `plan_validation_tier` — the plan-validation tier this run ran at.
 - `critic_revise` — whether a critic REVISE occurred this run.
+- `terminal_failure_count` — the count of tasks in this run whose terminal status is `failed`
+  or `blocked`. A `deleted` or `cancelled` task is excluded: both are user-initiated removals
+  (the remove-task flow or the mid-run skip command), a scope decision rather than an outcome
+  of the work, so a run where the user dropped a task and everything else completed reads zero
+  here. Zero on a run where every task either completed or was user-removed. A count rather
+  than a boolean: it costs the same to store and preserves how many tasks ended badly, not
+  merely whether any did.
 
 **Window and occurrence bar.** The ledger holds a **rolling 10-run window** per project — on
 write, the newest record is appended and the file is trimmed to the most recent 10 runs. A
@@ -422,13 +431,15 @@ when it applies learned priors to future runs.
     ["skills/ops/SKILL.md", "skills/ops/phase-completion.md"]
   ],
   "plan_validation_tier": 2,
-  "critic_revise": false
+  "critic_revise": false,
+  "terminal_failure_count": 0
 }
 ```
 
 **Backward compatibility:** The ledger is a new file. A project with no ledger yet has nothing
-to read; the first run that produces an actionable adaptation creates it. Absence of the file is
-treated as an empty corpus. No migration is required.
+to read; the first run that produces an actionable adaptation, or a non-zero
+`terminal_failure_count`, creates it. Absence of the file is treated as an empty corpus. No
+migration is required.
 
 `reflection_action_counts` and `triage_confidence_dist` are additive fields. Older rollup
 records (including already-accrued runs) omit them and remain valid. Absence of
@@ -436,6 +447,17 @@ records (including already-accrued runs) omit them and remain valid. Absence of
 for that run). Absence of `triage_confidence_dist` is treated as an all-zero level distribution
 with an all-zero promotion block (no triage signal recorded for that run). No migration or
 backfill is required.
+
+`terminal_failure_count` is also additive, and older rollup records omit it the same way — no
+migration or backfill is required there either. It differs from the two fields above in what
+absence means: for `reflection_action_counts` and `triage_confidence_dist`, the all-zero /
+empty-map default is a genuinely correct reconstruction of a run that recorded nothing in that
+category. For `terminal_failure_count`, absence is **not** treated as zero, because a zero would
+assert the run was clean, and that assertion cannot be made after the fact — a run that predates
+this field could have ended with a `failed` or `blocked` task and there is no way to recover that
+from the rest of the record. Absence means the run's outcome on this axis is unknown, not that it
+was confirmed clean. This is exactly why the field is being added starting now rather than
+deferred: every rollup written before it exists stays permanently ambiguous on this point.
 
 ## Task Description Fields
 

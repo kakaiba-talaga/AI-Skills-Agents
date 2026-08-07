@@ -119,7 +119,7 @@ All task board operations use the state file as the primary store. **Every mutat
     5. `Read` the file back to confirm the field is `null` and the document still parses as valid JSON.
     6. Execute the resume action (subject to the post-`Skill()` two-turn caveat below).
 
-    The dispatch loop terminates **only** on Phase 4 completion (all tasks `completed`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
+    The dispatch loop terminates **only** on Phase 4 completion (every task has reached a terminal status — `completed`, `failed`, `blocked`, `deleted`, or `cancelled`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
 
     **Caveat (Skill-tool two-turn reality): post-`Skill()` mechanism limitation.** When a nested skill is invoked via the **Skill** tool (e.g., `/deslop`, `/cross-memory reflect`), the next assistant turn IS the skill's processing — the LLM is operating in the skill's prompt context, not the team manager's. The team manager has no turn from which to "continue dispatching in the same turn" with the skill. Under this mechanism, the "clear-after" ritual above must be split across two turns: the skill's response turn must end with an explicit user-visible halt notice, and the user's `/ops resume` invocation then completes the clear-after steps. Failing to emit the halt notice leaves the user staring at the skill's final output with no signal that further dispatching is needed — this is a structural limitation, not a workflow preference.
 
@@ -129,7 +129,7 @@ All task board operations use the state file as the primary store. **Every mutat
 
       Substitute `task-N`, `\<agent-type\>`, and `\<subject\>` with the actual values from the next pending task's `id`, `agent_type`, and `subject` fields. The `pending_nested_skill` record persists across the user-interaction boundary so `/ops resume` can reconstruct the dispatch state and continue from the correct point.
 
-11. **Status–spawn atomicity** — a task transitions to `in_progress` **only** in the same assistant message that also contains its `Agent()` spawn call. Never write `in_progress` — to the state file *or* to a rendered dashboard or prose — in a message that does not also spawn the agent. This governs the *transition* to running, not steady-state redisplay: re-rendering an already-dispatched running task in a later `/ops status` or dashboard turn reports existing reality and is fine. For a parallel batch, the single state-file write plus all the batch's `Agent()` calls ride one message — each task's `in_progress` write and its spawn stay co-located. This is the dispatch-side counterpart to #4: #4 forbids reporting completion without a real deliverable on disk; #11 forbids reporting a task as running without a real spawn behind it. A phantom `in_progress` (status written, no agent spawned) is what breaks `resume` and `status`, which then treat it as a live-but-orphaned dispatch. (Mechanically: emit the state-file write and the `Agent()` call(s) as parallel tool uses within one assistant message.)
+11. **Status–spawn atomicity** — a task transitions to `in_progress` **only** in the same assistant message that also contains its `Agent()` spawn call. Never write `in_progress` — to the state file *or* to a rendered dashboard or prose — in a message that does not also spawn the agent. This governs the *transition* to running, not steady-state redisplay: re-rendering an already-dispatched running task in a later `/ops status` or dashboard turn reports existing reality and is fine. For a parallel batch, one state-file write per task rides the same message as all the batch's `Agent()` calls — each task's `in_progress` write and its spawn stay co-located. This is the dispatch-side counterpart to #4: #4 forbids reporting completion without a real deliverable on disk; #11 forbids reporting a task as running without a real spawn behind it. A phantom `in_progress` (status written, no agent spawned) is what breaks `resume` and `status`, which then treat it as a live-but-orphaned dispatch. (Mechanically: emit the state-file write and the `Agent()` call(s) as parallel tool uses within one assistant message.)
 
     **Reconciliation carve-out.** A targeted `Edit` can fail on a bad anchor after its message's `Agent()` spawn has already gone out — the spawn is live, but the failed `Edit` leaves the task reading `pending` with no `started_at` or `model_used` on disk. This is not a gap in the rule above: the transition already happened the moment the spawn went out, it just failed to reach the board. Repairing it is a **reconciliation** write — a follow-up `Edit` that sets the same `in_progress` fields the failed transition would have set — applied as soon as the failure is discovered (see `phase-dispatch.md`'s next-turn reconciliation check). A reconciliation write never authorizes recording `in_progress` for a task that was never actually spawned; it only makes the board match a spawn that already exists.
 
@@ -208,7 +208,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 | `phase-intake.md` | After triage routes to `pipeline` or `trivial` / `save` |
 | `phase-dispatch.md` | Task board ready; before and during dispatch |
 | `phase-preflights.md` | At the Phase 2.5 entry; before a Phase 3 Step 2 dispatch (2.5b/2.5c/2.5d advisory preflights) |
-| `phase-completion.md` | All tasks completed; `status` dashboard |
+| `phase-completion.md` | All tasks terminal; `status` dashboard |
 | `state-schema.md` | Any state file read/write (MUST) |
 | `handoffs.md` | Writing or reading handoffs (MUST) |
 | `brief-contract.md` | Composing agent briefs (MUST) |
@@ -446,7 +446,7 @@ When escalating, always include enough context for the user to make a decision w
 | Mode | Checkpoints | Stops when |
 | :--- | :--- | :--- |
 | Interactive (default) | After each pipeline stage | User confirms, adjusts, skips, stops, or injects/reprioritizes tasks |
-| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 5x verify failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks complete |
+| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 5x verify failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks terminal |
 | Supervised (`--supervised`) | After every task | User approves before next dispatch |
 
 ---

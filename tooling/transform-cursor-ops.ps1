@@ -152,7 +152,7 @@ def _companion_patch(old):
         "Dispatch a **preflight** agent (see `~/.claude/agents/preflight.md`)",
         "| **Blocked**",
         "Orphan detection is handled by the **work-verifier** agent",
-        "When every task is `completed`:",
+        "Phase 4 triggers when every task has reached a **terminal status**",
         "   - **Estimation accuracy**",
     ))
 
@@ -419,8 +419,8 @@ rep(
 # PATCH 30 — Phase 4 header
 # ---------------------------------------------------------------------------
 rep(
-    "When every task is `completed`:",
-    "When every task is `completed` (check state file):",
+    "Phase 4 triggers when every task has reached a **terminal status** — `completed`, `failed`, `blocked`, `deleted`, or `cancelled` — not only when every task is `completed`.",
+    "Phase 4 triggers when every task has reached a **terminal status** — `completed`, `failed`, `blocked`, `deleted`, or `cancelled` — not only when every task is `completed` (check state file).",
 )
 
 # ---------------------------------------------------------------------------

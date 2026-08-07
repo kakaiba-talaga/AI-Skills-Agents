@@ -91,6 +91,9 @@ The caller provides task metadata — either inline in the arguments or as a ref
 - `model_used` — which model ran the task
 - `attempts` — number of dispatch attempts
 - `stage` — pipeline stage (plan, implement, verify, review, document)
+- `status` — the task's terminal status
+
+Only entries whose `status` is `completed` feed the averages below. A `failed` or `blocked` task's `duration_seconds` measures how long failing took, not how long the work takes, so it carries no calibration signal and is excluded before any average is computed — not folded in and left for the outlier rule to catch, since that rule keys on duration magnitude rather than status. If the caller passes a state file reference with tasks in other statuses, filter to `completed` before extracting the fields above. If that filter leaves no entries, there is nothing to average from: skip the write and report that no `completed` entries were available, rather than averaging over nothing or writing silently — the same handling `phase-completion.md` step 4a applies to its own direct write when its filtered input is empty.
 
 ### Write threshold
 

@@ -1,7 +1,7 @@
 <!-- Referenced by ~/.claude/skills/ops/SKILL.md. Keep in sync. -->
 # Phase 4 — Completion Options
 
-At the end of a successful run, present a structured decision menu so the next step is explicit. Do not exit Phase 4 until the user has selected an option.
+At the end of any run that reaches Phase 4 — whether every task completed cleanly or the run ended with a terminal failure — present a structured decision menu so the next step is explicit. Do not exit Phase 4 until the user has selected an option.
 
 ## Decision menu
 

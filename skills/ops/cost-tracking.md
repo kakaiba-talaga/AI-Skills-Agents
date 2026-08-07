@@ -77,7 +77,7 @@ est_cost = ($0.0240 + $0.1800) × 1 = ~$0.20
 
 **Steps:**
 
-1. For each completed task, apply the per-task formula using the agent type's baseline tokens and the model recorded in `metadata.model_used`.
+1. For each dispatched task, regardless of its terminal status, apply the per-task formula using the agent type's baseline tokens and the model recorded in `metadata.model_used`. A `failed` task's `retry_count` reflects real dispatches that consumed real tokens; excluding it from this sum would under-report the run's actual cost.
 2. Sum across all tasks for the total run cost estimate.
 3. Break down by model tier — show how much was attributed to sonnet vs. opus (vs. other tiers if applicable).
 4. Compute model escalation overhead: the additional cost added by tasks that were escalated. This is the difference between what the task would have cost at the baseline model vs. what it cost at the escalated model.
