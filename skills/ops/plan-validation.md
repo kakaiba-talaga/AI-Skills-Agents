@@ -14,7 +14,7 @@
 ## Already-Validated Plan Detection
 
 When the user provides a plan via `execute`, check whether it has already been through scoping and/or critique before deciding to skip Phase 1a:
-1. A companion scoping document exists on disk at `docs/plan/<plan-name>-scoping.md` alongside the plan file.
+1. A companion scoping document exists on disk at `docs/<plan-name>-scoping.md` in the docs root — not alongside the plan file, which lives in `docs/plan/`.
 2. The plan document itself contains a "Critic Verdict" or "Scoping" section (indicating it was reviewed in a prior session).
 3. The conversation context contains a critic verdict or scoper output for this plan.
 
@@ -68,7 +68,7 @@ Two distinctions are load-bearing, and the consultation must never blur them:
 - **Effort estimates** — hours per task, sourced from scoping analysis (these feed into `estimated_minutes` with `estimate_source: "scoping-doc"` in Phase 2)
 - **Risk flags** — what could go wrong and how to mitigate
 - **Scope boundaries** — what's explicitly out of scope to prevent creep
-- **Scoping document** — persisted to `docs/plan/` alongside the plan document
+- **Scoping document** — persisted to `docs/<plan-name>-scoping.md` in the docs root, not alongside the plan document in `docs/plan/`
 
 ## What the Critic Adds (Tier 3 only)
 

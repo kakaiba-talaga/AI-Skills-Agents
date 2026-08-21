@@ -636,15 +636,14 @@ If you experience an unexpected permission prompt, find the relevant entry below
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
-| `Edit` | executor, verifier, documentor, debugger, git-master, project-scoper, planner, architect | Edit existing files (planner scoped to `docs/plan/*-plan.md`, `_tmp_*`; architect scoped to `docs/plan/*-design.md`, `docs/plan/*-architecture.md`, `_tmp_*`) |
-| `Write` | executor, verifier, documentor, debugger, git-master, project-scoper, planner | Create new files (planner scoped to `docs/plan/*-plan.md`, `_tmp_*`) |
+| `Edit` | architect, db, debugger, debugger-build, documentor, executor, generalist, git-master, infra, planner, project-scoper, verifier | Edit existing files — every grant is scoped to the holder's own file-class allowlist (e.g., planner to `docs/plan/*-plan.md`, verifier to test files only); see each agent's own `File-class allowlist` section for exact globs |
+| `Write` | architect, code-intel, corpus-search, cross-memory, db, debugger, debugger-build, documentor, executor, generalist, git-master, infra, interviewer, planner, project-scoper, verifier, web-research | Create new files — scoped to the holder's own file-class or write allowlist for 16 of 17 (e.g., planner to `docs/plan/*-plan.md`, web-research to `docs/web-research/**`; see each agent's own allowlist section for exact globs); interviewer has no allowlist and writes its `*-requirements.md` deliverable to the brief-specified path, or the project root if none is given |
 | `Read` | all agents | Read files |
 | `Glob` | all agents | Find files by pattern |
 | `Grep` | all agents | Search file contents |
 | `Agent` | ops | Spawn sub-agents |
 | `WebSearch` | docs-lookup, planner, project-scoper, web-research | Search the web for context |
 | `WebFetch` | docs-lookup, planner, project-scoper, web-research | Fetch web page content |
-| `NotebookEdit` | executor | Edit Jupyter notebooks |
 | `TodoWrite` | any agent | Legacy todo list |
 | `Skill` | ops | Invoke skills (`/ralph-loop`, `/doc-sync`, `/code-review`, etc.) |
 
@@ -655,12 +654,10 @@ If you experience an unexpected permission prompt, find the relevant entry below
 | `Write`, `Edit` | ops | Create `.ops-state/<run-id>-board.json` state file (`Write`) and mutate it (`Edit`) |
 | `Read` | ops | Read state file for resume, status, and dispatch |
 
-### Plan and worktree tools
+### Worktree tools
 
 | Permission | Used by | Purpose |
 | :--- | :--- | :--- |
-| `EnterPlanMode` | planner | Enter structured plan mode |
-| `ExitPlanMode` | planner | Exit plan mode after writing plan |
 | `EnterWorktree` | ops (`--worktree`) | Create isolated git worktree for parallel agents |
 | `ExitWorktree` | ops (`--worktree`) | Clean up worktree after agent finishes |
 
