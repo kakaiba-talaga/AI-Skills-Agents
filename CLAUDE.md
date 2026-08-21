@@ -10,7 +10,7 @@ Do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit
 
 > **Mirror:** This section is duplicated in `.cursor/rules/source-of-truth-and-deployment.mdc` (project-local; excluded from the Cursor deploy in `tooling/deploy-manifest.json`). Changes here must be applied there too, and vice versa.
 
-This repository is the **source of truth** for every agent, skill, hook, rule, and settings file. Content is deployed *outward* to live harness locations by `tooling/deploy.{ps1,sh}` (per `tooling/deploy-manifest.json`): `agents/` and `skills/` land in `~/.claude/` (Claude Code — Windows and WSL are separate destinations) and `~/.cursor/` (Cursor); global instructions deploy from `CLAUDE-root.md` to `~/.claude/CLAUDE.md`.
+This repository is the **source of truth** for every agent, skill, hook, rule, and settings file. Content is deployed *outward* to live harness locations by `tooling/deploy.ps1` (per `tooling/deploy-manifest.json`): `agents/` and `skills/` land in `~/.claude/` (Claude Code — Windows and WSL are separate destinations) and `~/.cursor/` (Cursor); global instructions deploy from `CLAUDE-root.md` to `~/.claude/CLAUDE.md`.
 
 **Never edit a deployed copy — always edit the repo source.**
 
@@ -37,7 +37,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `CLAUDE-root.md` | `tooling/deploy-manifest.json` (settings → `~/.claude/CLAUDE.md`; `cursor` → `rules`), `~/.claude/CLAUDE.md` (deployed global instructions), `.cursor/rules/*.mdc` (one rule mirror per section, excl. Maintenance Note + `documentation-sync.mdc`) |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
-| `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
+| `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy-manifest.json` |
 | `tooling/README.md` | `tooling/transform-cursor-{ops,deploy,ralph-loop}.{ps1,sh}`, `.github/workflows/transform-drift.yml` (CI drift gate when tracked) |
 | `agents/README.md` | `agents/_shared/**`, `agents/*.md` (agent definitions + shared snippets); self-contained agent reference: catalog, per-agent usage, workflow/handoffs/parallelization, full permissions reference |
 | `skills/ops/phase-intake.md` | `skills/ops/SKILL.md` (Triage Gate → pipeline/trivial/save; Phase 1–2, state file on disk invariant), `tooling/transform-cursor-ops.{ps1,sh}` |
@@ -47,6 +47,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `agents/code-intel.md` | `agents/code-intel.md`, `agents/_shared/code-intel-orchestrator-brief.md`, `skills/ops/phase-preflights.md` (Phase 2.5b), `tooling/deploy-manifest.json` |
 | `agents/corpus-search.md` | `agents/corpus-search.md`, `agents/_shared/corpus-search-orchestrator-brief.md`, `skills/ops/phase-preflights.md` (Phase 2.5c), `tooling/deploy-manifest.json` |
 | `agents/web-research.md` | `agents/web-research.md`, `skills/ops/phase-intake.md` (Agent Assignment Rules row + lane-boundary row), `tooling/deploy-manifest.json` |
+| `agents/planner.md` (Write/Edit allowlist) | `skills/ops/phase-intake.md` (lane-boundary row + Plan document persistence section), `agents/README.md` (catalog row + permissions table `Write` row and `Edit` row) |
 | `agents/generalist.md` | `agents/generalist.md`, `skills/ops/phase-intake.md` (Agent Assignment Rules row + lane-boundary row), `skills/ops/tool-restrictions.md` (Delegate-First Table row, "What the Team Manager MAY Do Directly" dispatch note, Subagent Dispatch Decision Framework rows), `tooling/deploy-manifest.json` (deploy-by-glob — new agent file needs no manifest edit) |
 | `agents/infra.md` | `agents/infra.md`, `skills/ops/phase-intake.md` (Agent Assignment Rules row + lane-boundary row), `skills/ops/tool-restrictions.md` (Delegate-First Table row, § Model Escalation for `infra`/`db`), `tooling/deploy-manifest.json` (deploy-by-glob — new agent file needs no manifest edit) |
 | `agents/db.md` | `agents/db.md`, `skills/ops/phase-intake.md` (Agent Assignment Rules row + lane-boundary row), `skills/ops/tool-restrictions.md` (Delegate-First Table row, § Model Escalation for `infra`/`db`), `tooling/deploy-manifest.json` (deploy-by-glob — new agent file needs no manifest edit) |

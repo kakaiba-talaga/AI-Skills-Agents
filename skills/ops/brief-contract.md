@@ -267,8 +267,12 @@ The `## Scope` section lists paths. Each path belongs to a file class. The class
 | `docs` | Human-facing documentation not under `docs/plan/`. | `README.md` at any level, `docs/**/*.md` (excluding `docs/plan/*.md`) |
 | `config` | Configuration files — build, packaging, environment. | `package.json`, `pyproject.toml`, `tsconfig.json`, `.gitignore`, `.gitattributes`, lockfiles |
 | `agent-contract` | Runtime contracts that define agent or skill behavior. | `agents/*.md` (except `agents/README.md`), `skills/**/*.md` (except `README.md` at any level) |
-| `plan-doc` | Planning artifacts — plans, ADDs, scoping docs, assessments. | `docs/plan/*.md`, `docs/*-assessment.md`, `docs/*-add.md` |
+| `plan-doc` | Umbrella term for planning artifacts. Carries no glob of its own — each planning artifact type has its own row below with a single owning agent and a distinct positive glob. | See `design-doc`, `architecture-doc`, `implementation-plan-doc`, `assessment-doc`, `scoping-doc` below. |
 | `design-doc` | Architecture Decision Documents produced by the architect via the brainstorm gate. In scope for the `architect` agent only. | `docs/plan/*-design.md` |
+| `architecture-doc` | Architecture Decision Documents produced by the architect via the default (non-brainstorm) path. In scope for the `architect` agent only. | `docs/plan/*-architecture.md` |
+| `implementation-plan-doc` | Implementation plan documents produced by the planner. In scope for the `planner` agent only. | `docs/plan/*-plan.md` |
+| `assessment-doc` | Requirement assessment documents produced by the project-scoper. In scope for the `project-scoper` agent only. | `docs/*-assessment.md` |
+| `scoping-doc` | Project scoping documents produced by the project-scoper. In scope for the `project-scoper` agent only. | `docs/*-scoping.md` |
 
 **`agent-contract` routing rules:**
 

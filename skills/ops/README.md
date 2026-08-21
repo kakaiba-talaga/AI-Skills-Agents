@@ -164,7 +164,7 @@ Branch isolation is compatible with `--worktree` (worktree branches fork from th
 
 ### Plan Document Persistence
 
-For non-trivial tasks (>2 implementation tasks or multi-stage work), the team manager writes the plan to `docs/plan/<descriptive-name>-plan.md` before creating the task board. This plan document survives session loss and serves as the source of truth on `resume`. For trivial tasks, the plan stays in conversation only. Use the `plan` command to force a plan document even for small tasks.
+For non-trivial tasks (>2 implementation tasks or multi-stage work), the planner writes the plan to `docs/plan/<descriptive-name>-plan.md` before the team manager creates the task board. This plan document survives session loss and serves as the source of truth on `resume`. For trivial tasks, the plan stays in conversation only. Use the `plan` command to force a plan document even for small tasks.
 
 ### Handoff Documents
 

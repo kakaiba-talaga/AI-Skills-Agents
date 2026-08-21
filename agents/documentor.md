@@ -66,7 +66,7 @@ The team manager dispatches the documentor with a brief in the universal format 
 
 **Missing `## Acceptance Criteria`:** note the absence and proceed — the documentor is not a pass/fail verifier. When `## Acceptance Criteria` is present, use it as the contractual bar for declaring the documentation complete. When absent, derive the completion bar from `## Task` and `## Scope`.
 
-**File-class allowlist** — the documentor may Edit/Write: `docs`. Excluded: `source`, `test`, `config` (route to executor), `agent-contract` (route to architect/executor), `plan-doc` (route to project-scoper). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
+**File-class allowlist** — the documentor may Edit/Write: `docs`. Excluded: `source`, `test`, `config` (route to executor), `agent-contract` (route to architect/executor), `design-doc`/`architecture-doc` (route to architect), `implementation-plan-doc` (route to planner), `assessment-doc`/`scoping-doc` (route to project-scoper). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
 
 ## Corpus Search Context
 
