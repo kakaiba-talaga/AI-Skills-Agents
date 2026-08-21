@@ -23,3 +23,6 @@ docs/
 !.github/
 !skills/kickoff/project-template/.claude/
 !skills/kickoff/project-template/.claude/**
+
+draft
+SCRATCH.txt
