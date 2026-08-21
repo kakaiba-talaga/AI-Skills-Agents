@@ -51,11 +51,11 @@ Any non-zero exit (expect **3** on drift) fails the check.
 
 ### Post-B1 ops hub scope (Phase B)
 
-After ops modularization (B1), `transform-cursor-ops` drift-check compares **`skills/ops/SKILL.md` → `skills/ops/SKILL.cursor.md` only**. Phase workflow prose moved to `skills/ops/phase-*.md` companions; embedded patches whose anchors now live in those files are **intentionally skipped** on the hub pass (no `PATCH NOT FOUND` warning). Cursor-specific dispatch/TodoWrite detail for trivial runs is harness-neutral in `phase-intake.md` plus hub patches in `SKILL.cursor.md`. Phase companions receive `Bash`→`Shell`, `Agent`→`Task`, and `~/.claude/`→`~/.cursor/` rewrites at **Cursor deploy** time (`tooling/deploy.ps1` / `deploy.sh`), not via this drift gate.
+After ops modularization (B1), `transform-cursor-ops` drift-check compares **`skills/ops/SKILL.md` → `skills/ops/SKILL.cursor.md` only**. Phase workflow prose moved to `skills/ops/phase-*.md` companions; embedded patches whose anchors now live in those files are **intentionally skipped** on the hub pass (no `PATCH NOT FOUND` warning). Cursor-specific dispatch/TodoWrite detail for trivial runs is harness-neutral in `phase-intake.md` plus hub patches in `SKILL.cursor.md`. Phase companions receive `Bash`→`Shell`, `Agent`→`Task`, and `~/.claude/`→`~/.cursor/` rewrites at **Cursor deploy** time (`tooling/deploy.ps1`), not via this drift gate.
 
 ## Deploy
 
-See repository `README.md` and `docs/portability-guide.md` for `deploy.ps1` / `deploy.sh` usage.
+See repository `README.md` and `docs/portability-guide.md` for `deploy.ps1` usage.
 
 `tooling/deploy-manifest.json` excludes build-only skill artifacts from every target: `**/SKILL.cursor.additions.md` (a human-readable documentation mirror of the Cursor-transform patches hard-coded in `tooling/transform-cursor-ops.{ps1,sh}`; NOT read by the transform — the scripts are the source of truth). The Cursor target also excludes `**/SKILL.cursor.md` — deploy writes that content as `SKILL.md` at the destination only.
 

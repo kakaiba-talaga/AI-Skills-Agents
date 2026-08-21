@@ -32,7 +32,7 @@ The project is organized into the following directories:
 
 The deploy script syncs repo files to the correct global directories for each tool.
 
-**Prerequisites:** `deploy.ps1` requires PowerShell 7+ (`pwsh`). Windows PowerShell 5.1 is not supported. `deploy.sh` requires bash and `jq`.
+**Prerequisites:** `deploy.ps1` requires PowerShell 7+ (`pwsh`) on every platform. Windows PowerShell 5.1 is not supported.
 
 By default, the script prompts for confirmation before writing files. Use `-Force` to skip the prompt, or `-DryRun` to preview without writing.
 
@@ -59,16 +59,7 @@ By default, the script prompts for confirmation before writing files. Use `-Forc
 .\tooling\deploy.ps1 -Diff
 ```
 
-On Linux/macOS (requires `jq`):
-
-```bash
-./tooling/deploy.sh                          # prompts for confirmation
-./tooling/deploy.sh -t claude -f             # skip confirmation
-./tooling/deploy.sh -t cursor -c skills
-./tooling/deploy.sh -t wsl -f              # deploy to WSL only
-./tooling/deploy.sh --dry-run
-./tooling/deploy.sh --diff
-```
+On Linux and macOS, install PowerShell 7+ and invoke the same script directly — `pwsh tooling/deploy.ps1 -DryRun`. The `wsl` target is Windows-only and has no meaning elsewhere.
 
 For Cursor targets, the script automatically transforms files:
 
@@ -83,7 +74,7 @@ See `docs/portability-guide.md` for the full format differences and tool gap ana
 
 ### Pruning orphans
 
-The deploy scripts are additive by default: they create and update files at the target, but never remove anything. Over time this accumulates stale agents and skills — files that were renamed or deleted from the repo but remain in `~/.claude/` or `~/.cursor/`. The `--prune` / `-Prune` flag adds an opt-in delete pass that enumerates those orphans and removes them after confirmation.
+The deploy script is additive by default: it creates and updates files at the target, but never removes anything. Over time this accumulates stale agents and skills — files that were renamed or deleted from the repo but remain in `~/.claude/` or `~/.cursor/`. The `--prune` / `-Prune` flag adds an opt-in delete pass that enumerates those orphans and removes them after confirmation.
 
 ```powershell
 # Preview orphans across all targets — delete nothing
@@ -96,16 +87,9 @@ The deploy scripts are additive by default: they create and update files at the 
 .\tooling\deploy.ps1 -PruneOnly -Force
 ```
 
-```bash
-# Linux/macOS equivalents
-./tooling/deploy.sh --prune --dry-run
-./tooling/deploy.sh --prune
-./tooling/deploy.sh --prune-only -f
-```
+Before deleting, the script prints the full orphan list and prompts: `Delete N orphan file(s)? [y/N]`. Pass `-Force` to skip the prompt, or `-DryRun` to preview without deleting anything. When both flags are present, dry-run wins — no deletion occurs regardless of `-Force`.
 
-Before deleting, the script prints the full orphan list and prompts: `Delete N orphan file(s)? [y/N]`. Pass `-Force` / `-f` to skip the prompt, or `-DryRun` / `-n` to preview without deleting anything. When both flags are present, dry-run wins — no deletion occurs regardless of `-Force`.
-
-`-PruneOnly` / `--prune-only` skips the upsert pass entirely, making it the right choice after renaming or deleting files in the repo when you only want to clean up the targets, not re-deploy.
+`-PruneOnly` skips the upsert pass entirely, making it the right choice after renaming or deleting files in the repo when you only want to clean up the targets, not re-deploy.
 
 ## Compatibility
 

@@ -6,7 +6,7 @@
 
 **Prerequisites:**
 
-- **Deployed agent:** `agents/code-intel.md` deployed to `~/.claude/agents/` (or project `.claude/agents/`) via `tooling/deploy.ps1` / `tooling/deploy.sh`.
+- **Deployed agent:** `agents/code-intel.md` deployed to `~/.claude/agents/` (or project `.claude/agents/`) via `tooling/deploy.ps1`.
 - **Git repository:** working tree inside a git repo (`git rev-parse HEAD` succeeds) — required for `db_indexed_sha` stamping and staleness checks.
 - **Indexer runtime:** at least one Tier-1 or Tier-2 language runtime available for this repo (Python is sufficient for AI-Skills-Agents).
 - **SQLite:** `sqlite3` CLI available on PATH for index inspection during manual tests.

@@ -144,7 +144,7 @@ When `~/.cross-memory/` is absent on first save / recall / etc., the skill provi
 4. **Initialize per-scope `MEMORY.md` files** as empty index files for `user-global/`, `harnesses/claude-code/`, `harnesses/cursor/`, `harnesses/generic/`. Project-scope `MEMORY.md` files are created lazily per-project on first save (since the project slug isn't known until a save targets it).
 5. **Proceed** with the original operation (save / recall / etc.).
 
-**The deploy pipeline (`tooling/deploy.{ps1,sh}`) does NOT provision `~/.cross-memory/`.** Provisioning is runtime, triggered by the first skill invocation. This keeps deploy idempotent and store creation user-driven.
+**The deploy pipeline (`tooling/deploy.ps1`) does NOT provision `~/.cross-memory/`.** Provisioning is runtime, triggered by the first skill invocation. This keeps deploy idempotent and store creation user-driven.
 
 ### Cross-references
 

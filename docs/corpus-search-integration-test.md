@@ -6,7 +6,7 @@
 
 **Prerequisites:**
 
-- **Deployed agent:** `agents/corpus-search.md` deployed to `~/.claude/agents/` (or project `.claude/agents/`) via `tooling/deploy.ps1` / `tooling/deploy.sh`.
+- **Deployed agent:** `agents/corpus-search.md` deployed to `~/.claude/agents/` (or project `.claude/agents/`) via `tooling/deploy.ps1`.
 - **Git repository:** working tree inside a git repo (`git rev-parse HEAD` succeeds) — required for orchestrator-path `corpus_indexed_sha` stamping.
 - **Search tools:** `rg` (ripgrep) available on PATH; agent falls back to `grep` if `rg` is unavailable.
 - **Ops skill:** `/ops` skill deployed; Phase 2.5c advisory preflight is implemented in `skills/ops/phase-preflights.md` (loaded from the ops hub after triage routes to pipeline).

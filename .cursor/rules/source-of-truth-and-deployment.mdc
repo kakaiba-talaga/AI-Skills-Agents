@@ -7,7 +7,7 @@ alwaysApply: true
 
 > **Mirror:** This section is duplicated in `CLAUDE.md`. Changes here must be applied there too, and vice versa.
 
-This repository is the **source of truth** for every agent, skill, hook, rule, and settings file. Content is deployed *outward* to live harness locations by `tooling/deploy.{ps1,sh}` (per `tooling/deploy-manifest.json`): `agents/` and `skills/` land in `~/.claude/` (Claude Code — Windows and WSL are separate destinations) and `~/.cursor/` (Cursor); global instructions deploy from `CLAUDE-root.md` to `~/.claude/CLAUDE.md`.
+This repository is the **source of truth** for every agent, skill, hook, rule, and settings file. Content is deployed *outward* to live harness locations by `tooling/deploy.ps1` (per `tooling/deploy-manifest.json`): `agents/` and `skills/` land in `~/.claude/` (Claude Code — Windows and WSL are separate destinations) and `~/.cursor/` (Cursor); global instructions deploy from `CLAUDE-root.md` to `~/.claude/CLAUDE.md`.
 
 **Never edit a deployed copy — always edit the repo source.**
 

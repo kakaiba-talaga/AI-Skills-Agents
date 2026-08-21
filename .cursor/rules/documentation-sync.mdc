@@ -19,7 +19,7 @@ alwaysApply: false
 | `README.md` | Repo structure, `tooling/deploy-manifest.json` |
 | `CLAUDE-root.md` | `tooling/deploy-manifest.json` (settings → `~/.claude/CLAUDE.md`; `cursor` → `rules`), `~/.claude/CLAUDE.md` (deployed global instructions), `.cursor/rules/*.mdc` (one rule mirror per section, excl. Maintenance Note + `documentation-sync.mdc`) |
 | `docs/ASSESSMENT.md` | All agents, skills, and tooling |
-| `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy.sh`, `tooling/deploy-manifest.json` |
+| `docs/portability-guide.md` | `tooling/deploy.ps1`, `tooling/deploy-manifest.json` |
 | `tooling/README.md` | `tooling/transform-cursor-{ops,deploy,ralph-loop}.{ps1,sh}`, `.github/workflows/transform-drift.yml` (CI drift gate when tracked) |
 | `agents/README.md` | `agents/_shared/**`, `agents/*.md` (agent definitions + shared snippets); self-contained agent reference: catalog, per-agent usage, workflow/handoffs/parallelization, full permissions reference |
 | `skills/ops/phase-intake.md` | `skills/ops/SKILL.md` (Triage Gate → pipeline/trivial/save; Phase 1–2, state file on disk invariant), `tooling/transform-cursor-ops.{ps1,sh}` |

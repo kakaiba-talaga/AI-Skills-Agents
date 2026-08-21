@@ -296,7 +296,7 @@ The human summary distinguishes the two idempotent-path states explicitly — `s
 - **No save.** Init does not create or modify any canonical memory file under `~/.cross-memory/`. The always-on filter reads from canonical memories but never writes to them.
 - **No `--repair` or `--force`.** Bad-state diagnosis and repair are doctor's lane. Init is additive only — it provisions what is absent and leaves everything else untouched.
 - **No telemetry.** Same posture as v1: no usage data, no network calls, no analytics.
-- **No deploy.** Init is not invoked by `tooling/deploy.{ps1,sh}` and does not invoke them.
+- **No deploy.** Init is not invoked by `tooling/deploy.ps1` and does not invoke it.
 - **No project-scope provisioning.** The project-scope `MEMORY.md` for the active project is still created lazily on first save, exactly as today. Init does not create or write project-scope memory files.
 
 ## Reuse of doctor's check primitives

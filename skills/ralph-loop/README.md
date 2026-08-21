@@ -57,7 +57,7 @@ All files live in `~/.claude/skills/ralph-loop/`. The main file orchestrates; co
 
 - The task is a simple one-liner — use `--lightweight` for trivial fixes, or run directly.
 - You need a code review pass only — use `/code-review`.
-- You're deploying — use `tooling/deploy.{ps1,sh}` directly (not `/deploy`).
+- You're deploying — use `tooling/deploy.ps1` directly (not `/deploy`).
 - The task is fully specified with no iteration needed — a single executor invocation finishes it faster.
 
 ## Key flags

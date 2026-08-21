@@ -68,7 +68,7 @@ Check identifiers used above are defined in `## Check-name vocabulary`. Cross-re
 
 ### Pre-deploy mode (`--pre-deploy`)
 
-Selects the six-check shorthand for validating the local repository state before a deploy run. All six checks are read-only. This mode is appropriate as a pre-flight step in CI or before running `tooling/deploy.{ps1,sh}`.
+Selects the six-check shorthand for validating the local repository state before a deploy run. All six checks are read-only. This mode is appropriate as a pre-flight step in CI or before running `tooling/deploy.ps1`.
 
 | Check name | Group |
 | :--- | :--- |
@@ -83,7 +83,7 @@ Full check definitions, finding shapes, and PASS/WARN/FAIL criteria are document
 
 ### Post-deploy mode (`--post-deploy`)
 
-Selects the five-check shorthand for validating a deployed state. Designed to run after `tooling/deploy.{ps1,sh}` completes, using the second harness as the invoking context.
+Selects the five-check shorthand for validating a deployed state. Designed to run after `tooling/deploy.ps1` completes, using the second harness as the invoking context.
 
 | Check name | Group | Notes |
 | :--- | :--- | :--- |
