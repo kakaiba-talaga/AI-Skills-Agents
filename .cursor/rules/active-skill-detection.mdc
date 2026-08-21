@@ -14,6 +14,7 @@ The following skills use **output tagging** (a badge on the first line of every 
 | `/deploy` | **`Deploy`** | Deployment progress, ssh-executor dispatches, rollback decisions, host status |
 | `/deslop` | **`Deslop`** | Deletion proposals, slop findings, cleanup reports |
 | `/doc-sync` | **`Doc Sync`** | Documentation audit, staleness checks |
+| `/humanize-writing` | **`Humanize Writing`** | Voice selection prompts, vocabulary/structure/texture rewrite passes, rewritten text delivery |
 | `/kickoff` | **`Kickoff`** | Scaffold progress, interview questions, plan generation, plan population |
 | `/linter` | **`Linter`** | Lint runs, auto-fix results |
 | `/ops` | **`Team Manager`** | Task board activity, agent dispatches, stage transitions |

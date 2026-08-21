@@ -86,6 +86,7 @@ Documentation-to-code mapping for the doc-sync skill. Run `/doc-sync` to audit.
 | `skills/ralph-loop/SKILL.cursor.md` | `skills/ralph-loop/SKILL.md`, `tooling/transform-cursor-ralph-loop.{ps1,sh}` |
 | `skills/timing-calibrator/README.md` | `skills/timing-calibrator/SKILL.md` |
 | `skills/ralph-loop/templates/README.md` | `skills/ralph-loop/templates/*.yaml` |
+| `skills/humanize-writing/README.md` | `skills/humanize-writing/SKILL.md`, `skills/humanize-writing/references/**` |
 | `docs/authoring-skills.md` | `skills/*/SKILL.md` (file layout, flat-markdown convention, output tagging, sub-file extraction, transform-regen rule — contributor conventions derived from existing skills) |
 
 ### Rules
