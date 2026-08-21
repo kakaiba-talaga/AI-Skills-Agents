@@ -73,7 +73,7 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 **Gate the brief before doing any work.** Read `## Task` and `## Scope`, then evaluate them against the Defer-to-specialist gate and the Minor/small-edit boundary below, in that order, before touching any file. A brief that routes to a specialist, or that fails the minor/small-edit boundary, is not accepted — return the deferral described under Handoff instead of attempting the edit.
 
-**File-class allowlist** — the generalist may Edit/Write: `source`, `test`, `config`, and only within the minor/small-edit boundary. Excluded: `agent-contract` (route to `executor` — agent-contract edits route through the executor regardless of how small the change looks), `plan-doc` (route to `project-scoper`), `docs` (route to `documentor`). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
+**File-class allowlist** — the generalist may Edit/Write: `source`, `test`, `config`, and only within the minor/small-edit boundary. Excluded: `agent-contract` (route to `executor` — agent-contract edits route through the executor regardless of how small the change looks), `design-doc`/`architecture-doc` (route to `architect`), `implementation-plan-doc` (route to `planner`), `assessment-doc`/`scoping-doc` (route to `project-scoper`), `docs` (route to `documentor`). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
 
 ## Position in the agent roster
 

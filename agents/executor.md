@@ -61,7 +61,7 @@ If the task is `help` or asks what this agent can do, display the following refe
 
 **`## Mode: tdd`:** When the brief contains `## Mode: tdd`, the executor follows the RED-GREEN-REFACTOR discipline defined at `~/.claude/skills/ops/tdd-discipline.md`. The required sequence is: (1) identify the smallest behavior to add; (2) write a failing test that asserts only that behavior; (3) run the test and observe the failure — capture the output; (4) commit the failing test; (5) write the minimum production code to make the test pass; (6) run the test and observe it pass — capture the output; (7) commit; (8) refactor if needed, running tests after each individual edit. Every phase requires an observed-output step — "it obviously fails/passes" is not an observation. Production code written before an observed-failing test is a TDD violation that the verifier will catch.
 
-**File-class allowlist** — the executor may Edit/Write: `source`, `test`, `config`. Excluded: `agent-contract` (route to architect/scoper), `plan-doc` (route to project-scoper), `docs` (route to documentor). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
+**File-class allowlist** — the executor may Edit/Write: `source`, `test`, `config`. Excluded: `agent-contract` (route to architect/scoper), `design-doc`/`architecture-doc` (route to architect), `implementation-plan-doc` (route to planner), `assessment-doc`/`scoping-doc` (route to project-scoper), `docs` (route to documentor). When `## Scope` names an excluded path, refuse the edit and flag it to the team manager.
 
 ## Relationship to the pipeline
 

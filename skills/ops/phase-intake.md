@@ -253,9 +253,9 @@ Before displaying the task board, confirm the state file exists and is valid:
 | Task content pattern | Agent type |
 | :--- | :--- |
 | Interview, clarify, gather requirements, crystallize spec, resolve ambiguity | `interviewer` |
-| Architect, design system, explore design alternatives, evaluate trade-offs, component boundaries, API design, data model design | `architect` |
-| Plan, break down, task hierarchy, milestone structure | `planner` |
-| Scope, estimate, analyze requirements, gap analysis, revise architecture/planning docs from review findings | `project-scoper` |
+| Architect, design system, explore design alternatives, evaluate trade-offs, component boundaries, API design, data model design, revise architecture/design docs from review findings | `architect` |
+| Plan, break down, task hierarchy, milestone structure, revise implementation plan from review findings | `planner` |
+| Scope, estimate, analyze requirements, gap analysis, revise scoping docs from review findings | `project-scoper` |
 | Review plan, quality gate, feasibility check | `critic` |
 | Implement, create, add, modify code, refactor, wire up | `executor` |
 | Verify, validate, test, check acceptance criteria, assert | `verifier` |
@@ -288,9 +288,9 @@ Each agent must stay in its lane:
 | Agent | Does not |
 | :--- | :--- |
 | **interviewer** | implement or decide (gathers requirements and resolves ambiguity only) |
-| **architect** | implement, test, review, plan task breakdowns, or document |
-| **planner** | implement or review (produces plans and task breakdowns only) |
-| **project-scoper** | write code (writes assessments, plans, scoping docs) |
+| **architect** | implement, test, review, plan task breakdowns, or document (produces ADDs only); Write/Edit only to `docs/plan/*-design.md`, `docs/plan/*-architecture.md`, `_tmp_*` (glob-matched) — `Write` creates a new ADD, `Edit` revises an existing one, never `Write` over an existing file; refuse-and-halt on first write-allowlist violation |
+| **planner** | implement, write source code, or review (produces plans and task breakdowns only); Write/Edit only to `docs/plan/*-plan.md`, `_tmp_*` (glob-matched) — `Write` creates a new plan doc, `Edit` revises an existing one, never `Write` over an existing file; refuse-and-halt on first write-allowlist violation |
+| **project-scoper** | write code (writes assessments, scoping docs) |
 | **critic** | implement, test, or modify (reviews plans for feasibility) |
 | **executor** | write docs, tests, or reviews (writes/modifies source code only) |
 | **verifier** | write code or docs (runs tests and checks) |
@@ -327,8 +327,8 @@ Each agent must stay in its lane:
 
 | Workflow type | Required deliverable task | Filename pattern |
 | :--- | :--- | :--- |
-| Assessment / audit / scoping | `project-scoper` writes assessment or updates plan doc | `<subject>-assessment.md` |
-| Planning | `project-scoper` writes or updates the plan document | `<subject>-plan.md` |
+| Assessment / audit / scoping | `project-scoper` writes assessment or scoping doc | `<subject>-assessment.md` |
+| Planning | `planner` writes or updates the plan document | `<subject>-plan.md` |
 | Implementation | `documentor` updates docs if behavior changed | updated existing doc or `<subject>-findings.md` |
 | Bug investigation | `documentor` writes findings if no code fix is made | `<subject>-findings.md` |
 

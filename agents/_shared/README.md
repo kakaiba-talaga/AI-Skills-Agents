@@ -32,7 +32,7 @@ Bump the **module version** in this README when adding snippets or making breaki
 
 ## Agents that include `brief-format-snippet.md`
 
-These 19 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format-snippet.md` from `## Brief Format` (grep `brief-format-snippet` to audit):
+These 20 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format-snippet.md` from `## Brief Format` (grep `brief-format-snippet` to audit):
 
 | Agent | Agent-specific overrides (examples) |
 | :--- | :--- |
@@ -45,10 +45,11 @@ These 19 pipeline/utility agents point at `~/.claude/agents/_shared/brief-format
 | `docs-lookup.md` | Universal prose brief; no JSON-fenced format; no Edit/Write tools; mode ignored; missing AC proceeds |
 | `documentor.md` | `docs` file-class; missing AC proceeds |
 | `executor.md` | TDD mode; file-class allowlist; strict missing AC |
-| `generalist.md` | Defer-to-specialist gate + minor/small-edit boundary evaluated before Brief Format applies; missing AC refuses; file-class allowlist excludes agent-contract/plan-doc/docs |
+| `generalist.md` | Defer-to-specialist gate + minor/small-edit boundary evaluated before Brief Format applies; missing AC refuses; file-class allowlist excludes agent-contract/design-doc/architecture-doc/implementation-plan-doc/assessment-doc/scoping-doc/docs |
 | `git-master.md` | Git operations scope |
 | `infra.md` | Required provider/environment fields; missing AC refuses; file-class allowlist scoped to IaC/manifest patterns |
-| `project-scoper.md` | `plan-doc` file-class; mode ignored |
+| `planner.md` | `implementation-plan-doc` file-class allowlist (`docs/plan/*-plan.md`, `_tmp_*`); refuse-and-halt on write-allowlist violation |
+| `project-scoper.md` | `assessment-doc`/`scoping-doc` file-classes; mode ignored |
 | `scout.md` | Missing AC optional (deliberate override); JSON-fenced brief is a lane signal to defer to `corpus-search`/`code-intel`; read-only, no write tools |
 | `security-reviewer.md` | Security-weighted Project Knowledge |
 | `ssh-executor.md` | Deploy JSON brief + preamble PK |
@@ -65,7 +66,7 @@ These agents use labeled-prose for humans and JSON-fenced blocks for orchestrato
 | `code-intel.md` | [`code-intel-orchestrator-brief.md`](code-intel-orchestrator-brief.md) |
 | `corpus-search.md` | [`corpus-search-orchestrator-brief.md`](corpus-search-orchestrator-brief.md) |
 
-Agents without `## Brief Format` (e.g. architect, planner) do not include `brief-format-snippet.md` or orchestrator companions.
+Agents without `## Brief Format` (e.g. architect) do not include `brief-format-snippet.md` or orchestrator companions.
 
 ## Deploy manifest
 
