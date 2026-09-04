@@ -1,4 +1,4 @@
-name: Transform drift
+name: Transform Drift
 
 on:
   push:
@@ -7,14 +7,12 @@ on:
       - 'skills/deploy/**'
       - 'skills/ralph-loop/**'
       - 'tooling/transform-cursor-*.sh'
-      - 'tooling/transform-cursor-*.ps1'
   pull_request:
     paths:
       - 'skills/ops/**'
       - 'skills/deploy/**'
       - 'skills/ralph-loop/**'
       - 'tooling/transform-cursor-*.sh'
-      - 'tooling/transform-cursor-*.ps1'
 
 permissions:
   contents: read
@@ -26,11 +24,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Drift-check ops transform
+      - name: Set Execute Permission
+        run: chmod +x ./tooling/transform-cursor-*.sh
+
+      - name: Drift-check ops Transform
         run: ./tooling/transform-cursor-ops.sh </dev/null
 
-      - name: Drift-check deploy transform
+      - name: Drift-check deploy Transform
         run: ./tooling/transform-cursor-deploy.sh </dev/null
 
-      - name: Drift-check ralph-loop transform
+      - name: Drift-check ralph-loop Transform
         run: ./tooling/transform-cursor-ralph-loop.sh </dev/null
