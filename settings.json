@@ -113,6 +113,23 @@
   },
   "model": "opus[1m]",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/guard-clickup-api.sh\"",
+            "statusMessage": "Checking ClickUp guard..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/guard-compound-bash.sh\"",
+            "statusMessage": "Checking compound-command guard..."
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "compact",
@@ -154,6 +171,7 @@
   "verbose": false,
   "preferredNotifChannel": "auto",
   "remoteControlAtStartup": true,
+  "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "inputNeededNotifEnabled": true
+  "autoScrollEnabled": false
 }
