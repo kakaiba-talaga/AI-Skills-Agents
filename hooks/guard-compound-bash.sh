@@ -27,23 +27,26 @@ set -u
 # scanned.
 #
 # Lines are split with pure parameter-expansion string manipulation instead of
-# a `<<< "$text"` herestring loop. On this platform, Git Bash implements `<<<`
-# by writing a temp file, and creating that file costs seconds (most likely
-# antivirus scanning it on write). Since this hook runs before every Bash
-# call, that cost stalled every single command — do not reintroduce a
-# herestring or process substitution here.
+# a `<<< "$text"` herestring loop. Bash backs `<<<` with a temp file on every
+# platform, not just here; what is specific to this machine is that creating
+# that file has been measured to intermittently cost seconds, most likely
+# antivirus scanning it on write. Since this hook runs before every Bash
+# call, that cost stalled every single command. Do not reintroduce a
+# herestring here, and process substitution is not a fallback either: it
+# measured roughly 19x slower than the herestring in this environment (about
+# 16ms per iteration against about 0.8ms).
 strip_heredoc_bodies() {
   local text="$1"
   local out="" line delim="" skipping=0 trimmed
   local remaining="$text"
 
   while [ -n "$remaining" ]; do
-    if [ "$remaining" = "${remaining#*$'\n'}" ]; then
-      line="$remaining"
-      remaining=""
-    else
+    if [[ "$remaining" == *$'\n'* ]]; then
       line="${remaining%%$'\n'*}"
       remaining="${remaining#*$'\n'}"
+    else
+      line="$remaining"
+      remaining=""
     fi
 
     if [ "$skipping" -eq 1 ]; then
