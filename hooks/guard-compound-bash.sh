@@ -36,22 +36,37 @@ set -u
 # not reintroduce a herestring here, and process substitution is not a
 # fallback either: it measured roughly 19x slower than the herestring in this
 # environment (about 16ms per iteration against about 0.8ms).
+#
+# Finding the opener itself used to be a plain regex match against the raw
+# line, with no idea whether the `<<` it just matched was sitting inside a
+# quoted string. That let a quoted or herestring `<<` (`echo "cat <<EOF"`,
+# `grep foo <<<bar`) turn on heredoc-skipping for real, at which point every
+# line after it got silently discarded until a line happened to match the
+# fabricated delimiter - usually never, so the rest of the command vanished
+# along with any genuine `&&`/`||`/`;` it contained. The fix is a
+# character-by-character scan of the line that tracks single quotes, double
+# quotes, backslash escapes, backticks and `$( )` depth - the exact same
+# state find_operator() below tracks - and only treats `<<` as a real opener
+# once that state says we're at the top level, not inside a string or a
+# subshell. This can't just call find_operator() to get that state:
+# find_operator() consumes THIS function's output, so calling it from in here
+# would be circular. The state machine is duplicated on purpose, not shared.
+#
+# Backtick tracking is not optional, even though a bare `<<` never legally
+# appears inside one: an odd number of quote characters inside a backtick
+# span (`` echo `it's here` ``) has to be recognized as backtick content and
+# left alone, or the apostrophe reads as an unbalanced quote and every `<<`
+# for the rest of the command is wrongly treated as still being inside a
+# string - which refuses to open a heredoc that is actually there, and the
+# body text after it gets scanned as live command text instead. Quote state
+# also has to persist across lines, not reset at each newline, because a
+# quoted string (or a `$( )`) can legitimately span more than one line.
 strip_heredoc_bodies() {
   local text="$1"
   local out="" line delim="" skipping=0 trimmed
   local remaining="$text"
-  # Bash's `=~` matches the leftmost occurrence by default; the sed pattern
-  # this replaced used a leading `.*<<`, which is greedy and so matched the
-  # LAST heredoc opener on a line instead. That distinction only shows up when
-  # a single line opens two heredocs, e.g. `cmd <<A <<B`: bash reads their
-  # bodies back to back, body A immediately followed by body B, so this
-  # function's single `skipping`/`delim` pair has to track the LAST opener
-  # (B) to keep skipping across both bodies. Tracking the first opener (A)
-  # would stop skipping as soon as A's terminator line is seen, exposing body
-  # B's content to the operator scan below as if it were live command text.
-  # The leading `.*` reproduces the sed pattern's last-match choice on
-  # purpose.
-  local hd_re=".*<<-?[[:space:]]*[\"']?([A-Za-z_][A-Za-z0-9_]*)"
+  local single=0 double=0 backtick=0 depth=0
+  local pos len char pair opener_delim scan qchar word wchar prev_char
 
   while [ -n "$remaining" ]; do
     if [[ "$remaining" == *$'\n'* ]]; then
@@ -73,11 +88,117 @@ strip_heredoc_bodies() {
 
     out="$out$line"$'\n'
 
-    delim=""
-    if [[ "$line" =~ $hd_re ]]; then
-      delim="${BASH_REMATCH[1]}"
-    fi
-    if [ -n "$delim" ]; then
+    opener_delim=""
+    len=${#line}
+    pos=0
+    while [ "$pos" -lt "$len" ]; do
+      char="${line:pos:1}"
+      pair="${line:pos:2}"
+
+      if [ "$char" = "\\" ] && [ "$single" -eq 0 ]; then
+        pos=$((pos + 2))
+        continue
+      fi
+      if [ "$char" = "'" ] && [ "$double" -eq 0 ] && [ "$backtick" -eq 0 ]; then
+        single=$((1 - single))
+        pos=$((pos + 1))
+        continue
+      fi
+      if [ "$char" = '"' ] && [ "$single" -eq 0 ] && [ "$backtick" -eq 0 ]; then
+        double=$((1 - double))
+        pos=$((pos + 1))
+        continue
+      fi
+      if [ "$single" -eq 1 ] || [ "$double" -eq 1 ]; then
+        pos=$((pos + 1))
+        continue
+      fi
+      if [ "$char" = '`' ]; then
+        backtick=$((1 - backtick))
+        pos=$((pos + 1))
+        continue
+      fi
+      if [ "$backtick" -eq 1 ]; then
+        pos=$((pos + 1))
+        continue
+      fi
+      if [ "$pair" = '$(' ]; then
+        depth=$((depth + 1))
+        pos=$((pos + 2))
+        continue
+      fi
+      if [ "$char" = ')' ] && [ "$depth" -gt 0 ]; then
+        depth=$((depth - 1))
+        pos=$((pos + 1))
+        continue
+      fi
+      if [ "$depth" -gt 0 ]; then
+        pos=$((pos + 1))
+        continue
+      fi
+
+      if [ "$char" = '#' ]; then
+        # A `#` starts a comment only when it begins a word: at the start of
+        # the line, or right after whitespace or one of ; & | ( ). A `#` in
+        # the middle of a word (http://x/#frag, echo a#b) is not a comment.
+        # Once a real comment starts it runs to the end of this physical
+        # line, so the rest of the line - including any `<<` - must never be
+        # examined; a commented-out heredoc opener must not start skipping.
+        if [ "$pos" -eq 0 ]; then
+          prev_char=""
+        else
+          prev_char="${line:$((pos - 1)):1}"
+        fi
+        case "$prev_char" in
+          "" | " " | $'\t' | ";" | "&" | "|" | "(" | ")")
+            break
+            ;;
+        esac
+      fi
+
+      if [ "$pair" = '<<' ]; then
+        # Parse the delimiter positionally from the characters right after
+        # "<<" instead of matching a regex against the whole line. This
+        # closes the herestring bypass for free: "<<<bar" leaves "<bar"
+        # here, "<" cannot start a delimiter, so no opener is recorded and
+        # the line is left alone.
+        scan=$((pos + 2))
+        if [ "${line:scan:1}" = '-' ]; then
+          scan=$((scan + 1))
+        fi
+        while [ "${line:scan:1}" = ' ' ] || [ "${line:scan:1}" = $'\t' ]; do
+          scan=$((scan + 1))
+        done
+        qchar="${line:scan:1}"
+        if [ "$qchar" = "'" ] || [ "$qchar" = '"' ]; then
+          scan=$((scan + 1))
+        fi
+        word=""
+        while :; do
+          wchar="${line:scan:1}"
+          if [[ "$wchar" == [A-Za-z0-9_] ]]; then
+            word="$word$wchar"
+            scan=$((scan + 1))
+          else
+            break
+          fi
+        done
+        if [ -n "$word" ] && [[ "${word:0:1}" == [A-Za-z_] ]]; then
+          # Last opener on the line wins: assign on every match instead of
+          # stopping at the first, so a line that opens two heredocs at
+          # once (`cmd <<A <<B`) keeps skipping through both bodies back to
+          # back, the same way bash reads them.
+          opener_delim="$word"
+        fi
+        pos=$((pos + 2))
+        continue
+      fi
+
+      pos=$((pos + 1))
+    done
+
+    if [ -n "$opener_delim" ]; then
+      delim="$opener_delim"
       skipping=1
     fi
   done
@@ -98,7 +219,7 @@ find_operator() {
   local length=${#text}
   local index=0
   local single=0 double=0 backtick=0 depth=0
-  local char pair
+  local char pair prev_char rest before_nl
 
   while [ "$index" -lt "$length" ]; do
     char="${text:index:1}"
@@ -144,6 +265,30 @@ find_operator() {
     if [ "$depth" -gt 0 ]; then
       index=$((index + 1))
       continue
+    fi
+
+    if [ "$char" = '#' ]; then
+      # Same word-boundary rule as strip_heredoc_bodies(): a `#` only opens a
+      # comment when it starts a word. Both scanners have to agree on this or
+      # one of them ends up scanning text the other one is hiding, which is
+      # exactly the kind of mismatch that manufactures a false denial.
+      if [ "$index" -eq 0 ]; then
+        prev_char=""
+      else
+        prev_char="${text:$((index - 1)):1}"
+      fi
+      case "$prev_char" in
+        "" | " " | $'\t' | $'\n' | ";" | "&" | "|" | "(" | ")")
+          # A real comment runs to the end of the physical line, and an
+          # operator sitting inside a comment is not a chained command, so
+          # jump straight past it instead of scanning it character by
+          # character.
+          rest="${text:index}"
+          before_nl="${rest%%$'\n'*}"
+          index=$((index + ${#before_nl}))
+          continue
+          ;;
+      esac
     fi
     if [ "$pair" = '&&' ]; then
       printf '%s' '&&'
