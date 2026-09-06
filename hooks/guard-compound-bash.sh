@@ -25,11 +25,27 @@ set -u
 # Drops heredoc bodies so an operator inside one is not read as chaining. The
 # line that opens the heredoc is kept, so the rest of that line is still
 # scanned.
+#
+# Lines are split with pure parameter-expansion string manipulation instead of
+# a `<<< "$text"` herestring loop. On this platform, Git Bash implements `<<<`
+# by writing a temp file, and creating that file costs seconds (most likely
+# antivirus scanning it on write). Since this hook runs before every Bash
+# call, that cost stalled every single command — do not reintroduce a
+# herestring or process substitution here.
 strip_heredoc_bodies() {
   local text="$1"
   local out="" line delim="" skipping=0 trimmed
+  local remaining="$text"
 
-  while IFS= read -r line; do
+  while [ -n "$remaining" ]; do
+    if [ "$remaining" = "${remaining#*$'\n'}" ]; then
+      line="$remaining"
+      remaining=""
+    else
+      line="${remaining%%$'\n'*}"
+      remaining="${remaining#*$'\n'}"
+    fi
+
     if [ "$skipping" -eq 1 ]; then
       trimmed="$(printf '%s' "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
       if [ "$trimmed" = "$delim" ]; then
@@ -45,7 +61,7 @@ strip_heredoc_bodies() {
     if [ -n "$delim" ]; then
       skipping=1
     fi
-  done <<< "$text"
+  done
 
   printf '%s' "$out"
 }
