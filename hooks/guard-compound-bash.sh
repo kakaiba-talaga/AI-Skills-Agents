@@ -150,7 +150,7 @@ strip_heredoc_bodies() {
           prev_char="${line:$((pos - 1)):1}"
         fi
         case "$prev_char" in
-          "" | " " | $'	' | ";" | "&" | "|" | "(" | ")")
+          "" | " " | $'\t' | ";" | "&" | "|" | "(" | ")")
             break
             ;;
         esac
