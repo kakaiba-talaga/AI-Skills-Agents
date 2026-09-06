@@ -25,13 +25,46 @@ set -u
 # Drops heredoc bodies so an operator inside one is not read as chaining. The
 # line that opens the heredoc is kept, so the rest of that line is still
 # scanned.
+#
+# Lines are split with pure parameter-expansion string manipulation instead of
+# a `<<< "$text"` herestring loop. Bash backs `<<<` with a temp file on every
+# platform, not just here; what is specific to this machine is that creating
+# that file has been measured to intermittently cost seconds, most likely
+# antivirus scanning it on write. That risk is real on every Bash call this
+# hook runs before, though measurement traced this hook's actual dominant cost
+# to the per-line `sed` forks replaced below, not to the herestring itself. Do
+# not reintroduce a herestring here, and process substitution is not a
+# fallback either: it measured roughly 19x slower than the herestring in this
+# environment (about 16ms per iteration against about 0.8ms).
 strip_heredoc_bodies() {
   local text="$1"
   local out="" line delim="" skipping=0 trimmed
+  local remaining="$text"
+  # Bash's `=~` matches the leftmost occurrence by default; the sed pattern
+  # this replaced used a leading `.*<<`, which is greedy and so matched the
+  # LAST heredoc opener on a line instead. That distinction only shows up when
+  # a single line opens two heredocs, e.g. `cmd <<A <<B`: bash reads their
+  # bodies back to back, body A immediately followed by body B, so this
+  # function's single `skipping`/`delim` pair has to track the LAST opener
+  # (B) to keep skipping across both bodies. Tracking the first opener (A)
+  # would stop skipping as soon as A's terminator line is seen, exposing body
+  # B's content to the operator scan below as if it were live command text.
+  # The leading `.*` reproduces the sed pattern's last-match choice on
+  # purpose.
+  local hd_re=".*<<-?[[:space:]]*[\"']?([A-Za-z_][A-Za-z0-9_]*)"
 
-  while IFS= read -r line; do
+  while [ -n "$remaining" ]; do
+    if [[ "$remaining" == *$'\n'* ]]; then
+      line="${remaining%%$'\n'*}"
+      remaining="${remaining#*$'\n'}"
+    else
+      line="$remaining"
+      remaining=""
+    fi
+
     if [ "$skipping" -eq 1 ]; then
-      trimmed="$(printf '%s' "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+      trimmed="${line#"${line%%[![:space:]]*}"}"
+      trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
       if [ "$trimmed" = "$delim" ]; then
         skipping=0
       fi
@@ -40,12 +73,14 @@ strip_heredoc_bodies() {
 
     out="$out$line"$'\n'
 
-    delim="$(printf '%s' "$line" | sed -n \
-      "s/.*<<-\{0,1\}[[:space:]]*['\"]\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)['\"]\{0,1\}.*/\1/p")"
+    delim=""
+    if [[ "$line" =~ $hd_re ]]; then
+      delim="${BASH_REMATCH[1]}"
+    fi
     if [ -n "$delim" ]; then
       skipping=1
     fi
-  done <<< "$text"
+  done
 
   printf '%s' "$out"
 }
@@ -127,9 +162,7 @@ find_operator() {
   done
 }
 
-payload="$(cat)"
-
-command="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+command="$(jq -r '.tool_input.command // empty' 2>/dev/null)"
 if [ -z "$command" ]; then
   exit 0
 fi
