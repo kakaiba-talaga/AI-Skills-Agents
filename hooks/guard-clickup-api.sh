@@ -22,15 +22,13 @@
 
 set -u
 
-payload="$(cat)"
-
-command="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+command="$(jq -r '.tool_input.command // empty' 2>/dev/null)"
 if [ -z "$command" ]; then
   exit 0
 fi
 
 # The host must be named. Lower-cased so a capitalised URL still matches.
-lowered="$(printf '%s' "$command" | tr '[:upper:]' '[:lower:]')"
+lowered="${command,,}"
 case "$lowered" in
   *api.clickup.com*) ;;
   *) exit 0 ;;
