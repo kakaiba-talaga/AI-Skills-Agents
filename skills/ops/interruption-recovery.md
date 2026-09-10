@@ -70,7 +70,11 @@ On `/ops resume`:
 
    If the field is `null` or absent, proceed to the next step (orphan detection and dedup verification for `in_progress` tasks).
 
-   If the field is non-null, the previous session was interrupted **inside a nested-skill call** (between the write-before step and the return) — meaning the changes already made by that skill may be partial, complete, or absent. **Do not re-invoke the nested skill automatically.** Escalate to the user with the marker's contents (`skill`, `invoked_at`, `resume_phase`, `resume_notes`) and ask which branch applies:
+   If the field is non-null, read its `halt_notice_emitted` field next (see `state-schema.md`). This is the discriminator between a designed handoff and a genuine interruption. Elapsed time since `invoked_at` cannot serve the same purpose: a user may legitimately resume a normal handoff hours or days later, so age alone would misclassify it as a crash.
+
+   **If `halt_notice_emitted` is `true`,** the previous session ran the nested skill to completion and emitted the mandated halt notice (`SKILL.md` Non-negotiable #10) before yielding its turn: this `/ops resume` is the documented two-turn handoff working as designed, not an interruption. Skip the escalation below and complete the clear-after ritual directly: consult `resume_phase` and `resume_notes`, clear `pending_nested_skill` to `null`, verify the write with `Read`, and continue into the next step (orphan detection and dedup verification for `in_progress` tasks).
+
+   **If `halt_notice_emitted` is `false` or absent** (a board written before this field existed defaults to this branch), the previous session was interrupted **inside a nested-skill call** (between the write-before step and either the skill's completion or its halt notice): the changes already made by that skill may be partial, complete, or absent. **Do not re-invoke the nested skill automatically.** Escalate to the user with the marker's contents (`skill`, `invoked_at`, `resume_phase`, `resume_notes`) and ask which branch applies:
 
    - **(a) Clear and continue** — the user has verified the nested skill's effects are in the correct terminal state; clear the marker and proceed with resume.
    - **(b) Re-invoke** — the user has verified the pre-invocation conditions still hold; re-run the nested skill from the beginning.

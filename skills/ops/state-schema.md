@@ -120,7 +120,8 @@ Root-level field tracking whether the team manager is currently inside a nested-
   "skill": "/deslop",
   "invoked_at": "2026-04-19T14:22:03Z",
   "resume_phase": "phase-3-deslop-stage",
-  "resume_notes": "integrations.md steps 5-6: if deslop made changes, re-dispatch verifier; if no changes, proceed to code-review stage"
+  "resume_notes": "integrations.md steps 5-6: if deslop made changes, re-dispatch verifier; if no changes, proceed to code-review stage",
+  "halt_notice_emitted": false
 }
 ```
 
@@ -130,10 +131,11 @@ Field meanings:
 - `invoked_at` — ISO-8601 UTC timestamp of invocation. Enables future stale-marker detection.
 - `resume_phase` — short identifier of where the team manager must resume. Allowed values (open set): `"phase-3-dispatch"`, `"phase-3-deslop-stage"`, `"phase-3-save-followup"`, `"phase-4-cleanup-sweep"` (9a's relocation sweep invoking `/cross-memory save`; see `phase-completion.md`'s Phase 4 completion section, step 9a).
 - `resume_notes` — one-line human-readable instruction the team manager re-reads when clearing the marker.
+- `halt_notice_emitted`: boolean, default `false`. Set alongside the rest of the record in write-before, then flipped to `true` immediately before the mandatory halt-notice template is emitted (see `SKILL.md` Non-negotiable #10), which happens only once the nested skill has actually run to completion and the required halt notice has been surfaced to the user. This is the discriminator `resume` uses to tell a designed two-turn handoff (skill finished, halt notice shown, user typed `/ops resume` right on schedule) from a genuine interruption (session died mid-skill, before the halt notice could be written); see `phase-intake.md`'s `resume` row and `interruption-recovery.md`'s Session Recovery step 2 for where this read happens. Elapsed time since `invoked_at` is deliberately not used for this purpose: a user can resume a perfectly normal handoff hours or even days later, so age alone cannot separate the two cases.
 
-**Lifecycle:** `null` → set on write-before → consumed and acted upon on clear-after → `null`.
+**Lifecycle:** `null` (record absent) → object with `halt_notice_emitted: false` (set on write-before) → `halt_notice_emitted: true` (set immediately before the halt notice is emitted, only on the path where the skill actually completed) → `null` (record cleared entirely on clear-after, whether that ran in the same turn or after a `/ops resume`).
 
-**Backward compatibility:** The `pending_nested_skill` field is additive (optional; older files simply omit it). State files written before this field was introduced will not have it. The team manager treats absence as equivalent to `null`. No migration is required.
+**Backward compatibility:** The `pending_nested_skill` field is additive (optional; older files simply omit it). State files written before this field was introduced will not have it. The team manager treats absence as equivalent to `null`. No migration is required. `halt_notice_emitted` is additive within an already-additive record: a board written before this field existed can still have `pending_nested_skill` set with no `halt_notice_emitted` key. Absence is treated as `false`, the same fail-toward-escalation posture as a record that has the key but hasn't reached the halt notice yet, since the absence of evidence that the skill completed is not evidence that it did.
 
 ### worktrees_created
 
