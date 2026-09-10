@@ -1,12 +1,37 @@
-**/.*/
 **/.*
 **/config/
 **/__pycache__
 **/_temp*
 **/_tmp*
 
+# Certificate files.
+**/*.cer
+**/*.crt
+**/*.csr
+**/*.key
+**/*.p12
+**/*.pem
+**/*.pfx
+**/*.ppk
+**/*.pub
+**/id_rsa
+**/private_key
+
+# Archives
+**/*.7z
+**/*.zip
+**/*.tar.gz
+
+# PGP / GPG
+**/github*.pgp
+
 # Documents are not necessary to be committed.
 docs/
+
+# Tests and Diagnostics
+**/_diag_*
+**/_temp*
+**/_tmp_*
 
 # Exceptions
 !.gitattributes
