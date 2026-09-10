@@ -746,6 +746,14 @@ These limitations are inherent to the Cursor platform and cannot be worked aroun
 )
 
 # ---------------------------------------------------------------------------
+# PATCH 56 — Shared Brief Constraints: temp-file fallback, Bash → Shell
+# ---------------------------------------------------------------------------
+rep(
+    "If you're unsure which `_tmp_*` files are yours, check your own Write and Bash calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.",
+    "If you're unsure which `_tmp_*` files are yours, check your own Write and Shell calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.",
+)
+
+# ---------------------------------------------------------------------------
 # Global substitution: any remaining ~/.claude/ → ~/.cursor/
 # ---------------------------------------------------------------------------
 text = text.replace("~/.claude/", "~/.cursor/")
