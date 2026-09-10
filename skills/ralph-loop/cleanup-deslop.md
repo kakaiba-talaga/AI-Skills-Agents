@@ -33,6 +33,9 @@ In headless mode, skip uncertain fixes silently rather than prompting.
 
 **How escalation works:**
 1. Check if `/deslop` is available (file exists at `~/.claude/skills/deslop/SKILL.md`). If not, skip escalation silently and log: "Deslop escalation skipped — /deslop skill not available."
+
+**Precondition before invoking (below).** No subagent dispatched during this iteration may still be in flight when this step runs: not Verify's per-item fan-out (`hooks.verify.for_each`), not Execute's data-analysis fan-out, and, when this loop is wrapped by `/ops ralph`, not that outer cycle's own parallel task dispatches. Deslop's savepoint (`~/.claude/skills/deslop/SKILL.md` § Step 2, Create Savepoint) runs `git stash push` with no pathspec, a whole-tree operation on the shared branch: a subagent still writing when that stash fires has its uncommitted output swept into the stash, then keeps writing into a tree reverted underneath it. Ralph-loop's own stages already resolve fan-out synchronously before a stage's state persists (Verify aggregates every per-item result before advancing to Cleanup), so the case this precondition is actually guarding against is wrap mode, where an enclosing `/ops ralph` cycle's parallel dispatches could still be running when this iteration's Cleanup stage begins.
+
 2. Invoke `/deslop --conservative` on the files in `context.modified_files`. Conservative mode ensures only HIGH-confidence deletions are auto-applied -- deslop will not undo work done in the Execute stage.
 3. If deslop makes changes, the regression re-verification (next step) covers both linter changes and deslop changes together.
 4. If deslop makes no changes (all findings were report-only), proceed to regression re-verification with just the linter changes.
