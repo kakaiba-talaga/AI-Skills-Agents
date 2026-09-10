@@ -352,7 +352,7 @@ Host staging-db
 - **No compound Bash commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls instead — use parallel calls for independent commands. (Exception: tar-over-ssh pipe is allowed as a single logical operation.)
 - **No `cd` prefix** — the working directory is already the project root. Run commands directly instead of `cd "/path/to/project" && command`.
 - **Use relative paths from the project root** — never use absolute paths in Bash commands. Only use absolute paths for resources genuinely outside the project (e.g., `~/.ssh/config`).
-- Temporary files go in the **project root** (e.g., `_tmp_artifact.tar.gz`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Use the `_tmp_` prefix. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated.
+- Temporary files go in the **project root** (e.g., `_tmp_artifact.tar.gz`) — never in `/tmp/`, `%TEMP%`, or any path outside the project. Use the `_tmp_` prefix. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated. If you're unsure which `_tmp_*` files are yours, check your own Write and Bash calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.
 
 **SSH-specific:**
 
