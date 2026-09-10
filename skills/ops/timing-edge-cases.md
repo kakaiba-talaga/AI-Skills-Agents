@@ -3,7 +3,7 @@
 
 **1. Retry time:** When a task fails and is re-dispatched, the fields this needs already exist on the task object — no separate metadata block is required:
 
-- `attempts`: the existing top-level integer field, incremented on every return (`phase-dispatch.md` Step 4's outcome table increments it alongside `status` on every outcome, not only on failure).
+- `attempts`: the existing top-level integer field. `phase-dispatch.md` Step 4's outcome table increments it alongside `status` on every outcome except one: Passed, each Failed tier, Blocked, and Scope issue all increment it, so this is not a failure-only concept. The sole exception is `NEEDS_CLARIFICATION`, which explicitly does not increment `attempts`, because a clarifying question is not a completed attempt at the task.
 - `duration_seconds`: the existing top-level field. Step 4 overwrites it on every return with that return's own measured duration, so a failed attempt's duration does not survive the next attempt's write. By the time a task reaches `completed`, `duration_seconds` already holds only the duration of the attempt that succeeded — there is nothing else left to compare it against, so no separate "first success" field is needed.
 - In the dashboard, show `duration_seconds` as the Actual time and note the retry count alongside it: `"3:42 (2 retries)"`, where retries = `attempts - 1`. Compare `duration_seconds` directly against the estimate for variance — it already reflects the single successful pass the estimate assumed, not a sum across failed attempts, so nothing further is needed for an apples-to-apples comparison.
 
