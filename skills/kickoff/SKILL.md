@@ -430,7 +430,7 @@ End with the instruction:
 - **No compound Bash commands** — never use `&&`, `;`, or `||` to chain commands. Make separate Bash tool calls; use parallel calls for independent commands.
 - **No `cd` prefix** — the working directory is already the project root. Run commands directly.
 - **Relative paths only** — use absolute paths only for resources outside the project (e.g., `~/.claude/`).
-- **Temporary files** — use `_tmp_` prefix in the project root (e.g., `_tmp_planner-output.md`). Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated.
+- **Temporary files** — use `_tmp_` prefix in the project root (e.g., `_tmp_planner-output.md`). Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated. If you're unsure which `_tmp_*` files are yours, check your own Write and Bash calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.
 - **Do not modify files outside the target directory** — the kickoff skill reads its own templates from `~/.claude/skills/kickoff/project-template/` and writes to the target directory. No other directories are touched.
 - **Do not commit** — the kickoff skill never runs git commands. Committing the scaffolded files is the user's responsibility.
 
