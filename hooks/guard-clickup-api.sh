@@ -6,17 +6,23 @@
 # exit 0) otherwise, so an unrelated command is never slowed down.
 #
 # Why this exists: the standing rule is that ClickUp access goes through the
-# clickup skill and that its transport must not be re-derived. Reading the
-# skill's endpoints out of its file and then hand-writing curl satisfies the
-# letter of knowing how, and loses what the skill carries alongside the
-# endpoints -- notably that structured content belongs in the block-based
-# `comment` array rather than plain `comment_text`. Bypassing it produced a
-# comment whose paragraph breaks landed mid-sentence.
+# clickup skill and that its transport must not be re-derived. A hand-written
+# request loses what the skill carries alongside the endpoints -- notably that
+# structured content belongs in the block-based `comment` array rather than
+# plain `comment_text`. A hand-written write that used `comment_text` shipped a
+# comment whose paragraph breaks landed mid-sentence; that incident is a write
+# defect, and the guard's job is to stop requests that could reproduce it.
 #
 # Scoped to commands that genuinely make a request: the host name has to appear
 # AND an HTTP client has to be invoked. A bare mention is left alone, so
 # grepping for the host or reading these comments is not blocked. Blocking
 # those would erode the guard for no safety gain.
+#
+# A command shaped exactly like a read is let through: see
+# is_get_shaped_curl below for what "shaped like a read" means and why the
+# exemption only fires for curl. Everything else that names the host and
+# invokes a client, including a curl invocation this guard can't positively
+# clear, still denies.
 #
 # Always exits 0. A guard that errors out is worse than one that abstains.
 
@@ -93,6 +99,73 @@ strip_inert_heredoc_bodies() {
   printf '%s' "$out"
 }
 
+# is_get_shaped_curl <text>
+#
+# True only for a curl invocation that cannot be carrying a body and cannot
+# be naming a mutating method -- the shape of the read that this guard used
+# to block outright. Every other recognized client (wget, the PowerShell web
+# cmdlets, httpie, xh) still falls through to the deny below even when the
+# command looks like a plain GET, because none of them can be classified this
+# way from the command text alone:
+#   - wget resolves its long options with GNU getopt, which accepts any
+#     unambiguous abbreviation of a flag name, so a write flag typed as a
+#     shortened prefix would not match a literal string check here.
+#   - PowerShell binds parameter names the same way -- `-Met` can resolve to
+#     `-Method` -- for the same reason.
+#   - httpie and xh signal a write with a bare positional word (`http POST
+#     url`) or with unflagged `field=value` arguments, not with a flag this
+#     guard can grep for.
+# curl has neither hazard: it requires the exact spelling of a long option and
+# does not support abbreviation, so its flag surface can be checked directly.
+#
+# Takes the case-preserved, heredoc-stripped command (not the lower-cased
+# copy used for the host/client checks above). curl gives capital and
+# lowercase forms of the same letter unrelated meanings -- -F/--form (a body)
+# versus -f/--fail (unrelated), -T/--upload-file (a body) versus
+# -t/--telnet-option (unrelated), -X/--request (a method) versus -x/--proxy
+# (unrelated) -- so lower-casing first would blur exactly the distinction
+# this check depends on.
+is_get_shaped_curl() {
+  local cmd="$1"
+  local cmd_lower="${cmd,,}"
+
+  local curl_re='(^|[^[:alnum:]._-])curl([^[:alnum:]_-]|$)'
+  if ! printf '%s' "$cmd_lower" | grep -qE "$curl_re"; then
+    return 1
+  fi
+
+  # Only curl is being classified here. If another recognized client also
+  # appears in the same command, the flag surface below would need to be
+  # attributed to the right binary, which this guard does not attempt.
+  local other_clients_re='(^|[^[:alnum:]._-])(wget|httpie|http|xh|invoke-webrequest|invoke-restmethod|iwr|irm)([^[:alnum:]_-]|$)'
+  if printf '%s' "$cmd_lower" | grep -qE "$other_clients_re"; then
+    return 1
+  fi
+
+  # A flag that attaches a request body rules out a read. -F, -T and -d are
+  # matched with an optional run of other bundled short flags in front
+  # (curl allows "-sFfield=value", "-skTfile", "-sd@file"), since only the
+  # last flag in a bundle may carry a value.
+  local body_flags_re='(^|[^[:alnum:]._-])-[A-Za-z]*[FTd]([^[:alnum:]_-]|$)'
+  body_flags_re="$body_flags_re"'|(^|[^[:alnum:]._-])--(data|data-ascii|data-binary|data-raw|data-urlencode|form|form-string|upload-file|json)([^[:alnum:]_-]|$)'
+  if printf '%s' "$cmd" | grep -qE "$body_flags_re"; then
+    return 1
+  fi
+
+  # A method flag naming a mutating verb also rules out a read. -X is matched
+  # the same bundled way as the body flags above ("-sXPOST", "-skXPUT"); the
+  # verb itself is matched in either case since curl passes it through
+  # unmodified and a caller could type it either way.
+  local verbs='(POST|PUT|PATCH|DELETE|post|put|patch|delete)'
+  local method_re="(^|[^[:alnum:]._-])-[A-Za-z]*X[[:space:]=]*[\"']?${verbs}([^[:alnum:]_-]|\$)"
+  method_re="$method_re"'|(^|[^[:alnum:]._-])--request[[:space:]=]*["'"'"']?'"${verbs}"'([^[:alnum:]_-]|$)'
+  if printf '%s' "$cmd" | grep -qE "$method_re"; then
+    return 1
+  fi
+
+  return 0
+}
+
 command="$(jq -r '.tool_input.command // empty' 2>/dev/null)"
 if [ -z "$command" ]; then
   exit 0
@@ -123,12 +196,19 @@ if ! printf '%s' "$lowered" | grep -qE "$clients"; then
   exit 0
 fi
 
-reason="Direct requests to api.clickup.com are blocked. Invoke the clickup \
-skill instead of hand-rolling the transport: it carries the decision rules \
-alongside the endpoints, notably that structured content goes in the \
-block-based \`comment\` array rather than plain \`comment_text\`. Reading the \
-skill file and re-implementing its curl calls is the bypass this guard exists \
-to stop, not a substitute for invoking it."
+# A curl invocation that is positively shaped like a read is not what this
+# guard exists to stop.
+if is_get_shaped_curl "$scanned"; then
+  exit 0
+fi
+
+reason="This request to api.clickup.com is blocked; use the clickup skill for \
+it instead. The skill puts structured content in the block-based \`comment\` \
+array rather than plain \`comment_text\`, which is the rule a request built \
+outside it is prone to miss. A plain curl read -- no -d/--data/-F/--form/-T/\
+--upload-file/--json and no -X/--request naming POST, PUT, PATCH or DELETE -- \
+passes without going through this deny; every other shape, and every other \
+HTTP client, still routes through the skill."
 
 jq -n --arg reason "$reason" '{
   hookSpecificOutput: {
