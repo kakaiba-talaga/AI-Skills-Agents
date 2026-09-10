@@ -9,11 +9,12 @@ This file defines token and cost estimation for `/ops` runs. Claude Code does no
 
 ## 1. What to Track Per Task
 
-For each dispatched task, record the following in its metadata block:
+Cost estimation reads two fields already recorded on the task object (see `state-schema.md`); neither is metadata specific to cost tracking:
 
-- `metadata.model_used` — the model that executed the task (e.g., `"sonnet"`, `"opus"`)
-- `metadata.model_escalations` — number of times the model was escalated during retries (e.g., `1` for a sonnet→opus escalation)
-- `metadata.retry_count` — total number of dispatch attempts (initial attempt + retries)
+- `model_used`: the model that executed the task's last (or only) attempt (for example, `"sonnet"` or `"opus"`).
+- `attempts`: total number of dispatch attempts for the task (initial attempt plus retries).
+
+Whether a task was escalated during its retries is not stored as a separate count. It is derived at estimation time by comparing `model_used` against the model declared in the dispatched agent's own frontmatter (the model the task would have run on if no attempt had failed). The model-escalation ladder moves a task's model at most one tier over its whole lifecycle, so a mismatch between the two means the task escalated exactly once, and the frontmatter model is the pre-escalation baseline.
 
 These fields are populated as tasks complete and are used for cost estimation at the end of the run.
 
@@ -38,7 +39,7 @@ Since actual token counts are not available, estimate based on agent type. These
 | critic | 8,000 | 6,000 | Reviews plan, produces findings |
 | git-master | 4,000 | 2,000 | Simple git operations |
 
-**Multiply by `retry_count`** to get the total per-task token estimate.
+**Multiply by `attempts`** to get the total per-task token estimate.
 
 ---
 
@@ -61,7 +62,7 @@ Perform this calculation at completion (Phase 4), after timing computation.
 **Per-task formula:**
 
 ```
-est_cost = (input_tokens × input_price_per_token + output_tokens × output_price_per_token) × retry_count
+est_cost = (input_tokens × input_price_per_token + output_tokens × output_price_per_token) × attempts
 ```
 
 Where `input_price_per_token = model_input_price / 1,000,000` and similarly for output.
@@ -71,16 +72,16 @@ Where `input_price_per_token = model_input_price / 1,000,000` and similarly for 
 ```
 input:  8,000 tokens × ($3.00 / 1,000,000) = $0.0240
 output: 12,000 tokens × ($15.00 / 1,000,000) = $0.1800
-retry_count = 1
+attempts = 1
 est_cost = ($0.0240 + $0.1800) × 1 = ~$0.20
 ```
 
 **Steps:**
 
-1. For each dispatched task, regardless of its terminal status, apply the per-task formula using the agent type's baseline tokens and the model recorded in `metadata.model_used`. A `failed` task's `retry_count` reflects real dispatches that consumed real tokens; excluding it from this sum would under-report the run's actual cost.
+1. For each dispatched task, regardless of its terminal status, apply the per-task formula using the agent type's baseline tokens and the model recorded in `model_used`. A `failed` task's `attempts` count reflects real dispatches that consumed real tokens; excluding it from this sum would under-report the run's actual cost.
 2. Sum across all tasks for the total run cost estimate.
 3. Break down by model tier — show how much was attributed to sonnet vs. opus (vs. other tiers if applicable).
-4. Compute model escalation overhead: the additional cost added by tasks that were escalated. This is the difference between what the task would have cost at the baseline model vs. what it cost at the escalated model.
+4. Compute model escalation overhead: the additional cost added by tasks that escalated. A task escalated when its `model_used` differs from its agent type's frontmatter-declared model (see Section 1). For each such task, the overhead is the difference between what its `attempts` would have cost entirely at the frontmatter-declared (baseline) model and what the per-task formula above actually charges at the escalated `model_used`.
 5. Flag the overhead: `"Model escalation added ~$X.XX to the run"`
 
 ---
@@ -128,7 +129,7 @@ Model escalation overhead: ~$1.80 (2 tasks escalated sonnet→opus)
 ### 5.4 Required / optional columns
 
 **Required:** Tokens, Cost. Plus the grouping dimension (task # OR model).
-**Optional (include when you have them):** Agent, Model (in per-task format), Tool uses, retry_count.
+**Optional (include when you have them):** Agent, Model (in per-task format), Tool uses, attempts.
 
 ### 5.5 Formatting rules
 
