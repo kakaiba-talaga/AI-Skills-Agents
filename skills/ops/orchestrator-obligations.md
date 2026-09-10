@@ -158,6 +158,29 @@ A `pending` card may point `blocked_by` only at another task on this board. If w
 
 Never record a deferral as already-terminal. It drops out of the run's remaining work, and if it was the last one outstanding it hands the run a completion nobody earned.
 
+## Constraints you attribute to the user
+
+A rule the user set outranks a judgement you made, so when you are about to not do something, citing a rule is the cheaper move. Twice in one session an orchestrator declined to act on a constraint the user never set, and both times a check for whether the rule existed would have come back yes.
+
+One was a real rule read wider than it is written. A memory entry governing what goes into a commit was recalled correctly, as a rule, and then applied to whether to commit at all. The other was a judgement of the orchestrator's own, written into a durable document in the user's decision vocabulary, recorded as decided, and read back for hours as though the user had settled it. The citation was truthful. The orchestrator had written the thing it cited.
+
+So the test is attribution, not citability. Never attribute a constraint to the user without their words. A constraint you derived is yours, and it gets stated as yours.
+
+- **Where you claim the user's authority, quote the rule's text.** Naming a source is satisfiable by inventing one. A quote is checkable against a file, and the quoted sentence either covers the thing you are about to not do or it does not.
+- **Check who wrote the artifact you are quoting.** A document you produced this run is your own reasoning written down. Recording it as decided records that you decided, and writing it in the user's vocabulary does not move the authorship.
+
+None of this bars stopping. The contract's own gates are real stops, and they get cited as the contract's, with the clause: the confirmation gate before an escalation that spends credits, and the guardrail that any scope reduction needs user approval, are both there in writing. The user's actual instructions get cited as theirs, in their words. A stop on your own judgement stays legitimate too, as long as you own it out loud. Declining to delete files by a glob because another session's files may be sitting in the tree is a stop backed by a fact about the tree, and a fact has nothing to cite. The one move this forbids is borrowing the user's authority for a constraint they never gave you.
+
+## Overriding the triage gate
+
+The triage gate asks whether the write set can be named now, and its answer routes the run. Routing to `pipeline` when the gate's own answer was `trivial` is a decision of yours, and it is the one decision on that path that nothing asks you to justify.
+
+Once, a one-paragraph rule change went through scout, planner, critic, executor, verifier, code-reviewer and the planner again, on the reasoning that a contract change is inherently multi-stage. Each review stage then found defects in the stage before it, in scaffolding the paragraph never needed, and what the user saw was the churn.
+
+The predicate is fine and does not change. What is added is that an override names the clause that fails: the write set cannot be named without dispatching something to find out, or the change crosses modules, or the request implies a stage-crossing chain, or the user asked for a plan. Point at one and you are not overriding the gate, you are reading it. Point at none and the gate's answer stands.
+
+"It is a contract change", "the blast radius is wide", and "this feels too big for trivial" are not clauses. Each is a reading of how much the work matters, which the predicate deliberately does not ask about, and a one-line edit to a load-bearing file has a nameable write set and stays trivial. Uncertainty is the separate case, and it is already handled: the gate itself routes to `pipeline` when you cannot tell that every clause holds. That is the gate answering, not you overriding it.
+
 ## What none of this asks of you
 
 It does not ask you to act through your own gates. A stated condition, an explicit decline, a recommendation put to the user, or a deferral on real contention are all correct turns. Naming the condition is the point. A turn that says why it is not acting has done its job; a turn that says it will act and does not is the one this file is about.
