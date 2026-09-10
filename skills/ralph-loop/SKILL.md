@@ -12,7 +12,7 @@ Parse arguments as follows:
 - `status --task <id>` reports current saved progress.
 - `list` shows tasks with status and summary.
 - `pause --task <id> --reason "<text>"` pauses and records reason.
-- `complete --task <id>` marks task complete.
+- `complete --task <id>` marks task complete (`status: done`) and prompts, per the completion retention policy in `state-schema.md`, before deleting the task's state file, history log, and template copy. Never auto-deletes.
 - `rollback --to-iter N --task <id>` rolls back to iteration N's git snapshot.
 - `--loop-mode balanced|strict` sets loop execution mode.
 - `--percent <0-100>` sets target percent.
@@ -261,6 +261,7 @@ See `work-item-scaffolding.md` for template interaction, discovery, and completi
 - **Re-read on continuation:** Follow Stage Execution Discipline rule 0 before every response. Non-negotiable.
 - **User feedback is loop input:** Any user message during `active` or `blocked` status is input to the current iteration.
 - **Never silently exit:** Valid exits: user selects "Mark as done"/"Pause", user explicitly says stop, or hard blocker with `status: blocked`. **Exit requires explicit user confirmation** — completing a sub-step or finishing verification does NOT exit the loop; continue to next iteration. When in doubt, use the structured choice prompt.
+- **Never silently delete on completion:** Reaching `status: done` does not remove state artifacts by itself. See the completion retention policy in `state-schema.md`.
 - **State file is authoritative:** The JSON state file is the single source of truth. Persist after every stage.
 - **Context recovery:** Follow Stage Execution Discipline rule 0; recover position from state (`task_id`, `iteration`, `current_stage`, `next_step`, `achieved_percent`), restate to user with badge, continue. Never guess loop state from summarized context.
 - **Headless mode exception:** See Headless Gate and Stage Execution Discipline rule 7 for all headless behavior.

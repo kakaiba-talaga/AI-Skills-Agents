@@ -15,6 +15,16 @@ Three state arrays are capped to bound state-file growth. Pruning runs at **stat
 
 **`progress.iteration_history` is NOT capped.** Trend detection and auto-pause heuristics read this array in full; truncating it would break those calculations.
 
+## Completion retention
+
+Pruning above trims array contents inside a still-live state file. This section covers the separate question of what happens to the files themselves once a task is finished.
+
+When a task's `status` reaches `done`, its on-disk artifacts become disposable: `<task_id>.json` (the state file), `<task_id>.history.jsonl` (its history log), and `<task_id>.template.yaml` (only if the task used a template).
+
+- **`active`, `paused`, and `blocked` state is never touched, at any age.** A paused or blocked task is live state, kept deliberately so the loop can resume later: this policy applies only to `status: done`, regardless of how old the files are by wall-clock time.
+- **Warn and ask, never auto-delete.** On `complete --task <id>`, or when `list`/`status` surfaces a task already at `status: done`, warn the user: "Task `<task_id>` is marked done. Delete its state file, history log, and template copy?" Delete only on explicit user approval; never auto-delete.
+- **Enumerate deletions one file at a time.** No recursive delete, no directory-level delete, no glob. Each artifact (`<task_id>.json`, `<task_id>.history.jsonl`, and `<task_id>.template.yaml` when present) is a separate, explicit delete; skip any that don't exist rather than treating a missing file as an error.
+
 ## State Cache Semantics
 
 The loop maintains an in-memory snapshot (cache) of the state file to avoid re-reading the full JSON before every stage message. The file on disk remains the authoritative source of truth — the cache is a read optimization only.
