@@ -30,91 +30,115 @@ if git rev-parse --is-inside-work-tree 2>/dev/null | grep -q true; then
 fi
 
 # ---------------------------------------------------------------------------
+# Interpreter resolution (shared by sections 2 and 3)
+# ---------------------------------------------------------------------------
+# Resolved once so each section below spawns a single process instead of one
+# per state file. A name resolving on PATH is not proof it runs: on some
+# machines python3 resolves to a stub that exits non-zero instead of
+# executing anything, so each candidate is probed once before being trusted,
+# and its output is discarded either way. python is tried first because it
+# avoids spawning that known stub; python3 is kept as the fallback for
+# platforms (WSL among them) where python is absent from PATH entirely, in
+# which case the failed lookup costs nothing and resolution falls through to
+# python3 as before. Trying python first also means an older Python 2 could
+# be first in line, so the probe asserts the major version instead of just
+# running a no-op, to reject that case rather than silently trusting it.
+# Left empty, and skipped by the guards below, if no candidate actually runs.
+PYTHON_BIN=""
+for candidate in python python3; do
+    resolved=$(command -v "$candidate" 2>/dev/null)
+    if [ -n "$resolved" ] && "$resolved" -c "import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)" >/dev/null 2>&1; then
+        PYTHON_BIN="$resolved"
+        break
+    fi
+done
+
+# ---------------------------------------------------------------------------
 # 2. Active Ops Runs
 # ---------------------------------------------------------------------------
-if [ -d ".ops-state" ]; then
-    BOARD_FILES=$(find .ops-state -maxdepth 1 -name "*-board.json" -type f 2>/dev/null)
+# A board file older than this many days is left out of the report below.
+OPS_STALE_DAYS=14
 
-    if [ -n "$BOARD_FILES" ]; then
-        OPS_OUTPUT=""
-        for board in $BOARD_FILES; do
-            # A board with every task in a terminal status (completed, failed,
-            # blocked, deleted, cancelled) is a finished run, not an active one.
-            # Skip it entirely rather than printing a heading over dead work.
-            RESULT=$(python -c "
-import json, sys
-try:
-    with open('$board') as f:
-        data = json.load(f)
-    run_id   = data.get('run_id', 'unknown')
-    plan     = data.get('plan_file', 'unknown')
-    tasks    = data.get('tasks', [])
-    terminal = {'completed', 'failed', 'blocked', 'deleted', 'cancelled'}
-    if not any(t.get('status') not in terminal for t in tasks):
-        sys.exit(0)
-    print(f'Run: {run_id}  |  Plan: {plan}')
-    for t in tasks:
-        tid    = t.get('id', '?')
-        subj   = t.get('subject', t.get('title', '?'))
-        status = t.get('status', '?')
-        agent  = t.get('agent_type', t.get('agent', '?'))
-        print(f'  [{tid}] {subj} - {status} ({agent})')
-except Exception:
-    sys.exit(0)
-" 2>/dev/null)
-            if [ -n "$RESULT" ]; then
-                OPS_OUTPUT="${OPS_OUTPUT}${RESULT}"$'\n'
-            fi
-        done
+if [ -d ".ops-state" ] && [ -n "$PYTHON_BIN" ]; then
+    "$PYTHON_BIN" -c "
+import glob, json, os, sys, time
 
-        if [ -n "$OPS_OUTPUT" ]; then
-            echo ""
-            echo "## Active Ops Runs"
-            printf '%s' "$OPS_OUTPUT"
-        fi
-    fi
+ops_dir = sys.argv[1]
+stale_days = float(sys.argv[2])
+cutoff = time.time() - stale_days * 86400
+terminal = {'completed', 'failed', 'blocked', 'deleted', 'cancelled'}
+lines = []
+
+for path in sorted(glob.glob(os.path.join(ops_dir, '*-board.json'))):
+    if not os.path.isfile(path):
+        continue
+    # A board with every task in a terminal status (completed, failed,
+    # blocked, deleted, cancelled) is a finished run, not an active one.
+    # Skip it entirely rather than printing a heading over dead work.
+    # A malformed board, or one older than the window above, is skipped
+    # the same way, so one bad or stale file cannot take the section down.
+    try:
+        if os.path.getmtime(path) < cutoff:
+            continue
+        with open(path, encoding='utf-8', errors='replace') as f:
+            data = json.load(f)
+        run_id = data.get('run_id', 'unknown')
+        plan = data.get('plan_file', 'unknown')
+        tasks = data.get('tasks', [])
+        if not any(t.get('status') not in terminal for t in tasks):
+            continue
+        lines.append(f'Run: {run_id}  |  Plan: {plan}')
+        for t in tasks:
+            tid = t.get('id', '?')
+            subj = t.get('subject', t.get('title', '?'))
+            status = t.get('status', '?')
+            agent = t.get('agent_type', t.get('agent', '?'))
+            lines.append(f'  [{tid}] {subj} - {status} ({agent})')
+    except Exception:
+        continue
+
+if lines:
+    out = '\n## Active Ops Runs\n' + '\n'.join(lines) + '\n'
+    sys.stdout.buffer.write(out.encode('utf-8', 'replace'))
+" ".ops-state" "$OPS_STALE_DAYS" 2>/dev/null
 fi
 
 # ---------------------------------------------------------------------------
 # 3. Active Ralph Loop State
 # ---------------------------------------------------------------------------
-if [ -d ".ralph-state" ]; then
-    RALPH_FILES=$(find .ralph-state -maxdepth 1 -name "*.json" -type f 2>/dev/null)
+if [ -d ".ralph-state" ] && [ -n "$PYTHON_BIN" ]; then
+    "$PYTHON_BIN" -c "
+import glob, json, os, sys
 
-    if [ -n "$RALPH_FILES" ]; then
-        RALPH_OUTPUT=""
-        for state_file in $RALPH_FILES; do
-            # "done" is the only terminal ralph status; "paused" and "blocked"
-            # are live state waiting to be resumed and must keep printing.
-            # Summarize instead of dumping the full state object, which is
-            # what made this section unreadably large.
-            RESULT=$(python -c "
-import json, sys
-try:
-    with open('$state_file') as f:
-        data = json.load(f)
-    status = data.get('status', '?')
-    if status == 'done':
-        sys.exit(0)
-    task_id   = data.get('task_id', 'unknown')
-    title     = data.get('title', 'unknown')
-    iteration = data.get('iteration', '?')
-    achieved  = data.get('progress', {}).get('achieved_percent', '?')
-    print(f'[{task_id}] {title} - {status} (iteration {iteration}, {achieved}% achieved)')
-except Exception:
-    sys.exit(0)
-" 2>/dev/null)
-            if [ -n "$RESULT" ]; then
-                RALPH_OUTPUT="${RALPH_OUTPUT}${RESULT}"$'\n'
-            fi
-        done
+ralph_dir = sys.argv[1]
+lines = []
 
-        if [ -n "$RALPH_OUTPUT" ]; then
-            echo ""
-            echo "## Active Ralph Loop"
-            printf '%s' "$RALPH_OUTPUT"
-        fi
-    fi
+for path in sorted(glob.glob(os.path.join(ralph_dir, '*.json'))):
+    if not os.path.isfile(path):
+        continue
+    # 'done' is the only terminal ralph status; 'paused' and 'blocked' are
+    # live state waiting to be resumed and must keep printing. A malformed
+    # state file is skipped the same way a done one is, so one bad file
+    # cannot take the section down. Summarize instead of dumping the full
+    # state object, which is what made this section unreadably large.
+    try:
+        with open(path, encoding='utf-8', errors='replace') as f:
+            data = json.load(f)
+        status = data.get('status', '?')
+        if status == 'done':
+            continue
+        task_id = data.get('task_id', 'unknown')
+        title = data.get('title', 'unknown')
+        iteration = data.get('iteration', '?')
+        achieved = data.get('progress', {}).get('achieved_percent', '?')
+        lines.append(f'[{task_id}] {title} - {status} (iteration {iteration}, {achieved}% achieved)')
+    except Exception:
+        continue
+
+if lines:
+    out = '\n## Active Ralph Loop\n' + '\n'.join(lines) + '\n'
+    sys.stdout.buffer.write(out.encode('utf-8', 'replace'))
+" ".ralph-state" 2>/dev/null
 fi
 
 # ---------------------------------------------------------------------------
@@ -153,3 +177,6 @@ if [ -n "$RECENT" ]; then
     echo "## Recently Modified Files"
     echo "$RECENT"
 fi
+
+# This hook is advisory context injection; a non-zero exit surfaces to the user as a hook error.
+exit 0
