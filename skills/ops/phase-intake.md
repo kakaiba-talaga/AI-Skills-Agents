@@ -16,6 +16,10 @@ Determine the starting point from the parsed arguments:
 
 If no arguments are given, ask the user what they want to manage.
 
+## Stale artifact detection (start of a new run)
+
+Before continuing into the `Spec or requirement text` or `execute` routes above (the two that lead to a new run), run the three stale-artifact detections defined in `handoffs.md` § Handoff cleanup: stale handoff subdirectories (item 4), stale cleanup records (item 5), and stale terminal boards (item 6). Skip this step for `resume`, `status`, and `save`, which continue an existing run rather than starting one. Skip it entirely when neither `.ops-state/` nor `.agents/handoffs/` exists yet, since there is nothing on disk to check. Each detection warns and asks per its own phrasing; none of the three auto-deletes.
+
 ## Trivial Dispatch
 
 When the triage gate routes to `trivial`, execute these steps and stop — do not proceed to Phase 1a, Phase 2.5, or the full Phase 4 ceremony:
