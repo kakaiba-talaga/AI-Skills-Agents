@@ -141,7 +141,7 @@ All task board operations use the state file as the primary store. **Every mutat
 
     **The board is `.ops-state/<run-id>-board.json`. Nothing else is.** #12 bars the board from holding durable content; this is its converse. A triage document or status file the user asked for is a deliverable: build it and keep building it. It is not the board, however closely it resembles one or however often it calls itself one.
 
-    > **Reference:** You MUST Read `~/.claude/skills/ops/orchestrator-obligations.md` for artifact-versus-board authority, verifying an agent's claim before relaying it, and dispositioning a finding an agent reported but did not fix. If the file is missing, keep writing the board whatever else you maintain.
+    > **Reference:** You MUST Read `~/.claude/skills/ops/orchestrator-obligations.md` for artifact-versus-board authority, verifying an agent's claim before relaying it, dispositioning a finding an agent reported but did not fix, and committing a finished task's diff. If the file is missing, keep writing the board whatever else you maintain, and commit each task's diff as it lands.
 
 ---
 

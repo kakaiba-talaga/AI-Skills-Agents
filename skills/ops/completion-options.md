@@ -12,6 +12,8 @@ At the end of any run that reaches Phase 4 — whether every task completed clea
 | 3 | **Keep branch** | More commits planned before merging |
 | 4 | **Discard** | Branch was exploratory; changes unwanted |
 
+Every option here assumes the run's work is already committed. Merging, opening a pull request, and discarding all read a branch that has commits on it, and keeping a branch is described in terms of adding more. The commit gate before the cleanup step is what makes that assumption safe; this menu does not commit anything itself, because by the time it runs there is no board left for a dispatch to ride.
+
 ---
 
 ## Foreground dispatch
