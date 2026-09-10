@@ -119,11 +119,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/guard-clickup-api.sh\"",
-            "statusMessage": "Checking ClickUp guard..."
-          },
-          {
-            "type": "command",
             "command": "bash \"$HOME/.claude/hooks/guard-compound-bash.sh\"",
             "statusMessage": "Checking compound-command guard..."
           }

@@ -466,8 +466,8 @@ rep(
 # PATCH 37 — Constraints section: reorder Bash rules ↔ Team manager
 # ---------------------------------------------------------------------------
 rep(
-    "## Constraints (applies to team manager AND all spawned agents)\n\n### Bash rules\n\nThe Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical bash rules \u2014 no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.\n\n### Team manager tool restrictions\n\n**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.\n\n> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.",
-    "## Constraints (applies to team manager AND all spawned agents)\n\n### Team manager tool restrictions\n\n**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.\n\n> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.\n\n### Shell rules\n\nThe Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical Shell rules \u2014 no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.",
+    "## Constraints (applies to team manager AND all spawned agents)\n\n### Bash rules\n\nThe Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical bash rules \u2014 no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.\n\n### Team manager tool restrictions\n\n**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.\n\nClickUp is never a direct-call exception to that principle: every ClickUp action, including the Phase 1 enrichment lookup, routes through the `/clickup` skill per the ClickUp Actions rule in the deployed global instructions (`CLAUDE.md` for Claude Code, `.cursor/rules/clickup-actions.mdc` for Cursor).\n\n> **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.",
+    "## Constraints (applies to team manager AND all spawned agents)\n\n### Team manager tool restrictions\n\n**Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.\n\nClickUp is never a direct-call exception to that principle: every ClickUp action, including the Phase 1 enrichment lookup, routes through the `/clickup` skill per the ClickUp Actions rule in the deployed global instructions (`CLAUDE.md` for Claude Code, `.cursor/rules/clickup-actions.mdc` for Cursor).\n\n> **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.\n\n### Shell rules\n\nThe Shared Brief Constraints block (see `#shared-brief-constraints` above) defines the canonical Shell rules \u2014 no compound commands, no `cd` prefix, relative paths only, `_tmp_` prefix. These apply to the team manager AND all spawned agents.",
 )
 
 # ---------------------------------------------------------------------------
@@ -746,6 +746,14 @@ These limitations are inherent to the Cursor platform and cannot be worked aroun
 )
 
 # ---------------------------------------------------------------------------
+# PATCH 56 — Shared Brief Constraints: temp-file fallback, Bash → Shell
+# ---------------------------------------------------------------------------
+rep(
+    "If you're unsure which `_tmp_*` files are yours, check your own Write and Bash calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.",
+    "If you're unsure which `_tmp_*` files are yours, check your own Write and Shell calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.",
+)
+
+# ---------------------------------------------------------------------------
 # Global substitution: any remaining ~/.claude/ → ~/.cursor/
 # ---------------------------------------------------------------------------
 text = text.replace("~/.claude/", "~/.cursor/")
@@ -802,12 +810,18 @@ sys.exit(3)
 
 # ---------------------------------------------------------------------------
 # Invoke Python. Write the embedded script to a temp file as UTF-8 (no BOM)
-# to avoid PowerShell stdin pipeline re-encoding corrupting non-ASCII bytes.
+# to avoid PowerShell stdin pipeline re-encoding corrupting non-ASCII bytes
+# under Windows PowerShell 5.1, which this script also supports (see
+# 7749c95, abb09d4). The temp file lives in the OS temp directory rather
+# than the project root: this repository treats a root-level `_tmp_` file
+# as scratch space nothing may sweep with a glob, so a scratch file that
+# survives an interrupt between the write below and the `finally` cleanup
+# is safer sitting where the OS already expects ephemeral files to pile up.
 # ---------------------------------------------------------------------------
 $whatIfArg = if ($WhatIf) { "true" } else { "false" }
 $forceArg  = if ($Force)  { "true" } else { "false" }
 
-$tmpPy = Join-Path $PWD.Path "_tmp_transform-cursor-ops.py"
+$tmpPy = Join-Path ([System.IO.Path]::GetTempPath()) "_tmp_transform-cursor-ops.py"
 $code = 1
 try {
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false

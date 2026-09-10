@@ -184,6 +184,14 @@ rep(
 )
 
 # ---------------------------------------------------------------------------
+# PATCH 5 — Shared Brief Constraints: temp-file fallback, Bash → Shell
+# ---------------------------------------------------------------------------
+rep(
+    "If you're unsure which `_tmp_*` files are yours, check your own Write and Bash calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.",
+    "If you're unsure which `_tmp_*` files are yours, check your own Write and Shell calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.",
+)
+
+# ---------------------------------------------------------------------------
 # Global substitution: any remaining ~/.claude/ → ~/.cursor/
 # ---------------------------------------------------------------------------
 text = text.replace("~/.claude/", "~/.cursor/")
@@ -240,12 +248,18 @@ sys.exit(3)
 
 # ---------------------------------------------------------------------------
 # Invoke Python. Write the embedded script to a temp file as UTF-8 (no BOM)
-# to avoid PowerShell stdin pipeline re-encoding corrupting non-ASCII bytes.
+# to avoid PowerShell stdin pipeline re-encoding corrupting non-ASCII bytes
+# under Windows PowerShell 5.1, which this script also supports (see
+# 7749c95, abb09d4). The temp file lives in the OS temp directory rather
+# than the project root: this repository treats a root-level `_tmp_` file
+# as scratch space nothing may sweep with a glob, so a scratch file that
+# survives an interrupt between the write below and the `finally` cleanup
+# is safer sitting where the OS already expects ephemeral files to pile up.
 # ---------------------------------------------------------------------------
 $whatIfArg = if ($WhatIf) { "true" } else { "false" }
 $forceArg  = if ($Force)  { "true" } else { "false" }
 
-$tmpPy = Join-Path $PWD.Path "_tmp_transform-cursor-ralph-loop.py"
+$tmpPy = Join-Path ([System.IO.Path]::GetTempPath()) "_tmp_transform-cursor-ralph-loop.py"
 $code = 1
 try {
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false

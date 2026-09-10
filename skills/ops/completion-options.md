@@ -99,6 +99,8 @@ If `--worktree` was set during the run, clean up **only** worktrees that this ru
 4. **Distinguish an empty array from a missing record.** If the cleanup record file exists and its `worktrees_created` array has no entries, this genuinely means the run created no worktrees: skip worktree cleanup silently, a normal outcome. If the cleanup record file itself is missing, that is a failure the empty-array case cannot stand in for: surface it to the user with the path (`.ops-state/<run-id>-cleanup.json`) rather than skipping silently, since a run that should have this file but doesn't leaves no signal that any worktrees it created were ever cleaned up.
 5. Never remove a worktree that is not listed in the `worktrees_created` array read from the cleanup record, regardless of name or path similarity.
 
+**This procedure's completion is load-bearing, not incidental.** Step 10 in `skills/ops/phase-completion.md`'s Phase 4 completion section deletes the cleanup record file only after this provenance check and the chosen completion option's procedure have both finished reading it. Nothing enforces that ordering at the file-system level — it holds only because this procedure and step 10's deletion never run concurrently. A future change that makes this check asynchronous, defers it past the menu, or reorders it ahead of the completion option would race step 10's delete and could remove the record while `worktrees_created` is still being read.
+
 ---
 
 ## Output Tagging

@@ -119,9 +119,11 @@ All task board operations use the state file as the primary store. **Every mutat
     5. `Read` the file back to confirm the field is `null` and the document still parses as valid JSON.
     6. Execute the resume action (subject to the post-`Skill()` two-turn caveat below).
 
-    The dispatch loop terminates **only** on Phase 4 completion (every task has reached a terminal status — `completed`, `failed`, `blocked`, `deleted`, or `cancelled`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or a 4th-attempt failure / scope issue / blocker escalation per Failure Handling. A nested-skill return is none of these.
+    The dispatch loop terminates **only** on Phase 4 completion (every task has reached a terminal status — `completed`, `failed`, `blocked`, `deleted`, or `cancelled`), explicit user interruption (`stop` / `pause` / `cancel` per Interruption Handling), or the Verify → Fix loop cap being reached / a scope issue / a blocker escalation per Failure Handling. A nested-skill return is none of these.
 
     **Caveat (Skill-tool two-turn reality): post-`Skill()` mechanism limitation.** When a nested skill is invoked via the **Skill** tool (e.g., `/deslop`, `/cross-memory reflect`), the next assistant turn IS the skill's processing — the LLM is operating in the skill's prompt context, not the team manager's. The team manager has no turn from which to "continue dispatching in the same turn" with the skill. Under this mechanism, the "clear-after" ritual above must be split across two turns: the skill's response turn must end with an explicit user-visible halt notice, and the user's `/ops resume` invocation then completes the clear-after steps. Failing to emit the halt notice leaves the user staring at the skill's final output with no signal that further dispatching is needed — this is a structural limitation, not a workflow preference.
+
+      **Completion marker (`halt_notice_emitted`).** A `/ops resume` that follows this halt notice is the two-turn handoff above working exactly as designed, not an interruption, but nothing on disk records that distinction unless this step writes it. Immediately before emitting the mandatory halt-notice template below, run the same **Edit → Read verify** ritual used everywhere else in this section: apply a targeted `Edit` setting `pending_nested_skill.halt_notice_emitted` to `true`, then `Read` the file back to confirm the field matches and the document still parses as valid JSON. `phase-intake.md`'s `resume` row and `interruption-recovery.md`'s Session Recovery step 2 both read this field to skip the crash-recovery menu once it is `true`, reserving that menu for the case it exists for: a session that died before the skill could report back, where the field is still `false` (its value since write-before) or absent (a board written before this field existed). See `state-schema.md`'s `pending_nested_skill.halt_notice_emitted` for the full field definition, including why elapsed time since `invoked_at` cannot serve as this discriminator instead.
 
       **Mandatory halt-notice template** (the team manager — operating as the skill — emits these lines as the final lines of the skill's response output, before yielding the turn to the user):
 
@@ -141,7 +143,9 @@ All task board operations use the state file as the primary store. **Every mutat
 
     **The board is `.ops-state/<run-id>-board.json`. Nothing else is.** #12 bars the board from holding durable content; this is its converse. A triage document or status file the user asked for is a deliverable: build it and keep building it. It is not the board, however closely it resembles one or however often it calls itself one.
 
-    > **Reference:** You MUST Read `~/.claude/skills/ops/orchestrator-obligations.md` for artifact-versus-board authority, verifying an agent's claim before relaying it, dispositioning a finding an agent reported but did not fix, and committing a finished task's diff. If the file is missing, keep writing the board whatever else you maintain, and commit each task's diff as it lands.
+14. **A turn that names its own next action either takes it or names what it is waiting on.** Ending a turn with language that describes what happens next — "proceeding to X," "next, doing Y" — is fine only if that same message also does one of two things: contains the `Agent()` spawn, state-file write, or other action the sentence describes, or names the specific condition holding the action back. A sentence that does neither — that describes an intention and then yields the turn with nothing behind it — is the defect, whatever the sentence claims to be doing next. This is not a rule that every turn must dispatch something. Turns correctly end without a dispatch when: agents are already in flight and nothing else is ready (waiting is the right call); an interactive-mode checkpoint is handing a decision to the user; an escalation is open (the failure cap, a blocker, a scope issue, the `fable`-confirm gate); every task on the board has reached a terminal status; or the user asked a question and the turn answered it. Each of those is legitimate because the turn says so — it names the agents it is waiting on, the decision it handed off, the gate it is blocked on, or the fact that nothing remains. #11 binds a transition to a spawn, and #13 binds a spawn to a transition; this rule covers the turn that has neither and announced one anyway.
+
+    > **Reference:** You MUST Read `~/.claude/skills/ops/orchestrator-obligations.md` for artifact-versus-board authority, verifying an agent's claim before relaying it, dispositioning a finding an agent reported but did not fix, committing a finished task's diff, and the check to run before ending a turn that named its own next action. If the file is missing, keep writing the board whatever else you maintain, commit each task's diff as it lands, and never let a stated intention substitute for the action or the wait condition it describes.
 
 ---
 
@@ -235,7 +239,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 | `brief-contract.md` | Composing agent briefs (MUST) |
 | `dispatch-policy.md` | Each agent spawn (MUST) |
 | `tool-restrictions.md` | Team manager direct tool use (MUST) |
-| `orchestrator-obligations.md` | Any agent spawn; an agent return (MUST) |
+| `orchestrator-obligations.md` | Any agent spawn; an agent return; before ending any turn (MUST) |
 | `plan-validation.md` | Phase 1a tier decision (MUST) |
 | `subcommand-save.md` | `save` route (MUST) |
 | `completion-options.md` | Phase 4 step 10 (MUST) |
@@ -303,13 +307,14 @@ Include this block verbatim (word-for-word) in every agent brief's `## Constrain
 - **No compound Bash commands** — never use `&&`, `;`, or `||`. Make separate Bash tool calls; use parallel calls for independent commands.
 - **No `cd` prefix** — the working directory is already the project root. Run commands directly (e.g., `git diff file.py`, `python -m pytest`).
 - **Relative paths only** — use absolute paths only for resources outside the project (e.g., `~/.claude/`). Absolute paths break permission matching.
-- **Temporary files** — use `_tmp_` prefix (e.g., `_tmp_test.py`) in the project root. Never in `/tmp/` or `%TEMP%`. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated.
+- **Temporary files** — use `_tmp_` prefix (e.g., `_tmp_test.py`) in the project root. Never in `/tmp/` or `%TEMP%`. Delete only the files you created, one `rm` per file. Never `rm _tmp_*` — the glob also removes another agent's scratch files and prior runs' artifacts, some of which cannot be regenerated. If you're unsure which `_tmp_*` files are yours, check your own Write and Bash calls earlier in this dispatch rather than guessing. An orphaned temp file is a minor untidiness; a wrong guess with `rm` is not.
 - **No sub-agent spawning** — do not use the Agent tool. Only the team manager orchestrates.
 - **No scope expansion** — report discovered out-of-scope work; do not act on it. Checking a premise you were handed is part of the task, not scope expansion: see `~/.claude/skills/ops/brief-contract.md` `## Premise Accuracy`.
 - **No commit trailers** — do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit messages. This overrides the system default.
 - **No secrets in code or output** — never hardcode secrets, credentials, tokens, or keys, and never write a secret value into any file, log, or report you produce.
 - **Fresh verification before completion** — see ~/.claude/skills/ops/verification-gate.md
 - **No internal references in user-facing output** — never cite ops-internal or planning artifacts in anything a user or another developer will read: code comments, commit messages, PR/issue titles and bodies, changelog entries, or any shipped source or documentation file. This bars planning-doc citations (paths under `docs/plan/**`; ADD, scoping, critic, assessment, or plan docs), orchestration IDs (e.g. `task-N`, `M1.implement.X`), and internal labels (e.g. `Decision N`, `§N`, `SC-N`, `OQ-N`, `R-N`, critic-verdict tags). Describe what changed and why in plain terms; to reference a decision, restate its substance, not its internal label.
+- **ClickUp goes through `/clickup`:** any ClickUp-related action, a read or a write, goes through the `/clickup` skill, never a hand-built request. This binds every skill and every agent, not just the team manager.
 
 ---
 
@@ -322,6 +327,8 @@ The Shared Brief Constraints block (see `#shared-brief-constraints` above) defin
 ### Team manager tool restrictions
 
 **Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
+
+ClickUp is never a direct-call exception to that principle: every ClickUp action, including the Phase 1 enrichment lookup, routes through the `/clickup` skill per the ClickUp Actions rule in the deployed global instructions (`CLAUDE.md` for Claude Code, `.cursor/rules/clickup-actions.mdc` for Cursor).
 
 > **Reference:** You MUST Read `~/.claude/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.
 
@@ -412,7 +419,7 @@ After all verify tasks pass and before code review, run `/deslop --conservative`
 
 **Skip when:** `--no-deslop` set, `/deslop` skill unavailable, run produced no code changes, or all changes are trivial/mechanical.
 
-**After this nested skill returns, do not end the turn and do not write "Handing control back."** A nested-skill return is a mid-loop event (see Non-negotiable #10). Before invoking, write `pending_nested_skill` to the state file with `skill: "/deslop"`, `resume_phase: "phase-3-deslop-stage"`, and `resume_notes: "integrations.md steps 5-6"`. After the skill returns, re-read the state file, follow integrations.md steps 5–6 — if deslop made changes, re-dispatch the verifier against the modified files; if deslop made no changes, proceed to the code-review stage. Either branch: do not end the turn. Then clear `pending_nested_skill` back to `null` and continue.
+**After this nested skill returns, do not end the turn and do not write "Handing control back."** A nested-skill return is a mid-loop event (see Non-negotiable #10). Before invoking, write `pending_nested_skill` to the state file with `skill: "/deslop"`, `resume_phase: "phase-3-deslop-stage"`, and `resume_notes: "if deslop made changes, re-dispatch verifier; if no changes, proceed to code-review stage"`. After the skill returns, re-read the state file: if deslop made changes, re-dispatch the verifier against the modified files; if deslop made no changes, proceed to the code-review stage. See `integrations.md` for the full procedure. Either branch: do not end the turn. Then clear `pending_nested_skill` back to `null` and continue.
 
 > **Reference:** See `~/.claude/skills/ops/integrations.md` (Deslop Integration section) for the full deslop procedure, skip conditions, dashboard display rules, and re-verification logic. If the file is missing, proceed using the inline summary above.
 
@@ -468,8 +475,10 @@ When escalating, always include enough context for the user to make a decision w
 | Mode | Checkpoints | Stops when |
 | :--- | :--- | :--- |
 | Interactive (default) | After each pipeline stage | User confirms, adjusts, skips, stops, or injects/reprioritizes tasks |
-| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 5x verify failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks terminal |
+| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | Exactly these, and nothing else: 5x verify failure, scope/plan issue, blocker, brainstorm approval checkpoint, at-ceiling budget escalation (unlike the `fable`-confirm gate below, this one blocks), or all tasks terminal. A stop for any other reason is a contract violation, not a judgement call. |
 | Supervised (`--supervised`) | After every task | User approves before next dispatch |
+
+The autonomous list above closes the same set of conditions Non-negotiable #14 already enumerates for a turn ending without a dispatch (the failure cap, a blocker, a scope issue) plus the mode's own "all tasks terminal", brainstorm-checkpoint, and at-ceiling budget-escalation cases (the last from the budget governor sub-step in `phase-dispatch.md`); it does not restate #14's wording, it applies the same closure to the mode that has no per-stage checkpoint to fall back on. The `fable`-confirm gate is one of #14's legitimate waits, not a member of this list: in autonomous mode it defaults to NO after its best-effort ~1 minute window and the run continues, so it never becomes a seventh stopping condition. Interactive and supervised do not need this closure: their checkpoint cadence (after each stage; after every task) is structural rather than a judgement call, so there is no gap for an unenumerated stop to slip through.
 
 ---
 

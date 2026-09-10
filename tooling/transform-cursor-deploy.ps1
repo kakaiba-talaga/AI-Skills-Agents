@@ -310,12 +310,18 @@ sys.exit(3)
 
 # ---------------------------------------------------------------------------
 # Invoke Python. Write the embedded script to a temp file as UTF-8 (no BOM)
-# to avoid PowerShell stdin pipeline re-encoding corrupting non-ASCII bytes.
+# to avoid PowerShell stdin pipeline re-encoding corrupting non-ASCII bytes
+# under Windows PowerShell 5.1, which this script also supports (see
+# 7749c95, abb09d4). The temp file lives in the OS temp directory rather
+# than the project root: this repository treats a root-level `_tmp_` file
+# as scratch space nothing may sweep with a glob, so a scratch file that
+# survives an interrupt between the write below and the `finally` cleanup
+# is safer sitting where the OS already expects ephemeral files to pile up.
 # ---------------------------------------------------------------------------
 $whatIfArg = if ($WhatIf) { "true" } else { "false" }
 $forceArg  = if ($Force)  { "true" } else { "false" }
 
-$tmpPy = Join-Path $PWD.Path "_tmp_transform-cursor-deploy.py"
+$tmpPy = Join-Path ([System.IO.Path]::GetTempPath()) "_tmp_transform-cursor-deploy.py"
 $code = 1
 try {
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
