@@ -120,11 +120,32 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Recently Modified Files (last 60 minutes)
 # ---------------------------------------------------------------------------
-RECENT=$(find . -maxdepth 3 -type f -mmin -60 \
-    -not -path "./.git/*" \
-    -not -path "./node_modules/*" \
-    -not -path "./.ops-state/*" \
-    -not -path "./.ralph-state/*" \
+# -prune stops find from descending into these directories at all, instead of
+# walking every file underneath them and filtering the results afterward.
+# In a large repository (vendored dependencies, virtualenvs, caches) that
+# distinction is the difference between a sub-second scan and one that stalls
+# the hook for minutes. The timeout guard below is a second layer of defense:
+# if a tree is pathological in some other way, the hook still degrades to an
+# empty result instead of hanging.
+if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout 10"
+else
+    TIMEOUT_CMD=""
+fi
+
+RECENT=$($TIMEOUT_CMD find . -maxdepth 3 \
+    \( \
+        -name .git \
+        -o -name node_modules \
+        -o -name .ops-state \
+        -o -name .ralph-state \
+        -o -name .venv \
+        -o -name .worktrees \
+        -o -name .pytest_cache \
+        -o -name .ruff_cache \
+        -o -name .code-intel \
+    \) -prune \
+    -o -type f -mmin -60 -print \
     2>/dev/null)
 
 if [ -n "$RECENT" ]; then
