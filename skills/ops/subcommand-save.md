@@ -133,7 +133,7 @@ Default is N. If the user says no or presses Enter without input, stop — the s
 
 Before invoking, check the board file's `tasks` array for any task with `status: "in_progress"`. This guard runs **before** the nested-skill call, and is independent of the `pending_nested_skill` check in step 7 above: that check tracks a previously-invoked nested skill still awaiting its own return path, while this one tracks the run's own in-flight agent dispatches under detached-by-default dispatch. Either condition can be true on its own, both at once, or neither.
 
-If one or more tasks are **`in_progress`** — meaning an agent dispatch from this run has not yet returned — do not invoke `/cross-memory reflect`. Skip rather than wait: reflecting over a run whose agents have not yet returned would distill durable facts from a partial corpus, before the outstanding work has had a chance to shape what those facts even are. Print the following line verbatim, substituting the count of in-flight tasks:
+If one or more tasks are **`in_progress`** on the board — a marker that covers two distinct states, not one: a dispatch still running, and a dispatch already finished whose completion Step 4 has not yet processed (the finished-unprocessed window; see `phase-dispatch.md`'s liveness table) — do not invoke `/cross-memory reflect`. Skip rather than wait, in either case: reflecting before every dispatch this run made has been fully processed into the run's own record would distill durable facts from a partial corpus, before the outstanding work has had a chance to shape what those facts even are. Print the following line verbatim, substituting the count of in-flight tasks:
 
 ```
 Save complete; reflect skipped because <N> task(s) are still in flight.
