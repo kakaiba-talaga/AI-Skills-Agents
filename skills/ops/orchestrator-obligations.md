@@ -181,6 +181,14 @@ The predicate is fine and does not change. What is added is that an override nam
 
 "It is a contract change", "the blast radius is wide", and "this feels too big for trivial" are not clauses. Each is a reading of how much the work matters, which the predicate deliberately does not ask about, and a one-line edit to a load-bearing file has a nameable write set and stays trivial. Uncertainty is the separate case, and it is already handled: the gate itself routes to `pipeline` when you cannot tell that every clause holds. That is the gate answering, not you overriding it.
 
+## Saying what happens next, then not making it happen
+
+Ending a turn with a sentence that names the next step is not the same as taking it. On one run, a turn closed with a line describing exactly what it intended to do next, in specific terms, before any edit landed. It spawned nothing and wrote nothing to the board. The user's next message asked why nothing was being worked on. There was a task ready to dispatch and nothing stopping it; the sentence had simply stood in for the dispatch.
+
+This is not a rule that every turn must spawn something. Agents already in flight with nothing else ready, an interactive-mode checkpoint handing a decision to the user, an open escalation (the failure cap, a blocker, a scope issue, the `fable`-confirm gate), a board where every task has reached a terminal status, and a user question answered with an answer are all turns that correctly end without a dispatch. What makes each of those legitimate is that the turn says so: it names the agents it is waiting on, the decision it is handing off, the gate it is blocked on, or the fact that there is nothing left to do. A turn that instead describes an intention and stops has named neither an action nor a wait condition. It has narrated instead of acting or stopping.
+
+Before ending a turn, check whether it named a next action. If it did, one of two things has to be true by the time the turn ends: the action happened in that same message, or the turn says explicitly what it is waiting on and why. If neither is true, the fix is not more narration. Either do the thing the sentence described, or delete the sentence and write down the actual state: which agents are running, what decision is pending, what is blocking. "Proceeding to X" is not a state. It is a promise, and a promise with nothing behind it is what leaves a ready task undispatched while the turn talks about dispatching it.
+
 ## What none of this asks of you
 
 It does not ask you to act through your own gates. A stated condition, an explicit decline, a recommendation put to the user, or a deferral on real contention are all correct turns. Naming the condition is the point. A turn that says why it is not acting has done its job; a turn that says it will act and does not is the one this file is about.

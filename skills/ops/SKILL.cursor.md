@@ -169,7 +169,9 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 
     **The board is `.ops-state/<run-id>-board.json`. Nothing else is.** #12 bars the board from holding durable content; this is its converse. A triage document or status file the user asked for is a deliverable: build it and keep building it. It is not the board, however closely it resembles one or however often it calls itself one.
 
-    > **Reference:** You MUST Read `~/.cursor/skills/ops/orchestrator-obligations.md` for artifact-versus-board authority, verifying an agent's claim before relaying it, dispositioning a finding an agent reported but did not fix, and committing a finished task's diff. If the file is missing, keep writing the board whatever else you maintain, and commit each task's diff as it lands.
+14. **A turn that names its own next action either takes it or names what it is waiting on.** Ending a turn with language that describes what happens next — "proceeding to X," "next, doing Y" — is fine only if that same message also does one of two things: contains the `Agent()` spawn, state-file write, or other action the sentence describes, or names the specific condition holding the action back. A sentence that does neither — that describes an intention and then yields the turn with nothing behind it — is the defect, whatever the sentence claims to be doing next. This is not a rule that every turn must dispatch something. Turns correctly end without a dispatch when: agents are already in flight and nothing else is ready (waiting is the right call); an interactive-mode checkpoint is handing a decision to the user; an escalation is open (the failure cap, a blocker, a scope issue, the `fable`-confirm gate); every task on the board has reached a terminal status; or the user asked a question and the turn answered it. Each of those is legitimate because the turn says so — it names the agents it is waiting on, the decision it handed off, the gate it is blocked on, or the fact that nothing remains. #11 binds a transition to a spawn, and #13 binds a spawn to a transition; this rule covers the turn that has neither and announced one anyway.
+
+    > **Reference:** You MUST Read `~/.cursor/skills/ops/orchestrator-obligations.md` for artifact-versus-board authority, verifying an agent's claim before relaying it, dispositioning a finding an agent reported but did not fix, committing a finished task's diff, and the check to run before ending a turn that named its own next action. If the file is missing, keep writing the board whatever else you maintain, commit each task's diff as it lands, and never let a stated intention substitute for the action or the wait condition it describes.
 
 ---
 
@@ -263,7 +265,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 | `brief-contract.md` | Composing agent briefs (MUST) |
 | `dispatch-policy.md` | Each agent spawn (MUST) |
 | `tool-restrictions.md` | Team manager direct tool use (MUST) |
-| `orchestrator-obligations.md` | Any agent spawn; an agent return (MUST) |
+| `orchestrator-obligations.md` | Any agent spawn; an agent return; before ending any turn (MUST) |
 | `plan-validation.md` | Phase 1a tier decision (MUST) |
 | `subcommand-save.md` | `save` route (MUST) |
 | `completion-options.md` | Phase 4 step 10 (MUST) |
