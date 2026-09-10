@@ -120,7 +120,7 @@ Root-level field tracking whether the team manager is currently inside a nested-
   "skill": "/deslop",
   "invoked_at": "2026-04-19T14:22:03Z",
   "resume_phase": "phase-3-deslop-stage",
-  "resume_notes": "integrations.md steps 5-6: if deslop made changes, re-dispatch verifier; if no changes, proceed to code-review stage",
+  "resume_notes": "if deslop made changes, re-dispatch verifier; if no changes, proceed to code-review stage",
   "halt_notice_emitted": false
 }
 ```
@@ -130,7 +130,7 @@ Field meanings:
 - `skill` — the nested skill invoked (e.g., `"/deslop"`). Matches the skill identifier.
 - `invoked_at` — ISO-8601 UTC timestamp of invocation. Enables future stale-marker detection.
 - `resume_phase` — short identifier of where the team manager must resume. Allowed values (open set): `"phase-3-dispatch"`, `"phase-3-deslop-stage"`, `"phase-3-save-followup"`, `"phase-4-cleanup-sweep"` (9a's relocation sweep invoking `/cross-memory save`; see `phase-completion.md`'s Phase 4 completion section, step 9a).
-- `resume_notes` — one-line human-readable instruction the team manager re-reads when clearing the marker.
+- `resume_notes` — one-line human-readable instruction the team manager re-reads when clearing the marker. Write the instruction itself, not a pointer to where it lives (e.g. `"file.md steps N-M"`): a numbered-step citation goes stale silently the moment that section is renumbered, while the instruction's own content does not.
 - `halt_notice_emitted`: boolean, default `false`. Set alongside the rest of the record in write-before, then flipped to `true` immediately before the mandatory halt-notice template is emitted (see `SKILL.md` Non-negotiable #10), which happens only once the nested skill has actually run to completion and the required halt notice has been surfaced to the user. This is the discriminator `resume` uses to tell a designed two-turn handoff (skill finished, halt notice shown, user typed `/ops resume` right on schedule) from a genuine interruption (session died mid-skill, before the halt notice could be written); see `phase-intake.md`'s `resume` row and `interruption-recovery.md`'s Session Recovery step 2 for where this read happens. Elapsed time since `invoked_at` is deliberately not used for this purpose: a user can resume a perfectly normal handoff hours or even days later, so age alone cannot separate the two cases.
 
 **Lifecycle:** `null` (record absent) → object with `halt_notice_emitted: false` (set on write-before) → `halt_notice_emitted: true` (set immediately before the halt notice is emitted, only on the path where the skill actually completed) → `null` (record cleared entirely on clear-after, whether that ran in the same turn or after a `/ops resume`).
@@ -273,6 +273,32 @@ Field meanings:
 Unlike the other additive root fields documented above, `budget` is deliberately **not** part of the default set a board creation site emits — it is legitimately absent whenever no ceiling is set (see the "When null (or absent)" behavior above). The **first** write that sets `budget` on a board that was created without one is therefore a root-key **insertion**, not a replacement — there is no existing `budget` key for an `Edit` anchor to target. This is a real gap left by this section's `budget`-is-optional design; it is not addressed here.
 
 **Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `null` (no budget set). No migration is required.
+
+### checkpoint_pauses
+
+Root-level array recording interactive checkpoint pauses — spans where the team manager is waiting on the user (a stage-boundary confirmation, a `NEEDS_CLARIFICATION` round-trip, an escalation) rather than doing or waiting on agent work. It backs the completion summary's active-versus-total wall time split (`timing-edge-cases.md`, rule 7). Unlike `duration_seconds` and `attempts`, no existing field carries this information under a different name — a pause span is new data, not a fresh label on something the schema already tracked.
+
+**Type:** `array` (default `[]` when absent).
+
+**Element shape:**
+
+```json
+{
+  "paused_at": "2026-04-14T10:10:00Z",
+  "resumed_at": "2026-04-14T10:15:00Z",
+  "duration_seconds": 300
+}
+```
+
+Field meanings:
+
+- `paused_at` — ISO-8601 UTC timestamp recorded when the team manager opens a checkpoint that blocks on the user (a stage-boundary prompt, a clarification question, an escalation).
+- `resumed_at` — ISO-8601 UTC timestamp recorded when the user's reply is processed and the run proceeds.
+- `duration_seconds` — `resumed_at` minus `paused_at`, computed once both timestamps are known.
+
+**Write lifecycle:** The team manager appends one entry each time it opens an interactive checkpoint that blocks on the user, writing `paused_at` immediately. `resumed_at` and `duration_seconds` are filled in on that same entry once the user replies. In autonomous mode this array stays empty — an autonomous run never blocks on the user, so active wall time equals total wall time (`timing-edge-cases.md`, rule 7).
+
+**Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `[]`. No migration is required.
 
 ### pending_fable_confirm
 
