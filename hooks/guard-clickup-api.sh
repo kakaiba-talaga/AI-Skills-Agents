@@ -143,10 +143,20 @@ is_get_shaped_curl() {
   fi
 
   # A flag that attaches a request body rules out a read. -F, -T and -d are
-  # matched with an optional run of other bundled short flags in front
-  # (curl allows "-sFfield=value", "-skTfile", "-sd@file"), since only the
-  # last flag in a bundle may carry a value.
-  local body_flags_re='(^|[^[:alnum:]._-])-[A-Za-z]*[FTd]([^[:alnum:]_-]|$)'
+  # matched with an optional run of other bundled short flags in front (curl
+  # allows "-sFkey=value", "-skTfile", "-sd@file"), since only the last flag
+  # in a bundle may carry a value. That value may be glued directly to the
+  # flag letter with no separator at all -- "-dfoo=bar", "-Fkey=value" and
+  # "-Tfile.txt" are all valid curl invocations -- so nothing is required to
+  # follow the matched flag letter. An earlier version of this pattern did
+  # require a boundary character there, which meant a glued value was only
+  # caught when it happened to start with a non-alphanumeric character (as
+  # "-sd@file" does); a value starting with a letter, like the three examples
+  # just given, was misclassified as a read. Requiring no trailing context
+  # trades a theoretical false positive (denying a read whose text merely
+  # resembles "-F" or "-T" or "-d" followed by letters) for closing that
+  # false negative, which is the direction this guard is meant to fail in.
+  local body_flags_re='(^|[^[:alnum:]._-])-[A-Za-z]*[FTd]'
   body_flags_re="$body_flags_re"'|(^|[^[:alnum:]._-])--(data|data-ascii|data-binary|data-raw|data-urlencode|form|form-string|upload-file|json)([^[:alnum:]_-]|$)'
   if printf '%s' "$cmd" | grep -qE "$body_flags_re"; then
     return 1
