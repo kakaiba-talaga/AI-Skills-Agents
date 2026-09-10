@@ -46,8 +46,8 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
    cannot be the basis for promoting the run.
 
    If the status is already `failed` or `blocked`, do not evaluate the diff: append a
-   `type: promotion` entry with `action_taken: checked-no-promotion` and a note recording the
-   terminal status reached (e.g., "task ended failed before promotion evaluation, no
+   `type: promotion` entry with `action_taken: terminal-status-no-promotion` and a note recording
+   the terminal status reached (e.g., "task ended failed before promotion evaluation, no
    promotion"), then proceed to On result, which reads and preserves that same status.
    Otherwise the status is not yet terminal: evaluate the diff:
 
@@ -103,7 +103,7 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
         already-produced diff. Do NOT backfill Phase 1a or Phase 2.5. The state-file and self-contained-brief invariants hold
         (Non-negotiable #9). See the promotion transition shape below.
 
-   Each `type: promotion` entry sets `action_taken` to one of the values defined in `state-schema.md`: `promoted` (classification promoted to pipeline), `checked-no-promotion` (no promotion warranted, whether the diff was evaluated and the trivial assumption stood, or the task's status was already `failed`/`blocked` and the diff was never evaluated), or `empty-diff-no-promotion` (no diff to evaluate, promotion skipped).
+   Each `type: promotion` entry sets `action_taken` to one of the values defined in `state-schema.md`: `promoted` (classification promoted to pipeline), `checked-no-promotion` (the diff was evaluated and the trivial assumption stood), `terminal-status-no-promotion` (the task's status was already `failed`/`blocked` and the diff was never evaluated), or `empty-diff-no-promotion` (no diff to evaluate, promotion skipped).
 
 6. **On result:** If this run was promoted in the preceding Promotion check step, skip this step entirely —
    cleanup, the trivial one-line summary, and completion are owned by the pipeline's Phase 4.
