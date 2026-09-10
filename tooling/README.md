@@ -12,10 +12,12 @@ Scripts for deploying agents and skills to harness global directories and for ge
 
 Each pair shares the same embedded Python transform body (`.ps1` writes it to a temp file; `.sh` uses a heredoc). Regenerate after editing the source `SKILL.md`:
 
+Invoke the `.ps1` scripts with `pwsh` (PowerShell 7+), the same host the deploy script requires; Windows PowerShell 5.1 can refuse them outright under its execution policy.
+
 ```powershell
-.\tooling\transform-cursor-ops.ps1 -Force
-.\tooling\transform-cursor-deploy.ps1 -Force
-.\tooling\transform-cursor-ralph-loop.ps1 -Force
+pwsh -NoProfile -File tooling/transform-cursor-ops.ps1 -Force
+pwsh -NoProfile -File tooling/transform-cursor-deploy.ps1 -Force
+pwsh -NoProfile -File tooling/transform-cursor-ralph-loop.ps1 -Force
 ```
 
 ```bash
