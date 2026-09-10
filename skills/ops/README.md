@@ -196,7 +196,7 @@ Spawned agents are workers, not managers. They cannot spawn sub-agents, make sco
 
 The team manager does not end its turn on a nested-skill return — nested-skill invocations (deslop, etc.) are mid-loop events, not terminal events. The team manager writes a `pending_nested_skill` marker to the state file before invoking, and clears it after return.
 
-> **Note:** When `/ops` is wrapped with `/ralph-loop` (`/ops ralph`), nested-skill invocations inside the ralph-loop wrapper (e.g., ralph-loop's Cleanup stage → `/deslop`) are governed by ralph-loop's own prompt, which does not currently have an equivalent non-negotiable. A follow-up fix to `skills/ralph-loop/` is needed for full coverage. See Appendix A of the fix plan.
+> **Note:** When `/ops` is wrapped with `/ralph-loop` (`/ops ralph`), nested-skill invocations inside the ralph-loop wrapper (e.g., ralph-loop's Cleanup stage → `/deslop`) are governed by ralph-loop's own prompt, which does not currently have an equivalent non-negotiable. A follow-up fix to `skills/ralph-loop/` is needed for full coverage.
 
 ### Agent Dispatch
 
@@ -505,6 +505,7 @@ The hub file (`SKILL.md`) retains Triage Gate, Non-negotiables, and the phase po
 | `state-schema.md` | State file JSON structure, field definitions, directory conventions, cleanup record file schema | Phase 2 state file creation, Phase 4 cleanup |
 | `dispatch-policy.md` | Background-default dispatch rule, closed foreground-exception list, batch/predecessor rules, health-monitoring and harness/worktree interactions | Every agent spawn |
 | `tool-restrictions.md` | Delegate-first table, permitted direct actions, self-check rules, subagent dispatch decision framework | Team manager tool use decisions |
+| `orchestrator-obligations.md` | Board-versus-artifact authority (the board is the only dispatch-state file; a user-facing tracking artifact is never a substitute for it), enrolling work as it arrives mid-run and closing out every task that enrolment opens, checking the change an agent asserts before relaying its claim, dispositioning a finding an agent reported but did not fix | Any agent spawn; an agent return |
 | `dispatch-log.md` | Dispatch decision log spec — opt-in via `--dispatch-log` flag; file location, retention, entry format, kinds, append procedure, audit usage | Appending entries to `docs/ops-dispatch-log.md` when `--dispatch-log` is set |
 | `handoffs.md` | Full handoff template, run identity rules, naming examples, accumulation rules, cleanup lifecycle | Writing or reading handoff documents |
 | `integrations.md` | Deslop and Ralph Loop integration procedures | Verify→review stage transition; `ralph` flag |

@@ -9,8 +9,10 @@ Determine the starting point from the parsed arguments:
 | Spec or requirement text | If `--brainstorm` is set (or the user explicitly asks to brainstorm/design first), run the **Brainstorm Gate** below: `interviewer → architect → user approval checkpoint → planner`. Otherwise evaluate spec clarity (see below). If clear, dispatch a **planner** agent. If ambiguous, dispatch an **interviewer** agent first, then a **planner** with the pinned-down requirements. Wait for the plan, then proceed to Phase 1a (Plan Validation). |
 | `execute` (plan already in conversation) | Read the plan from conversation context. Proceed to Phase 1a (Plan Validation). |
 | `resume` | Read the state file. **Check `pending_nested_skill` before dedup** — if non-null, escalate to the user per `interruption-recovery.md` §Session Recovery step 2; do not auto-re-invoke. Treat an `in_progress` task as orphaned **only if the orchestrator does not still hold its spawn in the current context**; a spawn still held means the agent is live — keep watching it and do not re-dispatch it. A held spawn is reachable only in a same-session resume — ordinarily one typed while background agents from this session are still running — since across a session boundary the orchestrator holds nothing, so every inherited in-progress task classifies as orphaned. Dispatch a **work-verifier** agent per remaining in-progress task to determine actual completion status. Then run Phase 2.5 preflight if environment may have changed, then skip to Phase 3. See Interruption Handling → Session Recovery. |
-| `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent with orphan detection enabled. Display the dashboard (`phase-completion.md` § Status Dashboard), stop. |
+| `status` | Read the state file. For any `in_progress` tasks, dispatch a **work-verifier** agent with orphan detection enabled. Display the dashboard (`phase-completion.md` § Status Dashboard), close out the internal tasks those dispatches opened, then stop. |
 | `save` | Verify a state file exists for the current run, then follow subcommand-save.md. If no state file exists, print "/ops save requires an active run. Start one with /ops <spec> or /ops resume." and stop. |
+
+**The `resume` and `status` routes enrol their own dispatches, and close them.** Each `work-verifier` above rides an internal bookkeeping task moved to `in_progress` in the message that carries the dispatch, because the board is already on disk when these routes run (Non-negotiable #13). Each is then closed out when its verdict arrives, rather than left running: `resume` does that before it enters Phase 3, and `status` does it in the message that renders the dashboard, which is the last message that route sends. Skipping the close-out leaves a non-terminal row that nothing later is scheduled to clear, so a read-only status check would leave the run unable to reach completion. See `orchestrator-obligations.md` § Closing out what you enrolled.
 
 If no arguments are given, ask the user what they want to manage.
 
@@ -37,8 +39,12 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
      `type: promotion` entry to the `adaptations` array with the note "triage confidence:
      low, but empty diff — no promotion", then proceed to On result (the run completes as
      trivial).
-   - **Non-empty diff:** run `change-analyzer` against the actual diff. This is one shared
-     dispatch per run/stage, not a second mechanism. If a security-surface trigger already
+   - **Non-empty diff:** run `change-analyzer` against the actual diff. That dispatch enrols and
+     closes out like any other: an internal bookkeeping task moved to `in_progress` in the message
+     carrying the spawn, and a terminal status written when the verdict returns, before this step
+     ends (Non-negotiable #13; `orchestrator-obligations.md` § Closing out what you enrolled).
+     Consuming an earlier dispatch's output opens no row, because no new spawn happened. This is
+     one shared dispatch per run/stage, not a second mechanism. If a security-surface trigger already
      dispatched `change-analyzer` on this diff, consume that dispatch's output; if none has,
      this promotion check **is** the single `change-analyzer` dispatch for the run/stage (a
      later security-surface trigger dedups against it). Honor the at-most-once-per-run/stage
@@ -58,7 +64,9 @@ When the triage gate routes to `trivial`, execute these steps and stop — do no
      3. **Branch isolation (deferred branch on promotion):** Before any code-modifying
         downstream stage runs, check the current branch. If it is `main`/`master` (or the run
         otherwise lacks an isolating working branch), trigger deferred branch creation —
-        dispatch `git-master` via the standard Phase 1.5 mechanism — so the promoted pipeline
+        dispatch `git-master` via the standard Phase 1.5 mechanism, on its own board task
+        transitioned in that message and closed out when git-master returns (Non-negotiable #13;
+        `orchestrator-obligations.md` § Closing out what you enrolled), so the promoted pipeline
         runs on an isolating branch. The trivial path itself does not auto-commit, but
         downstream stages may, so the branch must exist first. This honors the standing
         never-commit-to-base posture.

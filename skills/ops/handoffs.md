@@ -79,6 +79,8 @@ After marking a task `completed` in the dispatch loop (Phase 3, Step 4), immedia
 
 When composing an agent brief, read the relevant handoff file(s) from the run's subdirectory and include the content in the **Context** section of the brief. For converging chains (multiple executors → single verifier), concatenate all relevant handoff files.
 
+Open items travel with the handoff, and the agent receiving them is barred from acting on out-of-scope work just as the agent that raised them was. Carrying a finding forward is not dispositioning it. The orchestrator does that at Step 4 of the dispatch loop, in the same beat as the return that raised it, rather than leaving it to the end-of-run relocation sweep. See `orchestrator-obligations.md`.
+
 ## Handoff accumulation
 
 Each stage transition writes a new handoff file. The full chain of handoff files for a task represents its complete history. When briefing a downstream agent, include the most recent handoff plus a summary of earlier ones (to avoid oversized briefs).

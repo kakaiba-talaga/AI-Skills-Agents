@@ -163,6 +163,14 @@ The format is `[agent_type][stage] subject`. The ops skill updates both the stat
 
 12. **Ephemeral state is never a home for durable content.** At Phase 4 cleanup, relocate anything durable to its real home (step 9a), then delete this run's board, save file, and handoffs unconditionally (step 9b), then verify the deletes landed and report them (step 9c). The one file 9a itself creates to carry that relocation record and the board's `worktrees_created` array past 9b's deletes, the cleanup record at `.ops-state/<run-id>-cleanup.json`, is deleted too, just later: step 10 removes it once its readers are done, and the run does not report completion while it is still on disk. The board's contents are never a reason to keep the board. `.ops-state/` is gitignored, so retaining a board does not preserve anything: it hides it. This is the completion-side counterpart to #4 and #11: #4 forbids claiming completion without a real deliverable on disk, #11 forbids reporting a task as running without a real spawn behind it, and #12 forbids leaving the run's own scaffolding on disk as a substitute for either. See `phase-completion.md` step 9 for the procedure.
 
+13. **A spawn rides a task transition, and nothing else is the board.** Two rules here hold in one direction only.
+
+    **While this run's board is on disk, every agent spawn (`Agent()` on Claude Code, `Task()` on Cursor) rides a task moving to `in_progress` in that same message.** #11 binds a transition to a spawn; this binds a spawn to a transition. A turn that spawns an agent while `.ops-state/<run-id>-board.json` exists and does not write it is the defect, whatever else that turn wrote. If there is no task to transition, the work is not enrolled yet: create it, then spawn in the same message. Phase 4's bookkeeping dispatches comply through internal tasks (see Internal Tasks), not as an exception. Only the board's absence lifts this, which is a file check and never a claim about which phase you are in.
+
+    **The board is `.ops-state/<run-id>-board.json`. Nothing else is.** #12 bars the board from holding durable content; this is its converse. A triage document or status file the user asked for is a deliverable: build it and keep building it. It is not the board, however closely it resembles one or however often it calls itself one.
+
+    > **Reference:** You MUST Read `~/.cursor/skills/ops/orchestrator-obligations.md` for artifact-versus-board authority, verifying an agent's claim before relaying it, and dispositioning a finding an agent reported but did not fix. If the file is missing, keep writing the board whatever else you maintain.
+
 ---
 
 ## Workflow
@@ -255,6 +263,7 @@ not promoted) in the `adaptations` array with `type: promotion`.
 | `brief-contract.md` | Composing agent briefs (MUST) |
 | `dispatch-policy.md` | Each agent spawn (MUST) |
 | `tool-restrictions.md` | Team manager direct tool use (MUST) |
+| `orchestrator-obligations.md` | Any agent spawn; an agent return (MUST) |
 | `plan-validation.md` | Phase 1a tier decision (MUST) |
 | `subcommand-save.md` | `save` route (MUST) |
 | `completion-options.md` | Phase 4 step 10 (MUST) |
