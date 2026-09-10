@@ -274,32 +274,6 @@ Unlike the other additive root fields documented above, `budget` is deliberately
 
 **Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `null` (no budget set). No migration is required.
 
-### checkpoint_pauses
-
-Root-level array recording interactive checkpoint pauses — spans where the team manager is waiting on the user (a stage-boundary confirmation, a `NEEDS_CLARIFICATION` round-trip, an escalation) rather than doing or waiting on agent work. It backs the completion summary's active-versus-total wall time split (`timing-edge-cases.md`, rule 7). Unlike `duration_seconds` and `attempts`, no existing field carries this information under a different name — a pause span is new data, not a fresh label on something the schema already tracked.
-
-**Type:** `array` (default `[]` when absent).
-
-**Element shape:**
-
-```json
-{
-  "paused_at": "2026-04-14T10:10:00Z",
-  "resumed_at": "2026-04-14T10:15:00Z",
-  "duration_seconds": 300
-}
-```
-
-Field meanings:
-
-- `paused_at` — ISO-8601 UTC timestamp recorded when the team manager opens a checkpoint that blocks on the user (a stage-boundary prompt, a clarification question, an escalation).
-- `resumed_at` — ISO-8601 UTC timestamp recorded when the user's reply is processed and the run proceeds.
-- `duration_seconds` — `resumed_at` minus `paused_at`, computed once both timestamps are known.
-
-**Write lifecycle:** The team manager appends one entry each time it opens an interactive checkpoint that blocks on the user, writing `paused_at` immediately. `resumed_at` and `duration_seconds` are filled in on that same entry once the user replies. In autonomous mode this array stays empty — an autonomous run never blocks on the user, so active wall time equals total wall time (`timing-edge-cases.md`, rule 7).
-
-**Backward compatibility:** Additive field. State files written before this field was introduced will not have it; the team manager treats absence as `[]`. No migration is required.
-
 ### pending_fable_confirm
 
 Root-level field tracking an in-flight `fable`-escalation confirmation in **autonomous mode** — the best-effort ~1-minute wait between asking the user and defaulting NO. It backs the autonomous timeout mechanism (see `phase-dispatch.md` § *`fable`-escalation autonomous timeout*) and lets a `resume` recover an interrupted wait.

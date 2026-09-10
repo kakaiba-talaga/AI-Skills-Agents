@@ -26,12 +26,10 @@
 
 **6. No calibration baseline:** When the team-manager produces its own estimates (no scoping doc), flag them in the dashboard: `"Est. 15m (heuristic)"` vs `"Est. 2h (scoped)"`. At completion, if heuristic estimates had >50% variance on average, note: `"Heuristic estimates were unreliable for this run. Consider using the project-scoper for future estimates."` Feed the actual durations into cross-run learning to calibrate future heuristics.
 
-**7. Idle time in wall clock:** Wall time includes interactive checkpoints (user thinking, approving). Track separately:
+**7. Idle time in wall clock:** Wall time includes interactive checkpoints (user thinking, approving) — a stage-boundary confirmation, a `NEEDS_CLARIFICATION` round-trip, an escalation. The state schema does not track when each of those checkpoints opens or closes: they fire from a couple dozen distinct sites across `phase-dispatch.md`, `phase-intake.md`, `phase-completion.md`, and `dispatch-policy.md`, and there is no single place a pause-start/pause-end write could be added without repeating that bookkeeping at every one of those sites. Given that, pause time is not measured, and the completion summary does not claim otherwise:
 
-- `checkpoint_pauses`: root-level array on the state file (see `state-schema.md` § checkpoint_pauses), one `{paused_at, resumed_at, duration_seconds}` entry per interactive pause. Unlike the fields in rules 1, 4, and 5 above, nothing pre-existing carries this information — a pause span is genuinely new data, not a different view of a field the schema already had, so it gets a field of its own.
-- **Active wall time** = wall time minus the sum of `checkpoint_pauses[].duration_seconds`.
-- In the completion summary, show: `"Wall time: 25m (20m active, 5m in checkpoints)"`.
-- In autonomous mode, there are no checkpoint pauses, so wall time = active wall time.
+- Report wall time as a single figure only: `"Wall time: 25m"`. Do not split it into an active/checkpoint breakdown — there is no data backing that split.
+- In autonomous mode, this distinction would be moot anyway, since an autonomous run never blocks on the user.
 
 **8. Background notification pickup:** A detached agent finishes its work at one moment, and the orchestrator learns of it only later, when it processes the completion notification. The gap between those two moments is dispatch latency, not agent runtime:
 
