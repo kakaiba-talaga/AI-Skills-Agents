@@ -73,6 +73,12 @@ Do not include `Co-Authored-By`, `Signed-off-by`, or any other trailer in commit
 
 ---
 
+## ClickUp Actions
+
+Any ClickUp-related action — a read or a write — goes through the `/clickup` skill, never a hand-built request. This binds every skill and every agent, not just `/ops`: `/clickup` is the only path to the ClickUp API, whatever else is doing the asking.
+
+---
+
 ## Active Skill Detection
 
 The following skills use **output tagging** (a badge on the first line of every response). When the skill prompt is not loaded (i.e., the user sends a message without invoking the slash command), the badge and all skill-specific behavior are lost — creating confusing inconsistency mid-workflow.

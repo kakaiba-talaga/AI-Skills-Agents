@@ -1,0 +1,6 @@
+---
+description: Route every ClickUp read or write through the /clickup skill, never a hand-built request, across all skills and agents.
+alwaysApply: true
+---
+
+Any ClickUp-related action — a read or a write — goes through the `/clickup` skill, never a hand-built request. This binds every skill and every agent, not just `/ops`: `/clickup` is the only path to the ClickUp API, whatever else is doing the asking.

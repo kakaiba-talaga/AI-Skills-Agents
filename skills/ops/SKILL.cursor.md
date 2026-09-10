@@ -342,6 +342,7 @@ Include this block verbatim (word-for-word) in every agent brief's `## Constrain
 - **No secrets in code or output** — never hardcode secrets, credentials, tokens, or keys, and never write a secret value into any file, log, or report you produce.
 - **Fresh verification before completion** — see ~/.cursor/skills/ops/verification-gate.md
 - **No internal references in user-facing output** — never cite ops-internal or planning artifacts in anything a user or another developer will read: code comments, commit messages, PR/issue titles and bodies, changelog entries, or any shipped source or documentation file. This bars planning-doc citations (paths under `docs/plan/**`; ADD, scoping, critic, assessment, or plan docs), orchestration IDs (e.g. `task-N`, `M1.implement.X`), and internal labels (e.g. `Decision N`, `§N`, `SC-N`, `OQ-N`, `R-N`, critic-verdict tags). Describe what changed and why in plain terms; to reference a decision, restate its substance, not its internal label.
+- **ClickUp goes through `/clickup`:** any ClickUp-related action, a read or a write, goes through the `/clickup` skill, never a hand-built request. This binds every skill and every agent, not just the team manager.
 
 ---
 
@@ -350,6 +351,8 @@ Include this block verbatim (word-for-word) in every agent brief's `## Constrain
 ### Team manager tool restrictions
 
 **Delegate-first:** always dispatch an agent or invoke a skill before using a tool directly. Only use tools directly for reading state or displaying information.
+
+ClickUp is never a direct-call exception to that principle: every ClickUp action, including the Phase 1 enrichment lookup, routes through the `/clickup` skill per the ClickUp Actions rule in the deployed global instructions (`CLAUDE.md` for Claude Code, `.cursor/rules/clickup-actions.mdc` for Cursor).
 
 > **Reference:** You MUST Read `~/.cursor/skills/ops/tool-restrictions.md` for the full delegate-first table, permitted direct actions, self-check rules, and the subagent dispatch decision framework. If the file is missing, proceed using the delegate-first principle above.
 
