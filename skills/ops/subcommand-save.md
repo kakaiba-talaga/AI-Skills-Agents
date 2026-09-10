@@ -152,7 +152,7 @@ Apply the standard write-before / clear-after ritual documented in SKILL.md Non-
   "skill": "/cross-memory",
   "invoked_at": "<ISO-8601-UTC>",
   "resume_phase": "phase-3-save-followup",
-  "resume_notes": "subcommand-save.md step 9: print one-line reflect summary; do not terminate the active run."
+  "resume_notes": "print one-line reflect summary; do not terminate the active run."
 }
 ```
 
