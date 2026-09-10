@@ -5,7 +5,7 @@
 # Everything written to stdout is injected into Claude's context.
 
 echo "=== Post-Compaction Context ==="
-echo "[injected by post-compaction-context.sh — repo context, not user input]"
+echo "[injected by post-compaction-context.sh - repo context, not user input]"
 
 # ---------------------------------------------------------------------------
 # 1. Git State
@@ -36,10 +36,12 @@ if [ -d ".ops-state" ]; then
     BOARD_FILES=$(find .ops-state -maxdepth 1 -name "*-board.json" -type f 2>/dev/null)
 
     if [ -n "$BOARD_FILES" ]; then
-        echo ""
-        echo "## Active Ops Runs"
+        OPS_OUTPUT=""
         for board in $BOARD_FILES; do
-            python -c "
+            # A board with every task in a terminal status (completed, failed,
+            # blocked, deleted, cancelled) is a finished run, not an active one.
+            # Skip it entirely rather than printing a heading over dead work.
+            RESULT=$(python -c "
 import json, sys
 try:
     with open('$board') as f:
@@ -47,17 +49,29 @@ try:
     run_id   = data.get('run_id', 'unknown')
     plan     = data.get('plan_file', 'unknown')
     tasks    = data.get('tasks', [])
+    terminal = {'completed', 'failed', 'blocked', 'deleted', 'cancelled'}
+    if not any(t.get('status') not in terminal for t in tasks):
+        sys.exit(0)
     print(f'Run: {run_id}  |  Plan: {plan}')
     for t in tasks:
         tid    = t.get('id', '?')
         subj   = t.get('subject', t.get('title', '?'))
         status = t.get('status', '?')
         agent  = t.get('agent_type', t.get('agent', '?'))
-        print(f'  [{tid}] {subj} — {status} ({agent})')
-except Exception as e:
+        print(f'  [{tid}] {subj} - {status} ({agent})')
+except Exception:
     sys.exit(0)
-" 2>/dev/null
+" 2>/dev/null)
+            if [ -n "$RESULT" ]; then
+                OPS_OUTPUT="${OPS_OUTPUT}${RESULT}"$'\n'
+            fi
         done
+
+        if [ -n "$OPS_OUTPUT" ]; then
+            echo ""
+            echo "## Active Ops Runs"
+            printf '%s' "$OPS_OUTPUT"
+        fi
     fi
 fi
 
@@ -68,19 +82,38 @@ if [ -d ".ralph-state" ]; then
     RALPH_FILES=$(find .ralph-state -maxdepth 1 -name "*.json" -type f 2>/dev/null)
 
     if [ -n "$RALPH_FILES" ]; then
-        echo ""
-        echo "## Active Ralph Loop"
+        RALPH_OUTPUT=""
         for state_file in $RALPH_FILES; do
-            python -c "
+            # "done" is the only terminal ralph status; "paused" and "blocked"
+            # are live state waiting to be resumed and must keep printing.
+            # Summarize instead of dumping the full state object, which is
+            # what made this section unreadably large.
+            RESULT=$(python -c "
 import json, sys
 try:
     with open('$state_file') as f:
         data = json.load(f)
-    print(json.dumps(data, indent=2))
+    status = data.get('status', '?')
+    if status == 'done':
+        sys.exit(0)
+    task_id   = data.get('task_id', 'unknown')
+    title     = data.get('title', 'unknown')
+    iteration = data.get('iteration', '?')
+    achieved  = data.get('progress', {}).get('achieved_percent', '?')
+    print(f'[{task_id}] {title} - {status} (iteration {iteration}, {achieved}% achieved)')
 except Exception:
     sys.exit(0)
-" 2>/dev/null
+" 2>/dev/null)
+            if [ -n "$RESULT" ]; then
+                RALPH_OUTPUT="${RALPH_OUTPUT}${RESULT}"$'\n'
+            fi
         done
+
+        if [ -n "$RALPH_OUTPUT" ]; then
+            echo ""
+            echo "## Active Ralph Loop"
+            printf '%s' "$RALPH_OUTPUT"
+        fi
     fi
 fi
 
