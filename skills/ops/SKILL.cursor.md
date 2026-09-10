@@ -502,8 +502,10 @@ When escalating, always include enough context for the user to make a decision w
 | Mode | Checkpoints | Stops when |
 | :--- | :--- | :--- |
 | Interactive (default) | After each pipeline stage | User confirms, adjusts, skips, stops, or injects/reprioritizes tasks |
-| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | 5x verify failure, scope/plan issue, blocker, brainstorm approval checkpoint, all tasks terminal |
+| Autonomous (`--autonomous`) | None (except brainstorm design-approval checkpoints) | Exactly these, and nothing else: 5x verify failure, scope/plan issue, blocker, brainstorm approval checkpoint, or all tasks terminal. A stop for any other reason is a contract violation, not a judgement call. |
 | Supervised (`--supervised`) | After every task | User approves before next dispatch |
+
+The autonomous list above closes the same set of conditions Non-negotiable #14 already enumerates for a turn ending without a dispatch (the failure cap, a blocker, a scope issue) plus the mode's own "all tasks terminal" and brainstorm-checkpoint cases; it does not restate #14's wording, it applies the same closure to the mode that has no per-stage checkpoint to fall back on. The `fable`-confirm gate is one of #14's legitimate waits, not a member of this list: in autonomous mode it defaults to NO after its best-effort ~1 minute window and the run continues, so it never becomes a sixth stopping condition. Interactive and supervised do not need this closure: their checkpoint cadence (after each stage; after every task) is structural rather than a judgement call, so there is no gap for an unenumerated stop to slip through.
 
 ---
 
