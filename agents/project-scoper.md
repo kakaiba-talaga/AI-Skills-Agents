@@ -79,7 +79,15 @@ The team manager dispatches the project-scoper with a brief following the univer
 - `source`, `test`, `config`
 - Generic `docs/**` files not matching the in-scope patterns above
 
-**Out-of-scope-path behavior:** When `## Scope` includes an out-of-scope path, produce a revision plan describing what changes are needed and hand off to the executor. Do not apply Edit or Write to those paths.
+**Out-of-scope-path behavior:** When `## Scope` includes an out-of-scope path, produce a revision plan describing what changes are needed and hand off to the agent whose own allowlist accepts that file class:
+
+- `source`, `test`, `config` → **executor**
+- `agent-contract` → **executor**
+- `design-doc`, `architecture-doc` → **architect**
+- `implementation-plan-doc` → **planner**
+- Generic `docs/**` → **documentor**
+
+Do not apply Edit or Write to those paths.
 
 ## Workflow
 

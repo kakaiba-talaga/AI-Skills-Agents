@@ -289,6 +289,7 @@ Before displaying the task board, confirm the state file exists and is valid:
 | Scope, estimate, analyze requirements, gap analysis, revise scoping docs from review findings | `project-scoper` |
 | Review plan, quality gate, feasibility check | `critic` |
 | Implement, create, add, modify code, refactor, wire up | `executor` |
+| Revise agent contract, update agent definition, edit an `agents/*.md` or `skills/**/*.md` contract file (per the `agent-contract` file class in `brief-contract.md`) | `executor` |
 | Verify, validate, test, check acceptance criteria, assert | `verifier` |
 | Security audit, threat model, vulnerability scan, OWASP, auth review, secrets scan, input validation, security review | `security-reviewer` |
 | Review, audit, inspect, code quality | `code-reviewer` |
