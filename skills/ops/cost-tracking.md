@@ -81,8 +81,8 @@ est_cost = ($0.0240 + $0.1800) × 1 = ~$0.20
 1. For each dispatched task, regardless of its terminal status, apply the per-task formula using the agent type's baseline tokens and the model recorded in `model_used`. A `failed` task's `attempts` count reflects real dispatches that consumed real tokens; excluding it from this sum would under-report the run's actual cost.
 2. Sum across all tasks for the total run cost estimate.
 3. Break down by model tier — show how much was attributed to sonnet vs. opus (vs. other tiers if applicable).
-4. Compute model escalation overhead: the additional cost added by tasks that escalated. A task escalated when its `model_used` differs from its agent type's frontmatter-declared model (see Section 1). For each such task, the overhead is the difference between what its `attempts` would have cost entirely at the frontmatter-declared (baseline) model and what the per-task formula above actually charges at the escalated `model_used`.
-5. Flag the overhead: `"Model escalation added ~$X.XX to the run"`
+4. Compute the model tier cost delta: the cost difference for tasks whose `model_used` differs from their agent type's frontmatter-declared model (see Section 1). For each such task, the delta is what its `attempts` actually cost at `model_used` minus what they would have cost entirely at the frontmatter-declared (baseline) model. Most deviations are upward escalations (baseline → a higher tier after repeated failures) and produce a positive delta — added cost. A deviation can also be downward — a step taken because the baseline tier itself was unavailable, not because the task failed (see `SKILL.md`, § Model escalation, "Tier unavailable") — and that produces a negative delta: reduced cost, not overhead. Sum the per-task deltas without assuming the sign in advance.
+5. Flag the net delta: `"Model escalation added ~$X.XX to the run"` when the sum is positive, or `"Model tier step-down saved ~$X.XX on the run"` when the sum is negative. Omit the line only when the sum is exactly zero (no tasks deviated from their baseline model).
 
 ---
 
@@ -135,7 +135,7 @@ Model escalation overhead: ~$1.80 (2 tasks escalated sonnet→opus)
 
 - All `$` and token figures **must** be prefixed with `~` to signal approximation.
 - **Ranges are acceptable and often more honest** than point estimates — e.g., `~$1.50–3.00` when input/output split is uncertain. Use a range when you are materially unsure; use a point estimate when you are not.
-- Omit the model escalation overhead line if no escalations occurred.
+- Omit the model tier cost delta line only when no tasks deviated from their baseline model (net delta is zero).
 - If pricing data is unavailable (e.g., `cost-tracking.md` couldn't be Read), output tokens only and add a line `pricing unavailable — $ cost omitted`. Do not fake figures.
 
 ### 5.6 Team-manager overhead (mandatory row)
