@@ -11,6 +11,7 @@ When the active harness is **Cursor**, ops uses a JSON board file plus `TodoWrit
 - `.ops-state/` holds one board file per run (supports concurrent/sequential runs without collision)
 - `.ops-state/` should be in `.gitignore` (ephemeral (short-lived; this run only) runtime state, not project content) — "should be ignored" means covered by an ignore rule as verified by `git check-ignore -q .ops-state/`, not string-match against `.gitignore` lines
 - Cleaned up on successful completion (same lifecycle as ralph-loop's `.ralph-state/`)
+- Anything an agent or the orchestrator writes into `.ops-state/` is named `<run-id>-<suffix>`, using the run's `run_id` verbatim rather than any abbreviation of it, with a hyphen between the two. Completion cleanup finds a run's files by that prefix, so a file named any other way is never cleaned up by anything.
 
 ## State File Structure
 
@@ -105,6 +106,8 @@ Per-task `status` values used across this skill:
 
 Five of these — `completed`, `failed`, `blocked`, `deleted`, and `cancelled` — are **terminal** for Phase 4's completion trigger (`phase-completion.md` § Phase 4 — Completion): a run is complete once every task has reached one of them, not only when every task is `completed`. `pending` and `in_progress` are the two non-terminal statuses.
 
+The status enum is closed: no other value belongs to this field. A status value outside these seven is a conformance defect, and it is treated as non-terminal wherever status is read, so it can never make a run look complete or a board look safe to remove. Three values have appeared outside the schema and each has a documented equivalent: `skipped` maps to `cancelled`, `awaiting_user` maps to `blocked`, and `deferred` maps to `pending` when the task is still intended or to `deleted` when it is not. When the orchestrator notices an unrecognized value on a board it currently owns, it repairs the value on the spot, because left in place the value stays non-terminal forever and the run it belongs to never reaches the completion phase that would otherwise clean its board up.
+
 ### pending_nested_skill
 
 Root-level field tracking whether the team manager is currently inside a nested-skill invocation.
@@ -189,7 +192,7 @@ Field meanings:
 - `relocations`: one entry per item 9a's sweep relocated, each naming the `content` and the `destination` it went to. An empty array means the sweep found nothing durable, a normal outcome, not an error.
 - `worktrees_created`: copied verbatim from the board's own `worktrees_created` field (above) at the moment 9a writes this file, before 9b deletes the board.
 
-**Lifecycle:** written once by 9a, before 9b's deletes; read by 9c's Cleanup block render and by the worktree-cleanup-by-provenance procedure (`completion-options.md`); deleted by step 10, after both of those readers are finished with it, with the delete verified and retried once on failure. Its delete happening later than the board's is a sequencing consequence of step 10 needing the file, not a retention exception: it is not on the board's never-delete list, and the run does not report completion while it is still on disk.
+**Lifecycle:** written once by 9a, before 9b's deletes; read by 9c's Cleanup block render and by the worktree-cleanup-by-provenance procedure (`completion-options.md`); deleted by step 10, after both of those readers are finished with it, with the delete verified and retried once on failure. Its delete happening later than the board's is a sequencing consequence of step 10 needing the file, not a retention exception: it is not on the board's never-delete list, and the run does not report completion while it is still on disk. It is excluded by name from step 9b's prefix derivation, since that derivation would otherwise match it on the run-id prefix and delete a file step 10 still needs.
 
 **Backward compatibility:** New file; a run using an older version of this skill never wrote one, and there is nothing to migrate. Its absence during the stale-artifact sweep at Phase 1 (see `handoffs.md`) is the expected outcome once step 10 has already deleted it for a completed run.
 
