@@ -41,31 +41,27 @@ case "$OS" in
         MSG_ESCAPED="${MSG//\'/\'\'}"
         TITLE_ESCAPED="${TITLE//\'/\'\'}"
 
-        # Stay on Windows PowerShell (powershell.exe), not pwsh: the WinRT
-        # toast API this branch depends on is unavailable under PowerShell 7
-        # (pwsh exits 1 with "Unable to find type
-        # [Windows.UI.Notifications.ToastNotificationManager]"), and
-        # powershell.exe is also the faster host to start on this platform.
-        # The WinRT type accelerator below has to be loaded explicitly in
-        # every invocation: referencing the type by its short name without
-        # it first also throws "Unable to find type", because each
-        # powershell.exe process starts with a clean WinRT projection.
+        # This uses the tray-balloon (NotifyIcon/ShowBalloonTip), not a
+        # WinRT toast, because the balloon is the one path observed to
+        # actually present on screen on this platform, including under Do
+        # Not Disturb (silently, but visibly). A WinRT toast was tried here
+        # and never appeared on screen; it only ever showed up filed in the
+        # Notification Center, which does not meet the point of a hook that
+        # is supposed to get the user's attention. Do not switch this back
+        # to a toast without first confirming on-screen delivery, not just
+        # that the call succeeded or that the notification was logged
+        # somewhere.
         #
-        # Build the toast body with CreateTextNode rather than LoadXml on a
-        # hand-built XML string: escaped double quotes inside -Command do
-        # not survive PowerShell argument parsing and LoadXml fails with
-        # "Missing ')' in method call". CreateTextNode only needs single
-        # quotes, which pass through -Command cleanly, and it escapes XML
-        # metacharacters in the message for free.
+        # Start-Sleep -Milliseconds 500 keeps the process alive long enough
+        # for the balloon to actually register with the shell; removing it
+        # drops delivery to nothing. Do not remove it and do not shorten it.
         #
-        # Fire the whole invocation detached (trailing &) and exit
-        # immediately: a hook's wall-clock cost to the session is the time
-        # spent waiting for this script, not for whatever it spawns. There
-        # is no Start-Sleep in this branch and none should be added back:
-        # that sleep belonged to the old NotifyIcon/Dispose() balloon path,
-        # which this branch no longer uses, and its absence does not affect
-        # delivery here.
-        powershell.exe -NoProfile -Command "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; \$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); \$texts = \$template.GetElementsByTagName('text'); \$texts.Item(0).AppendChild(\$template.CreateTextNode('$TITLE_ESCAPED')) | Out-Null; \$texts.Item(1).AppendChild(\$template.CreateTextNode('$MSG_ESCAPED')) | Out-Null; \$toast = [Windows.UI.Notifications.ToastNotification]::new(\$template); [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe').Show(\$toast)" >/dev/null 2>&1 &
+        # The whole invocation is still fired detached (trailing &) so this
+        # script reaches exit 0 immediately: the hook's wall-clock cost to
+        # the session is the time spent waiting for this script, not for
+        # what it spawns, and that holds regardless of which notification
+        # mechanism runs inside it.
+        powershell.exe -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; \$n = New-Object System.Windows.Forms.NotifyIcon; \$n.Icon = [System.Drawing.SystemIcons]::Information; \$n.Visible = \$true; \$n.ShowBalloonTip(5000, '$TITLE_ESCAPED', '$MSG_ESCAPED', 'Info'); Start-Sleep -Milliseconds 500; \$n.Dispose()" 2>/dev/null &
         ;;
 esac
 
