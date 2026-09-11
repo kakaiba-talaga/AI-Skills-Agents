@@ -126,7 +126,7 @@ Such a run is **not** a clean run, and the completion output must say so plainly
    - `.corpus-search/` — the parent corpus-search directory
    - `docs/corpus-search/` — corpus-search has no persistent index (unlike code-intel's SQLite DB); only the run-scoped subdirectory under `.corpus-search/runs/<run-id>/` is ephemeral
 
-   This list is closed: no path is added to it at runtime on the basis of a judgment made during the run. Anything a run wants to preserve goes through step 9a's relocation, never through an ad-hoc addition here.
+   The never-delete list is closed: no path is added to it at runtime on the basis of a judgment made during the run. Anything a run wants to preserve goes through step 9a's relocation, never through an ad-hoc addition here.
 
    **9c. Verify the deletes landed, then render the Cleanup block.** After the deletes, confirm each targeted path no longer exists on disk. Use the same per-path enumeration the deletes used. If any target still exists, cleanup has not completed. Retry the delete once, and if it still exists, report the failure explicitly to the user with the path and the reason. Never report run completion with the board still on disk and no explanation for why.
 
