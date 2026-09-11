@@ -41,27 +41,39 @@ case "$OS" in
         MSG_ESCAPED="${MSG//\'/\'\'}"
         TITLE_ESCAPED="${TITLE//\'/\'\'}"
 
-        # This uses the tray-balloon (NotifyIcon/ShowBalloonTip), not a
-        # WinRT toast, because the balloon is the one path observed to
-        # actually present on screen on this platform, including under Do
-        # Not Disturb (silently, but visibly). A WinRT toast was tried here
-        # and never appeared on screen; it only ever showed up filed in the
-        # Notification Center, which does not meet the point of a hook that
-        # is supposed to get the user's attention. Do not switch this back
-        # to a toast without first confirming on-screen delivery, not just
-        # that the call succeeded or that the notification was logged
-        # somewhere.
+        # Two mechanisms fire here, not one, because each covers what the
+        # other lacks. The tray balloon (NotifyIcon/ShowBalloonTip) is what
+        # the user actually sees and hears on screen, including under Do
+        # Not Disturb, but its own record in the Notification Center
+        # self-deletes within seconds. The WinRT toast (CreateToastNotifier)
+        # never presents on screen on this platform, not even under Do Not
+        # Disturb, but its record persists in the Notification Center long
+        # after the balloon's has already expired. Neither alone is
+        # sufficient: drop the balloon and the on-screen alert is gone,
+        # drop the toast and the durable record is gone. The balloon fires
+        # first because it is the one that gets the user's attention; if
+        # the toast spawn below ever fails, the user has still been
+        # notified.
         #
-        # Start-Sleep -Milliseconds 500 keeps the process alive long enough
-        # for the balloon to actually register with the shell; removing it
-        # drops delivery to nothing. Do not remove it and do not shorten it.
+        # Start-Sleep -Milliseconds 500 keeps the balloon process alive
+        # long enough for the balloon to actually register with the shell;
+        # removing it drops delivery to nothing. Do not remove it and do
+        # not shorten it. Confirm any change to either mechanism by
+        # watching for on-screen delivery or by checking the Notification
+        # Center directly, not by assuming a successful call means the
+        # user was actually notified.
         #
-        # The whole invocation is still fired detached (trailing &) so this
-        # script reaches exit 0 immediately: the hook's wall-clock cost to
-        # the session is the time spent waiting for this script, not for
-        # what it spawns, and that holds regardless of which notification
-        # mechanism runs inside it.
+        # Both invocations are fired detached (trailing &) so this script
+        # reaches exit 0 immediately: the hook's wall-clock cost to the
+        # session is the time spent waiting for this script, not for what
+        # it spawns.
         powershell.exe -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; \$n = New-Object System.Windows.Forms.NotifyIcon; \$n.Icon = [System.Drawing.SystemIcons]::Information; \$n.Visible = \$true; \$n.ShowBalloonTip(5000, '$TITLE_ESCAPED', '$MSG_ESCAPED', 'Info'); Start-Sleep -Milliseconds 500; \$n.Dispose()" 2>/dev/null &
+
+        # The WinRT type accelerator has to be loaded explicitly in every
+        # invocation: referencing the type by its short name without it
+        # throws "Unable to find type", because each powershell.exe process
+        # starts with a clean WinRT projection.
+        powershell.exe -NoProfile -Command "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; \$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); \$texts = \$template.GetElementsByTagName('text'); \$texts.Item(0).AppendChild(\$template.CreateTextNode('$TITLE_ESCAPED')) | Out-Null; \$texts.Item(1).AppendChild(\$template.CreateTextNode('$MSG_ESCAPED')) | Out-Null; \$toast = [Windows.UI.Notifications.ToastNotification]::new(\$template); [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe').Show(\$toast)" >/dev/null 2>&1 &
         ;;
 esac
 
