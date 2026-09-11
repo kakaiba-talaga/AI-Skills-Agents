@@ -367,7 +367,7 @@ nine fields:
   applies in another; the ledger is per-project-isolated.
 - `adaptation_counts` — the per-`type` adaptation counts already computed for the Phase 4
   summary: `reflection`, `promotion`, `replan`, `preflight-yield`, `finding`, `health-action`,
-  `prior-applied`, `budget-escalation`, and `other` (count of strategy-adaptation kinds beyond the named types — parallel-dispatch switch, sequential fallback, worktree enablement, reassignment, branch-creation skip). `finding` is a named key of its own rather than part of `other`, whose list is closed: a finding is an out-of-scope defect an agent reported, not a strategy switch, and folding it into `other` would hide the count the ledger exists to surface.
+  `prior-applied`, `budget-escalation`, and `other` (count of strategy-adaptation kinds beyond the named types — parallel-dispatch switch, sequential fallback, worktree enablement, reassignment, branch-creation skip). `finding` is a named key of its own rather than part of `other`; the list of kinds folded into `other` is closed: a finding is an out-of-scope defect an agent reported, not a strategy switch, and folding it into `other` would hide the count the ledger exists to surface.
 - `reflection_action_counts` — a count map from each reflection `action_taken` value to the
   number of `type: reflection` adaptation entries that carried it this run. Keys are the contract
   enum verbatim: `logged`, `proposed-addition`, `proposed-resequence`, `escalated`, `replanned`,

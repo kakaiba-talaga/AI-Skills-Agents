@@ -32,7 +32,7 @@ This is the closed list referenced above. When a dispatch matches none of the fo
 
 ## Extending the foreground list
 
-The list above is closed, and its value depends entirely on staying that way. Any addition must name one of exactly two justifications: **the same-turn consumption that forces it** — the orchestrator needs the dispatched agent's result within the same turn it spawned it, so it cannot proceed without blocking — or **a harness incapability** — the harness offers no way to run that dispatch detached. Nothing else qualifies.
+The foreground list is closed, and its value depends entirely on staying that way. Any addition must name one of exactly two justifications: **the same-turn consumption that forces it** — the orchestrator needs the dispatched agent's result within the same turn it spawned it, so it cannot proceed without blocking — or **a harness incapability** — the harness offers no way to run that dispatch detached. Nothing else qualifies.
 
 Two reasons are explicitly inadmissible, because they are the two that will actually be offered. "Nothing else is ready" is never a reason to block — conversability is a first-class reason to background a dispatch regardless of throughput, already argued in this file's Background (default) section. "It feels safer" is not a justification — if blocking is genuinely required, one of the two admissible reasons above will be nameable; if neither is, the unease is not evidence.
 
